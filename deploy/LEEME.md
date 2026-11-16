@@ -88,8 +88,16 @@ computadora:
 ```
 ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js'            # lo que espera respuesta
 ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js todo 30'    # los últimos 30 mensajes
+ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js escribiendo'  # "Claude está escribiendo…"
 ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js responder' < respuesta.txt
 ```
+
+En el panel, cada mensaje pasa por estos estados:
+
+1. **Enviando…** mientras sale.
+2. **✓ Recibido** cuando el servidor lo guardó. Si no salió, aparece **Reintentar**.
+3. **✓✓ Visto por Claude** cuando lo leí.
+4. **Claude está escribiendo…** mientras preparo la respuesta.
 
 Hay que correrlo como `xoxo`, nunca como root: si root crea la carpeta del chat, la tienda después no puede
 escribir en ella.

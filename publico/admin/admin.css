@@ -301,3 +301,19 @@ legend { padding: 0; margin-bottom: 4px; font-weight: 700; font-size: 14px; }
 .chat-rec .rec-text { flex: 1 1 200px; min-width: 0; color: var(--ink-2); font-size: 14px; }
 @keyframes rec-blink { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .chat-rec .rec-dot { animation: none; } }
+.msg.pending .msg-text, .msg.pending .msg-photos { opacity: .6; }
+.msg.failed .msg-text { outline: 1.5px solid var(--bad); }
+.msg-state { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; padding: 0 4px; color: var(--muted); font-size: 12px; }
+.msg-state .bad { color: var(--bad); font-weight: 600; }
+.msg-state .btn.small { min-height: 26px; padding: 0 8px; font-size: 12px; }
+.mine-state { align-self: flex-end; margin-top: -6px; }
+.mine-state b { color: var(--series-1); font-weight: 700; }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line-2); border-top-color: var(--ink-2); border-radius: 50%; vertical-align: -2px; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.typing .msg-text { padding: 12px 16px; }
+.dots { display: inline-flex; gap: 4px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: dot 1.2s ease-in-out infinite; }
+.dots i:nth-child(2) { animation-delay: .15s; }
+.dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes dot { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .spin, .dots i { animation: none; } }

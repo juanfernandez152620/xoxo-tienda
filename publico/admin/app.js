@@ -41,7 +41,7 @@
   const S = {
     site: null, draft: null, tab: 'estadisticas', stats: null, metric: 'visitors', prodSort: 'views', open: null,
     log: null, logQuery: { dia: '', tipo: '', q: '' }, backups: null, upload: null, server: null, exposed: null, reparto: null,
-    chat: { list: null, draft: '', files: [], sending: false, uploading: 0, busy: false },
+    chat: { list: null, estado: {}, draft: '', files: [], pending: [], uploading: 0, busy: false, rec: null },
   };
   // Preferencias de este navegador (nombre en el chat, último mensaje visto): si no se pueden guardar, no pasa nada
   const store = {
@@ -767,6 +767,8 @@
   }
 
   /* ----- Cambios por IA: chat con Claude ----- */
+  // Cada mensaje que se manda aparece al instante como "Enviando…" (S.chat.pending). Cuando el servidor lo guarda
+  // pasa a la conversación con "Recibido"; después se ve "Visto por Claude" y "Claude está escribiendo…".
   const SEEN = 'xoxo-chat-visto';
   const chatName = () => store.get('xoxo-chat-nombre') || 'Socio';
   function chatWhen(iso) {
@@ -785,10 +787,11 @@
     return out + esc(t.slice(last));
   }
   const clock = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const photosHtml = (list, de) => list.map(u =>
+    `<a href="${esc(media(u))}" target="_blank" rel="noopener"><img src="${esc(media(u))}" alt="Foto que mandó ${esc(de)}" loading="lazy"></a>`).join('');
   function chatBubble(m) {
     const mine = m.rol !== 'claude';
-    const photos = (m.adjuntos || []).map(u =>
-      `<a href="${esc(media(u))}" target="_blank" rel="noopener"><img src="${esc(media(u))}" alt="Foto que mandó ${esc(m.de)}" loading="lazy"></a>`).join('');
+    const photos = photosHtml(m.adjuntos || [], m.de);
     const audio = m.audio ? `<div class="msg-audio">
         <audio controls preload="metadata" src="${esc(media(m.audio))}"></audio>
         ${m.transcripcion ? `<p class="msg-tr"><b>Lo que dijo:</b> ${esc(m.transcripcion)}</p>` : ''}
@@ -800,18 +803,50 @@
       ${photos ? `<div class="msg-photos">${photos}</div>` : ''}
     </div>`;
   }
+  // Un mensaje que todavía no llegó al servidor
+  function pendingBubble(p) {
+    const state = p.error
+      ? `<span class="bad">No se envió: ${esc(p.error)}</span>
+         <button class="btn small" type="button" data-act="chat-retry" data-k="${p.k}">Reintentar</button>
+         <button class="btn small" type="button" data-act="chat-drop" data-k="${p.k}">Borrar</button>`
+      : `<span class="spin" aria-hidden="true"></span> ${p.audio && !p.url ? 'Subiendo el audio…' : 'Enviando…'}`;
+    return `<div class="msg mine pending${p.error ? ' failed' : ''}">
+      <div class="msg-meta">${esc(p.de)}</div>
+      ${p.audio ? `<div class="msg-text">Audio de ${clock(p.duracion || 0)}</div>` : ''}
+      ${p.texto ? `<div class="msg-text">${richText(p.texto)}</div>` : ''}
+      ${p.adjuntos.length ? `<div class="msg-photos">${photosHtml(p.adjuntos, p.de)}</div>` : ''}
+      <div class="msg-state" role="status">${state}</div>
+    </div>`;
+  }
+  // Debajo del último mensaje: recibido, visto o escribiendo
+  function chatTail() {
+    const P = S.chat.pending;
+    if (P.length) return P.map(pendingBubble).join('');
+    const L = S.chat.list || [], E = S.chat.estado || {};
+    if (E.escribiendo) {
+      return `<div class="msg ai typing" role="status"><div class="msg-meta">Claude está escribiendo…</div>
+        <div class="msg-text"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div></div>`;
+    }
+    const last = L[L.length - 1];
+    if (!last || last.rol === 'claude') return '';
+    const seen = E.visto && L.findIndex(m => m.id === E.visto) >= L.length - 1;
+    return `<div class="msg-state mine-state" role="status">${seen
+      ? '<b>✓✓</b> Visto por Claude'
+      : '<b>✓</b> Recibido. Claude todavía no lo vio.'}</div>`;
+  }
   function chatLog() {
     const L = S.chat.list;
     if (!L) return loading;
-    if (!L.length) {
+    const tail = `<div id="chat-tail">${chatTail()}</div>`;
+    if (!L.length && !S.chat.pending.length) {
       return `<div class="chat-empty"><b>Todavía no hay mensajes</b>
-        <p>Escribí qué querés cambiar en la tienda. Por ejemplo: "Poné el Samsung A16 a $699.999" o "Agregá el iPhone 15 de 128 GB con esta foto".</p></div>`;
+        <p>Escribí qué querés cambiar en la tienda. Por ejemplo: "Poné el Samsung A16 a $699.999" o "Agregá el iPhone 15 de 128 GB con esta foto".</p></div>${tail}`;
     }
-    return L.map(chatBubble).join('');
+    return L.map(chatBubble).join('') + tail;
   }
   const chatFiles = () => S.chat.files.map((u, i) =>
     `<span class="chat-file"><img src="${esc(media(u))}" alt="Foto para mandar"><button type="button" data-act="chat-unfile" data-i="${i}" aria-label="Sacar esta foto">×</button></span>`).join('')
-    + (S.chat.uploading ? '<span class="muted">Subiendo foto…</span>' : '');
+    + (S.chat.uploading ? '<span class="muted"><span class="spin" aria-hidden="true"></span> Subiendo foto…</span>' : '');
   function viewChat() {
     return `
       <div class="page-head"><h1>Cambios por IA</h1></div>
@@ -827,25 +862,33 @@
       </section>`;
   }
   const lastChatId = () => (S.chat.list && S.chat.list.length ? S.chat.list[S.chat.list.length - 1].id : '');
-  // Trae lo nuevo (o todo la primera vez). Devuelve true si cambió algo.
+  // Trae lo nuevo (o todo la primera vez) y el estado (visto, escribiendo). Devuelve true si cambió algo.
   async function loadChat() {
-    const before = S.chat.list ? `${S.chat.list.length}|${lastChatId()}` : '';
+    const before = `${S.chat.list ? S.chat.list.length : -1}|${lastChatId()}|${JSON.stringify(S.chat.estado)}`;
     const last = lastChatId();
     const r = await api(`/chat${last ? `?despues=${encodeURIComponent(last)}` : ''}`);
     if (r.completo || !S.chat.list) S.chat.list = r.mensajes;
-    else S.chat.list.push(...r.mensajes);
-    return before !== `${S.chat.list.length}|${lastChatId()}`;
+    else {
+      // Dos pedidos al mismo tiempo pueden traer el mismo mensaje: no se repite
+      const have = new Set(S.chat.list.map(m => m.id));
+      S.chat.list.push(...r.mensajes.filter(m => !have.has(m.id)));
+    }
+    S.chat.estado = r.estado || {};
+    return before !== `${S.chat.list.length}|${lastChatId()}|${JSON.stringify(S.chat.estado)}`;
   }
-  // Repinta solo los mensajes (no el formulario, así no se pierde lo que se está escribiendo)
+  // Repinta sin borrar lo que ya está (así no se corta un audio que alguien está escuchando)
   function paintChat(bottom) {
     const log = $('#chat-log');
     if (!log) return;
     const near = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
     const L = S.chat.list || [];
-    const shown = $$('.msg', log);
-    const same = shown.length && shown.length <= L.length && shown[shown.length - 1].dataset.id === L[shown.length - 1].id;
-    if (same) log.insertAdjacentHTML('beforeend', L.slice(shown.length).map(chatBubble).join(''));
-    else log.innerHTML = chatLog();
+    const shown = $$('.msg[data-id]', log);
+    const tail = $('#chat-tail', log);
+    const same = tail && shown.length && shown.length <= L.length && shown[shown.length - 1].dataset.id === L[shown.length - 1].id;
+    if (same) {
+      tail.insertAdjacentHTML('beforebegin', L.slice(shown.length).map(chatBubble).join(''));
+      tail.innerHTML = chatTail();
+    } else log.innerHTML = chatLog();
     if (bottom || near) log.scrollTop = log.scrollHeight;
   }
   const paintFiles = () => { const el = $('#chat-files'); if (el) el.innerHTML = chatFiles(); };
@@ -864,36 +907,56 @@
     b.textContent = unread > 9 ? '9+' : String(unread);
     b.hidden = !unread || S.tab === 'ia';
   }
-  // Manda lo escrito y las fotos (y el audio, si viene en extra)
-  async function postChat(form, extra = {}) {
-    // Sin formulario (se cambió de pestaña mientras subía el audio): se usa lo que quedó guardado
+
+  /* Mandar: el mensaje se ve enseguida como "Enviando…" y, si falla, queda con Reintentar */
+  function newPending(form, extra = {}) {
     const de = (form ? form.de.value.trim() : chatName()) || 'Socio';
-    const texto = form ? form.texto.value.trim() : S.chat.draft.trim();
     store.set('xoxo-chat-nombre', de);
-    await api('/chat', { method: 'POST', body: { texto, de, adjuntos: S.chat.files, ...extra } });
+    const p = {
+      k: String(Date.now() + Math.random()), de, texto: form ? form.texto.value.trim() : S.chat.draft.trim(),
+      adjuntos: S.chat.files.slice(), error: '', ...extra,
+    };
     S.chat.draft = '';
     S.chat.files = [];
     if (form) form.texto.value = '';
     paintFiles();
-    await loadChat();
+    S.chat.pending.push(p);
     paintChat(true);
-    markSeen();
+    return p;
   }
-  async function sendChat(form) {
-    if (S.chat.sending || S.chat.uploading || S.chat.rec) return;
-    if (!form.texto.value.trim() && !S.chat.files.length) return form.texto.focus();
-    S.chat.sending = true;
-    paintControls();
+  async function deliver(p) {
+    p.error = '';
+    paintChat(true);
     try {
-      await postChat(form);
+      if (p.ready) await p.ready; // el audio se termina de cerrar
+      if (p.blob && !p.url) {
+        p.url = (await api('/chat/audio', { method: 'POST', file: p.blob })).url;
+        paintChat(true);
+      }
+      await api('/chat', {
+        method: 'POST',
+        body: {
+          texto: p.texto, de: p.de, adjuntos: p.adjuntos,
+          ...(p.audio ? { audio: p.url, duracion: p.duracion, transcripcion: p.transcripcion } : {}),
+        },
+      });
+      S.chat.pending = S.chat.pending.filter(x => x !== p);
+      await loadChat();
+      paintChat(true);
+      markSeen();
     } catch (err) {
-      toast(err.message, true);
-    } finally {
-      S.chat.sending = false;
-      paintControls();
-      form.texto.focus();
+      // Sin internet el navegador dice "Failed to fetch": se muestra en castellano
+      p.error = err instanceof TypeError ? 'no hay conexión con la tienda' : err.message || 'no hay conexión con la tienda';
+      paintChat(true);
     }
   }
+  function sendChat(form) {
+    if (S.chat.uploading || S.chat.rec) return;
+    if (!form.texto.value.trim() && !S.chat.files.length) return form.texto.focus();
+    deliver(newPending(form));
+    form.texto.focus();
+  }
+
   /* Audios: se graban con el micrófono del navegador. En la computadora, mientras se graba, el navegador también
      lo pasa a texto (así Claude lo puede leer). En el celular el dictado y la grabación se pelean por el micrófono,
      así que ahí se graba solo el audio. */
@@ -908,13 +971,13 @@
         <button class="btn primary small" type="button" data-act="rec-send">Enviar audio</button>
       </div>`;
     }
-    const busy = S.chat.sending || S.chat.uploading;
+    const busy = S.chat.uploading > 0;
     return `<div class="row">
       <label class="chat-as">Escribís como <input type="text" name="de" value="${esc(chatName())}" maxlength="30"></label>
       <span class="spacer"></span>
       <button class="btn small" type="button" data-act="chat-photo">Agregar foto</button>
-      <button class="btn small" type="button" data-act="chat-rec"${busy ? ' disabled' : ''}>Grabar audio</button>
-      <button class="btn primary small" type="submit"${busy ? ' disabled' : ''}>${S.chat.sending ? 'Enviando…' : 'Enviar'}</button>
+      <button class="btn small" type="button" data-act="chat-rec">Grabar audio</button>
+      <button class="btn primary small" type="submit"${busy ? ' disabled' : ''}>Enviar</button>
     </div>`;
   }
   // El nombre de "Escribís como" vive en el formulario: al repintar los botones se conserva lo que escribió
@@ -934,7 +997,7 @@
     return '';
   }
   async function startRec() {
-    if (S.chat.rec || S.chat.sending) return;
+    if (S.chat.rec) return;
     if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)) {
       return toast('Este navegador no deja grabar audio. Probá con Chrome o Safari actualizados.', true);
     }
@@ -1016,33 +1079,28 @@
     paintControls();
     await stopRec(R);
   }
-  async function sendRec() {
+  function sendRec() {
     const R = S.chat.rec;
     if (!R || R.stopping) return;
     const secs = Math.round((Date.now() - R.started) / 1000);
     S.chat.rec = null;
-    S.chat.sending = true;
     paintControls();
-    try {
-      await stopRec(R);
-      if (secs < 1 || !R.chunks.length) throw new Error('El audio quedó muy corto. Mantené grabando un poco más.');
-      const blob = new Blob(R.chunks, { type: R.recorder.mimeType || R.chunks[0].type || 'audio/webm' });
-      const { url } = await api('/chat/audio', { method: 'POST', file: blob });
-      await postChat($('#chat-form'), { audio: url, duracion: secs, transcripcion: `${R.text} ${R.interim}`.trim() });
-    } catch (err) {
-      toast(err.message, true);
-    } finally {
-      S.chat.sending = false;
-      paintControls();
-    }
+    // El mensaje aparece enseguida; el audio se termina de cerrar y se sube mientras dice "Subiendo el audio…"
+    const p = newPending($('#chat-form'), { audio: true, duracion: secs });
+    p.ready = stopRec(R).then(() => {
+      if (secs < 1 || !R.chunks.length) throw new Error('el audio quedó muy corto');
+      p.blob = new Blob(R.chunks, { type: R.recorder.mimeType || R.chunks[0].type || 'audio/webm' });
+      p.transcripcion = `${R.text} ${R.interim}`.trim();
+    });
+    deliver(p).then(() => { p.ready = null; });
   }
-
   async function addChatFiles(files) {
     for (const file of [...files].slice(0, Math.max(0, 6 - S.chat.files.length))) {
       if (!/^image\//.test(file.type)) { toast('Por el chat solo se pueden mandar fotos.', true); continue; }
       if (file.size > 8 * 1048576) { toast('La foto pesa más de 8 MB. Achicala y probá de nuevo.', true); continue; }
       S.chat.uploading++;
       paintFiles();
+      paintControls();
       try {
         const { url } = await api('/subir', { method: 'POST', file });
         S.chat.files.push(url);
@@ -1051,6 +1109,7 @@
       } finally {
         S.chat.uploading--;
         paintFiles();
+        paintControls();
       }
     }
   }
@@ -1068,10 +1127,10 @@
     e.preventDefault();
     e.target.form.requestSubmit();
   });
-  // Mensajes nuevos: cada 5 s con el chat abierto; si no, cada minuto para avisar en la pestaña
+  // Mensajes nuevos y estado: cada 3 s con el chat abierto; si no, cada minuto para avisar en la pestaña
   let chatPolledAt = 0;
   setInterval(async () => {
-    if (document.hidden || $('#app').hidden || S.chat.busy || S.chat.sending) return;
+    if (document.hidden || $('#app').hidden || S.chat.busy) return;
     const onChat = S.tab === 'ia';
     if (!onChat && Date.now() - chatPolledAt < 60e3) return;
     chatPolledAt = Date.now();
@@ -1081,7 +1140,7 @@
         if (S.tab === 'ia') { paintChat(false); markSeen(); } else updateBadge();
       }
     } catch {} finally { S.chat.busy = false; }
-  }, 5e3);
+  }, 3e3);
 
   /* ----- Pedidos (pago online) ----- */
   const ORDER_STATUS = {
@@ -1372,6 +1431,8 @@
     'chat-rec': () => startRec(),
     'rec-cancel': () => cancelRec(),
     'rec-send': () => sendRec(),
+    'chat-retry': el => { const p = S.chat.pending.find(x => x.k === el.dataset.k); if (p) deliver(p); },
+    'chat-drop': el => { S.chat.pending = S.chat.pending.filter(x => x.k !== el.dataset.k); paintChat(false); },
     'chat-unfile': el => { S.chat.files.splice(Number(el.dataset.i), 1); paintFiles(); },
     async 'test-pay'() {
       S.payTesting = true;

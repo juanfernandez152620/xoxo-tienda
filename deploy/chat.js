@@ -4,7 +4,10 @@
  *
  *   ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js'              lo que espera respuesta
  *   ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js todo 30'      los últimos 30 mensajes
+ *   ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js escribiendo'  "Claude está escribiendo…" (5 min)
  *   ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js responder' < texto.txt
+ *
+ * Leer los mensajes los marca como "Visto por Claude" en el panel.
  *
  * La respuesta se escribe por la entrada estándar (así no hay problemas con comillas ni saltos de línea) y aparece
  * en el chat del panel en unos segundos. En la computadora sirve igual, con la carpeta de datos del .env:
@@ -52,11 +55,16 @@ if (cmd === 'pendientes') {
     console.log(`${lista.length} ${lista.length === 1 ? 'mensaje espera' : 'mensajes esperan'} respuesta:`);
     mostrar(lista);
   }
+  chat.marcarVisto();
+} else if (cmd === 'escribiendo') {
+  chat.escribiendo(Math.max(10, Math.min(1800, Number(arg) || 300)));
+  console.log('En el panel se ve "Claude está escribiendo…".');
 } else if (cmd === 'todo') {
   const n = Math.max(1, Math.min(500, Number(arg) || 20));
   const { mensajes } = chat.leer('', n);
   if (!mensajes.length) console.log('El chat está vacío.');
   mostrar(mensajes);
+  chat.marcarVisto();
 } else if (cmd === 'responder') {
   let texto = '';
   process.stdin.setEncoding('utf8');
@@ -71,6 +79,6 @@ if (cmd === 'pendientes') {
     }
   });
 } else {
-  console.error('Uso: node deploy/chat.js [pendientes | todo N | responder < texto]');
+  console.error('Uso: node deploy/chat.js [pendientes | todo N | escribiendo [segundos] | responder < texto]');
   process.exitCode = 1;
 }
