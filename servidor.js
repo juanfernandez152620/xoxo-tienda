@@ -12,7 +12,7 @@ const entorno = require('./nucleo/entorno');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { PORT, BASE_URL, HTTPS, PUBLICO, DATOS, DETRAS_DE_PROXY } = entorno;
+const { PORT, HOST, BASE_URL, HTTPS, PUBLICO, DATOS, DETRAS_DE_PROXY } = entorno;
 const { Problema, limite } = require('./nucleo/archivos');
 const sitio = require('./nucleo/sitio');
 const estadisticas = require('./nucleo/estadisticas');
@@ -226,7 +226,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   sitio.cargar(); // la primera vez crea el contenido de fábrica
   sesion.config(); // y el usuario del panel
   console.log(`\nXOXO Tecno en ${BASE_URL}  (puerto ${PORT})`);

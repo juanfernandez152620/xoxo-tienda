@@ -1,0 +1,24 @@
+# Servicio de la tienda en el VPS: /etc/systemd/system/xoxo-tienda.service (esta es la copia de referencia)
+[Unit]
+Description=Tienda XOXO Tecno
+After=network.target
+
+[Service]
+User=xoxo
+Group=xoxo
+WorkingDirectory=/srv/xoxo-tienda
+# Ajustes y claves (BASE_URL, DATOS, pasarelas): solo los lee root y el usuario xoxo
+EnvironmentFile=/etc/xoxo-tienda.env
+ExecStart=/usr/bin/node servidor.js
+Restart=always
+RestartSec=3
+
+# La tienda solo puede escribir en su carpeta de datos
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/xoxo-tienda
+
+[Install]
+WantedBy=multi-user.target

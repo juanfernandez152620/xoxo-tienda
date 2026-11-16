@@ -33,6 +33,8 @@ module.exports = {
   // carpeta del código, así una actualización nunca la pisa.
   DATOS: path.resolve(APP, env('DATOS', 'datos')),
   PORT,
+  // Solo dentro del servidor: desde internet se entra por nginx (0.0.0.0 = abierto a la red)
+  HOST: env('HOST', '127.0.0.1'),
   BASE_URL,
   HTTPS: BASE_URL.startsWith('https://'),
   // true cuando adelante hay un nginx (o Cloudflare): así se guarda la IP real de cada visitante
