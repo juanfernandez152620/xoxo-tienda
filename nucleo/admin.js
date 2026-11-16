@@ -12,10 +12,12 @@ const reparto = require('./reparto');
 const sesion = require('./sesion');
 const pagos = require('./pagos');
 const socio = require('./socio');
+const chat = require('./chat');
 
 const SUBIDAS = path.join(DATOS, 'subidas');
 const MAX_FOTO = 8 * 1048576;
 const MAX_VIDEO = 30 * 1048576;
+const MAX_AUDIO = 15 * 1048576;
 
 // Tipo real del archivo subido (por sus primeros bytes, no por el nombre)
 function tipoDe(b) {
@@ -25,6 +27,15 @@ function tipoDe(b) {
   if (b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WEBP') return 'webp';
   if (b.toString('latin1', 0, 4) === 'GIF8') return 'gif';
   if (b.toString('latin1', 4, 8) === 'ftyp') return 'mp4';
+  return null;
+}
+
+// Audios grabados en el chat: WebM (Chrome, Android), Ogg (Firefox) o MP4/M4A (Safari, iPhone)
+function tipoAudio(b) {
+  if (b.length < 12) return null;
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'webm';
+  if (b.toString('latin1', 0, 4) === 'OggS') return 'ogg';
+  if (b.toString('latin1', 4, 8) === 'ftyp') return 'm4a';
   return null;
 }
 
@@ -163,6 +174,30 @@ async function api(req, res, url, h) {
 
     case 'GET /pedidos':
       return h.json(200, { pedidos: pagos.leerPedidos().slice().reverse(), config: pagos.configPublica(), pasarelas: pagos.estadoAdmin() });
+
+    // Chat "Cambios por IA": el panel trae los mensajes nuevos cada pocos segundos
+    case 'GET /chat':
+      return h.json(200, chat.leer(url.searchParams.get('despues') || ''));
+
+    case 'POST /chat': {
+      if (!limite('chat', h.ip, 40, 600)) throw new Problema('Mandaste muchos mensajes seguidos. Esperá unos minutos.', 429);
+      const body = await h.leerJson(20000);
+      return h.json(200, { mensaje: chat.agregar({
+        rol: 'equipo', de: body.de, texto: body.texto, adjuntos: body.adjuntos,
+        audio: body.audio, duracion: body.duracion, transcripcion: body.transcripcion,
+      }) });
+    }
+
+    case 'POST /chat/audio': {
+      if (!limite('chat-audio', h.ip, 30, 600)) throw new Problema('Mandaste muchos audios seguidos. Esperá unos minutos.', 429);
+      const data = await h.leerCrudo(MAX_AUDIO);
+      const ext = tipoAudio(data);
+      if (!ext) throw new Problema('No se pudo guardar el audio: el formato no se reconoce.', 400);
+      asegurarCarpeta(SUBIDAS);
+      const name = `audio-${diaLocal()}-${crypto.randomBytes(5).toString('hex')}.${ext}`;
+      fs.writeFileSync(path.join(SUBIDAS, name), data);
+      return h.json(200, { url: `/media/subidas/${name}`, size: data.length });
+    }
 
     case 'POST /pagos/probar':
       if (!limite('probar-pagos', h.ip, 20, 600)) throw new Problema('Demasiadas pruebas seguidas. Esperá unos minutos.', 429);

@@ -41,6 +41,12 @@
   const S = {
     site: null, draft: null, tab: 'estadisticas', stats: null, metric: 'visitors', prodSort: 'views', open: null,
     log: null, logQuery: { dia: '', tipo: '', q: '' }, backups: null, upload: null, server: null, exposed: null, reparto: null,
+    chat: { list: null, draft: '', files: [], sending: false, uploading: 0, busy: false },
+  };
+  // Preferencias de este navegador (nombre en el chat, último mensaje visto): si no se pueden guardar, no pasa nada
+  const store = {
+    get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+    set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
   };
 
   /* ---------- Servidor ---------- */
@@ -134,7 +140,7 @@
   }
 
   /* ---------- Vistas ---------- */
-  const VIEWS = { estadisticas: viewStats, pedidos: viewOrders, anuncio: viewAb, productos: viewProducts, accesorios: viewExtras, tienda: viewStore, registro: viewLog, copias: viewBackups, cuenta: viewAccount };
+  const VIEWS = { estadisticas: viewStats, ia: viewChat, pedidos: viewOrders, anuncio: viewAb, productos: viewProducts, accesorios: viewExtras, tienda: viewStore, registro: viewLog, copias: viewBackups, cuenta: viewAccount };
   const loading = '<p class="muted">Cargando…</p>';
 
   function render() {
@@ -149,10 +155,13 @@
   async function go(tab) {
     if (!VIEWS[tab]) tab = 'estadisticas';
     if (S.tab !== tab) { scrollTo(0, 0); S.open = null; }
+    if (tab !== 'ia' && S.chat.rec) cancelRec();
     S.tab = tab;
     history.replaceState(null, '', '#' + tab);
     render();
+    updateBadge();
     try {
+      if (tab === 'ia') { await loadChat(); render(); paintChat(true); markSeen(); }
       if (tab === 'estadisticas') { S.stats = await api('/estadisticas'); render(); }
       if (tab === 'anuncio') { S.reparto = await api('/reparto'); render(); }
       if (tab === 'pedidos') { S.orders = await api('/pedidos'); render(); }
@@ -757,6 +766,323 @@
       </section>`;
   }
 
+  /* ----- Cambios por IA: chat con Claude ----- */
+  const SEEN = 'xoxo-chat-visto';
+  const chatName = () => store.get('xoxo-chat-nombre') || 'Socio';
+  function chatWhen(iso) {
+    const d = new Date(iso);
+    const t = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    return d.toDateString() === new Date().toDateString() ? t : `${d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} ${t}`;
+  }
+  // Texto con los links clickeables (Claude manda links de vista previa)
+  function richText(t) {
+    const re = /https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)»]/g;
+    let out = '', last = 0, m;
+    while ((m = re.exec(t))) {
+      out += esc(t.slice(last, m.index)) + `<a href="${esc(m[0])}" target="_blank" rel="noopener">${esc(m[0])}</a>`;
+      last = m.index + m[0].length;
+    }
+    return out + esc(t.slice(last));
+  }
+  const clock = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  function chatBubble(m) {
+    const mine = m.rol !== 'claude';
+    const photos = (m.adjuntos || []).map(u =>
+      `<a href="${esc(media(u))}" target="_blank" rel="noopener"><img src="${esc(media(u))}" alt="Foto que mandó ${esc(m.de)}" loading="lazy"></a>`).join('');
+    const audio = m.audio ? `<div class="msg-audio">
+        <audio controls preload="metadata" src="${esc(media(m.audio))}"></audio>
+        ${m.transcripcion ? `<p class="msg-tr"><b>Lo que dijo:</b> ${esc(m.transcripcion)}</p>` : ''}
+      </div>` : '';
+    return `<div class="msg ${mine ? 'mine' : 'ai'}" data-id="${esc(m.id)}">
+      <div class="msg-meta">${mine ? esc(m.de) : 'Claude'} · ${chatWhen(m.at)}${m.audio ? ` · audio de ${clock(m.duracion || 0)}` : ''}</div>
+      ${audio}
+      ${m.texto ? `<div class="msg-text">${richText(m.texto)}</div>` : ''}
+      ${photos ? `<div class="msg-photos">${photos}</div>` : ''}
+    </div>`;
+  }
+  function chatLog() {
+    const L = S.chat.list;
+    if (!L) return loading;
+    if (!L.length) {
+      return `<div class="chat-empty"><b>Todavía no hay mensajes</b>
+        <p>Escribí qué querés cambiar en la tienda. Por ejemplo: "Poné el Samsung A16 a $699.999" o "Agregá el iPhone 15 de 128 GB con esta foto".</p></div>`;
+    }
+    return L.map(chatBubble).join('');
+  }
+  const chatFiles = () => S.chat.files.map((u, i) =>
+    `<span class="chat-file"><img src="${esc(media(u))}" alt="Foto para mandar"><button type="button" data-act="chat-unfile" data-i="${i}" aria-label="Sacar esta foto">×</button></span>`).join('')
+    + (S.chat.uploading ? '<span class="muted">Subiendo foto…</span>' : '');
+  function viewChat() {
+    return `
+      <div class="page-head"><h1>Cambios por IA</h1></div>
+      <section class="card chat">
+        <p class="muted">Pedile a Claude cambios en la tienda: precios, productos, fotos, textos o algo que no anda. Podés escribir, mandar fotos o grabar un audio. Te contesta acá, te cuenta qué va a cambiar y lo publica cuando le confirmes.</p>
+        <div class="chat-log" id="chat-log" aria-live="polite">${chatLog()}</div>
+        <form class="chat-form" id="chat-form" autocomplete="off">
+          <div class="chat-files" id="chat-files">${chatFiles()}</div>
+          <textarea name="texto" rows="2" maxlength="4000" placeholder="Escribí tu pedido…" aria-label="Mensaje para Claude">${esc(S.chat.draft)}</textarea>
+          <div id="chat-controls">${chatControls()}</div>
+          <input type="file" id="chat-file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+        </form>
+      </section>`;
+  }
+  const lastChatId = () => (S.chat.list && S.chat.list.length ? S.chat.list[S.chat.list.length - 1].id : '');
+  // Trae lo nuevo (o todo la primera vez). Devuelve true si cambió algo.
+  async function loadChat() {
+    const before = S.chat.list ? `${S.chat.list.length}|${lastChatId()}` : '';
+    const last = lastChatId();
+    const r = await api(`/chat${last ? `?despues=${encodeURIComponent(last)}` : ''}`);
+    if (r.completo || !S.chat.list) S.chat.list = r.mensajes;
+    else S.chat.list.push(...r.mensajes);
+    return before !== `${S.chat.list.length}|${lastChatId()}`;
+  }
+  // Repinta solo los mensajes (no el formulario, así no se pierde lo que se está escribiendo)
+  function paintChat(bottom) {
+    const log = $('#chat-log');
+    if (!log) return;
+    const near = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+    const L = S.chat.list || [];
+    const shown = $$('.msg', log);
+    const same = shown.length && shown.length <= L.length && shown[shown.length - 1].dataset.id === L[shown.length - 1].id;
+    if (same) log.insertAdjacentHTML('beforeend', L.slice(shown.length).map(chatBubble).join(''));
+    else log.innerHTML = chatLog();
+    if (bottom || near) log.scrollTop = log.scrollHeight;
+  }
+  const paintFiles = () => { const el = $('#chat-files'); if (el) el.innerHTML = chatFiles(); };
+  function markSeen() {
+    const id = lastChatId();
+    if (id) store.set(SEEN, id);
+    updateBadge();
+  }
+  // Cuántas respuestas de Claude hay sin ver (aparece en la pestaña)
+  function updateBadge() {
+    const b = $('#chat-badge');
+    if (!b) return;
+    const L = S.chat.list || [];
+    const seen = store.get(SEEN);
+    const unread = L.slice(L.findIndex(m => m.id === seen) + 1).filter(m => m.rol === 'claude').length;
+    b.textContent = unread > 9 ? '9+' : String(unread);
+    b.hidden = !unread || S.tab === 'ia';
+  }
+  // Manda lo escrito y las fotos (y el audio, si viene en extra)
+  async function postChat(form, extra = {}) {
+    // Sin formulario (se cambió de pestaña mientras subía el audio): se usa lo que quedó guardado
+    const de = (form ? form.de.value.trim() : chatName()) || 'Socio';
+    const texto = form ? form.texto.value.trim() : S.chat.draft.trim();
+    store.set('xoxo-chat-nombre', de);
+    await api('/chat', { method: 'POST', body: { texto, de, adjuntos: S.chat.files, ...extra } });
+    S.chat.draft = '';
+    S.chat.files = [];
+    if (form) form.texto.value = '';
+    paintFiles();
+    await loadChat();
+    paintChat(true);
+    markSeen();
+  }
+  async function sendChat(form) {
+    if (S.chat.sending || S.chat.uploading || S.chat.rec) return;
+    if (!form.texto.value.trim() && !S.chat.files.length) return form.texto.focus();
+    S.chat.sending = true;
+    paintControls();
+    try {
+      await postChat(form);
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      S.chat.sending = false;
+      paintControls();
+      form.texto.focus();
+    }
+  }
+  /* Audios: se graban con el micrófono del navegador. En la computadora, mientras se graba, el navegador también
+     lo pasa a texto (así Claude lo puede leer). En el celular el dictado y la grabación se pelean por el micrófono,
+     así que ahí se graba solo el audio. */
+  function chatControls() {
+    const R = S.chat.rec;
+    if (R) {
+      return `<div class="chat-rec" role="status">
+        <span class="rec-dot" aria-hidden="true"></span>
+        <span class="rec-time" id="rec-time">${clock((Date.now() - R.started) / 1000)}</span>
+        <span class="rec-text" id="rec-text">${esc(recPreview(R))}</span>
+        <button class="btn small" type="button" data-act="rec-cancel">Cancelar</button>
+        <button class="btn primary small" type="button" data-act="rec-send">Enviar audio</button>
+      </div>`;
+    }
+    const busy = S.chat.sending || S.chat.uploading;
+    return `<div class="row">
+      <label class="chat-as">Escribís como <input type="text" name="de" value="${esc(chatName())}" maxlength="30"></label>
+      <span class="spacer"></span>
+      <button class="btn small" type="button" data-act="chat-photo">Agregar foto</button>
+      <button class="btn small" type="button" data-act="chat-rec"${busy ? ' disabled' : ''}>Grabar audio</button>
+      <button class="btn primary small" type="submit"${busy ? ' disabled' : ''}>${S.chat.sending ? 'Enviando…' : 'Enviar'}</button>
+    </div>`;
+  }
+  // El nombre de "Escribís como" vive en el formulario: al repintar los botones se conserva lo que escribió
+  function paintControls() {
+    const el = $('#chat-controls');
+    if (!el) return;
+    const name = $('#chat-form [name="de"]');
+    if (name) store.set('xoxo-chat-nombre', name.value.trim() || chatName());
+    el.innerHTML = chatControls();
+    if (!$('#chat-form [name="de"]')) el.insertAdjacentHTML('beforeend', `<input type="hidden" name="de" value="${esc(chatName())}">`);
+  }
+  const recPreview = R => (`${R.text} ${R.interim}`.trim() || (R.recog ? 'Grabando… hablá tranquilo, se va escribiendo acá.' : 'Grabando…'));
+  function recMime() {
+    for (const t of ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm']) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return '';
+  }
+  async function startRec() {
+    if (S.chat.rec || S.chat.sending) return;
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)) {
+      return toast('Este navegador no deja grabar audio. Probá con Chrome o Safari actualizados.', true);
+    }
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      return toast(err && err.name === 'NotAllowedError'
+        ? 'Para grabar, permití el micrófono: tocá el candado al lado de la dirección de la página.'
+        : 'No se pudo usar el micrófono.', true);
+    }
+    const mime = recMime();
+    let recorder;
+    try { recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined); } catch {
+      stream.getTracks().forEach(t => t.stop());
+      return toast('Este navegador no deja grabar audio.', true);
+    }
+    const R = { recorder, stream, chunks: [], started: Date.now(), text: '', interim: '', recog: null, stopping: false };
+    S.chat.rec = R;
+    recorder.ondataavailable = e => { if (e.data && e.data.size) R.chunks.push(e.data); };
+    recorder.start(1000);
+    startRecognition(R);
+    R.timer = setInterval(() => {
+      const s = (Date.now() - R.started) / 1000;
+      const el = $('#rec-time');
+      if (el) el.textContent = clock(s);
+      if (s >= 300) sendRec(); // hasta 5 minutos por audio
+    }, 250);
+    paintControls();
+  }
+  function startRecognition(R) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR || matchMedia('(pointer: coarse)').matches) return;
+    try {
+      const sr = new SR();
+      sr.lang = 'es-AR';
+      sr.continuous = true;
+      sr.interimResults = true;
+      sr.onresult = e => {
+        let interim = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const r = e.results[i];
+          if (r.isFinal) R.text = `${R.text} ${r[0].transcript.trim()}`.trim();
+          else interim += r[0].transcript;
+        }
+        R.interim = interim.trim();
+        const el = $('#rec-text');
+        if (el) el.textContent = recPreview(R);
+      };
+      sr.onerror = () => {};
+      // Chrome corta el dictado después de un silencio: mientras se graba, se vuelve a prender
+      sr.onend = () => {
+        if (R.stopping) { if (R.recogDone) R.recogDone(); return; }
+        try { sr.start(); } catch {}
+      };
+      sr.start();
+      R.recog = sr;
+    } catch {}
+  }
+  function stopRec(R) {
+    R.stopping = true;
+    clearInterval(R.timer);
+    const audio = new Promise(resolve => {
+      R.recorder.onstop = resolve;
+      if (R.recorder.state !== 'inactive') R.recorder.stop(); else resolve();
+    });
+    // El dictado entrega las últimas palabras al cortarse: se espera un poco
+    const words = R.recog ? new Promise(resolve => {
+      R.recogDone = resolve;
+      setTimeout(resolve, 1500);
+      try { R.recog.stop(); } catch { resolve(); }
+    }) : Promise.resolve();
+    return Promise.all([audio, words]).then(() => R.stream.getTracks().forEach(t => t.stop()));
+  }
+  async function cancelRec() {
+    const R = S.chat.rec;
+    if (!R || R.stopping) return;
+    S.chat.rec = null;
+    paintControls();
+    await stopRec(R);
+  }
+  async function sendRec() {
+    const R = S.chat.rec;
+    if (!R || R.stopping) return;
+    const secs = Math.round((Date.now() - R.started) / 1000);
+    S.chat.rec = null;
+    S.chat.sending = true;
+    paintControls();
+    try {
+      await stopRec(R);
+      if (secs < 1 || !R.chunks.length) throw new Error('El audio quedó muy corto. Mantené grabando un poco más.');
+      const blob = new Blob(R.chunks, { type: R.recorder.mimeType || R.chunks[0].type || 'audio/webm' });
+      const { url } = await api('/chat/audio', { method: 'POST', file: blob });
+      await postChat($('#chat-form'), { audio: url, duracion: secs, transcripcion: `${R.text} ${R.interim}`.trim() });
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      S.chat.sending = false;
+      paintControls();
+    }
+  }
+
+  async function addChatFiles(files) {
+    for (const file of [...files].slice(0, Math.max(0, 6 - S.chat.files.length))) {
+      if (!/^image\//.test(file.type)) { toast('Por el chat solo se pueden mandar fotos.', true); continue; }
+      if (file.size > 8 * 1048576) { toast('La foto pesa más de 8 MB. Achicala y probá de nuevo.', true); continue; }
+      S.chat.uploading++;
+      paintFiles();
+      try {
+        const { url } = await api('/subir', { method: 'POST', file });
+        S.chat.files.push(url);
+      } catch (err) {
+        toast(err.message, true);
+      } finally {
+        S.chat.uploading--;
+        paintFiles();
+      }
+    }
+  }
+  document.addEventListener('input', e => {
+    if (e.target.name === 'texto' && e.target.closest('#chat-form')) S.chat.draft = e.target.value;
+  });
+  document.addEventListener('change', e => {
+    if (e.target.id === 'chat-file') { addChatFiles(e.target.files); e.target.value = ''; }
+    if (e.target.name === 'de' && e.target.closest('#chat-form')) store.set('xoxo-chat-nombre', e.target.value.trim());
+  });
+  // En la computadora, Enter manda y Shift+Enter baja de línea. En el celular, Enter baja de línea.
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.shiftKey || e.isComposing || e.target.name !== 'texto' || !e.target.closest('#chat-form')) return;
+    if (matchMedia('(pointer: coarse)').matches) return;
+    e.preventDefault();
+    e.target.form.requestSubmit();
+  });
+  // Mensajes nuevos: cada 5 s con el chat abierto; si no, cada minuto para avisar en la pestaña
+  let chatPolledAt = 0;
+  setInterval(async () => {
+    if (document.hidden || $('#app').hidden || S.chat.busy || S.chat.sending) return;
+    const onChat = S.tab === 'ia';
+    if (!onChat && Date.now() - chatPolledAt < 60e3) return;
+    chatPolledAt = Date.now();
+    S.chat.busy = true;
+    try {
+      if (await loadChat()) {
+        if (S.tab === 'ia') { paintChat(false); markSeen(); } else updateBadge();
+      }
+    } catch {} finally { S.chat.busy = false; }
+  }, 5e3);
+
   /* ----- Pedidos (pago online) ----- */
   const ORDER_STATUS = {
     created: 'Iniciado', pending: 'Esperando el pago', approved: 'Pagado', rejected: 'Rechazado',
@@ -976,7 +1302,7 @@
         </form>
         <p class="muted">¿Te la olvidaste? En el servidor, abrí <code>datos/config.json</code>, escribí una nueva en <code>"clave"</code> y entrá con esa.</p>
       </section>
-      ${sv && sv.socio ? partnerCard(sv.socio) : ''}
+      ${sv && sv.socio && sv.socio.configurado ? partnerCard(sv.socio) : ''}
       <section class="card">
         <div class="card-head"><h2>Servidor</h2></div>
         ${sv ? `<div class="table-wrap"><table><tbody>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</tbody></table></div>` : loading}
@@ -1042,6 +1368,11 @@
   const ACTIONS = {
     'reload-stats': () => go('estadisticas'),
     'reload-orders': () => go('pedidos'),
+    'chat-photo': () => $('#chat-file').click(),
+    'chat-rec': () => startRec(),
+    'rec-cancel': () => cancelRec(),
+    'rec-send': () => sendRec(),
+    'chat-unfile': el => { S.chat.files.splice(Number(el.dataset.i), 1); paintFiles(); },
     async 'test-pay'() {
       S.payTesting = true;
       render();
@@ -1189,6 +1520,7 @@
 
   document.addEventListener('submit', e => {
     if (e.target.id === 'pass-form') return changePassword(e);
+    if (e.target.id === 'chat-form') { e.preventDefault(); return sendChat(e.target); }
     if (e.target.id !== 'log-form') return;
     e.preventDefault();
     const f = new FormData(e.target);
@@ -1256,6 +1588,7 @@
     $('#login').hidden = true;
     $('#app').hidden = false;
     go(location.hash.slice(1) || S.tab);
+    if (S.tab !== 'ia') loadChat().then(updateBadge).catch(() => {});
     checkExposure();
   }
 

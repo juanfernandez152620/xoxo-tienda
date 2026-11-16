@@ -74,9 +74,31 @@ carga con `xoxo-claves`, opción 2, respondiendo que sí es de prueba.
 **Para cobrar de verdad:** cargar las credenciales de producción de los dos medios y apagar el pago simulado
 (opción 3).
 
-## WhatsApp del socio (etapa 5)
+## Chat "Cambios por IA" (etapa 5)
 
-El socio le escribe a un número de WhatsApp de la tienda. Por ahora la tienda anota el mensaje en
+Tu socio entra al panel, abre la pestaña **Cambios por IA** y escribe ahí lo que quiere cambiar. Puede mandar
+fotos y grabar audios de hasta 5 minutos. En la computadora, mientras se graba, el navegador pasa el audio a texto
+("Lo que dijo"). En el celular eso no se puede, porque el dictado y la grabación se pelean por el micrófono: ahí el
+audio llega sin texto. Para que Claude lo entienda, conviene dictar con el micrófono del teclado. Claude lee esos pedidos y contesta en el mismo chat. Las respuestas aparecen solas en unos segundos, y si el
+socio está en otra pestaña, ve un aviso rojo en "Cambios por IA".
+
+Los mensajes se guardan en `/var/lib/xoxo-tienda/chat/mensajes.jsonl`. Claude los lee y contesta desde la
+computadora:
+
+```
+ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js'            # lo que espera respuesta
+ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js todo 30'    # los últimos 30 mensajes
+ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js responder' < respuesta.txt
+```
+
+Hay que correrlo como `xoxo`, nunca como root: si root crea la carpeta del chat, la tienda después no puede
+escribir en ella.
+
+## WhatsApp del socio (en pausa)
+
+Quedó armado, pero por ahora se usa el chat del panel porque no hay otro número de teléfono para la tienda.
+
+Cuando se active: el socio le escribe a un número de WhatsApp de la tienda. Por ahora la tienda anota el mensaje en
 `/var/lib/xoxo-tienda/socio/mensajes.jsonl` y le contesta que llegó. Solo atiende a los números autorizados.
 El próximo paso es que Claude haga el cambio y lo publique cuando el socio confirme.
 

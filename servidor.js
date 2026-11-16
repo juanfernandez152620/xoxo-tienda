@@ -27,6 +27,7 @@ const TIPOS = {
   '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
   '.gif': 'image/gif', '.mp4': 'video/mp4', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
+  '.webm': 'audio/webm', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4',
 };
 // Robots y herramientas que no cuentan como visitas
 const BOTS = /bot|crawl|spider|slurp|headless|lighthouse|facebookexternalhit|curl|wget|python/i;
@@ -96,7 +97,22 @@ function archivo(req, res, url) {
     // Con ?v= (la fecha del archivo) se puede guardar mucho tiempo: cuando cambia, cambia la dirección
     const cache = url.searchParams.has('v') ? 'public, max-age=31536000, immutable'
       : ['.js', '.css'].includes(ext) ? 'no-cache' : 'public, max-age=86400';
-    res.writeHead(200, { 'Content-Type': TIPOS[ext] || 'application/octet-stream', 'Content-Length': st.size, 'Cache-Control': cache, ...BASE_HEADERS });
+    const headers = { 'Content-Type': TIPOS[ext] || 'application/octet-stream', 'Cache-Control': cache, 'Accept-Ranges': 'bytes', ...BASE_HEADERS };
+    // Pedazos del archivo (Range): Safari los necesita para reproducir audios y videos
+    const range = String(req.headers.range || '').match(/^bytes=(\d*)-(\d*)$/);
+    if (range && (range[1] || range[2])) {
+      const total = st.size;
+      const start = range[1] ? Number(range[1]) : Math.max(0, total - Number(range[2]));
+      const end = range[1] && range[2] ? Math.min(Number(range[2]), total - 1) : total - 1;
+      if (start >= total || start > end) {
+        res.writeHead(416, { 'Content-Range': `bytes */${total}`, ...BASE_HEADERS });
+        return res.end();
+      }
+      res.writeHead(206, { ...headers, 'Content-Range': `bytes ${start}-${end}/${total}`, 'Content-Length': end - start + 1 });
+      if (req.method === 'HEAD') return res.end();
+      return fs.createReadStream(file, { start, end }).pipe(res);
+    }
+    res.writeHead(200, { ...headers, 'Content-Length': st.size });
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(file).pipe(res);
   });
