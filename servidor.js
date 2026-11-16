@@ -21,6 +21,7 @@ const sesion = require('./nucleo/sesion');
 const pagos = require('./nucleo/pagos');
 const paginas = require('./nucleo/paginas');
 const admin = require('./nucleo/admin');
+const socio = require('./nucleo/socio');
 
 const TIPOS = {
   '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json',
@@ -213,6 +214,20 @@ const server = http.createServer(async (req, res) => {
       json(res, 200, { ok: true }); // la pasarela necesita la respuesta rápido; el chequeo sigue después
       return p.endsWith('mercadopago') ? pagos.avisoMercadoPago(body, url) : pagos.avisoGoCuotas(body);
     }
+    // WhatsApp del socio: Meta verifica la dirección (GET) y después avisa cada mensaje (POST, firmado)
+    if (route === 'GET /api/socio/whatsapp') {
+      const [status, out] = socio.verificar(url);
+      return texto(res, status, out);
+    }
+    if (route === 'POST /api/socio/whatsapp') {
+      const raw = await leerCrudo(req, 1048576);
+      if (!socio.firmaValida(raw, req.headers['x-hub-signature-256'])) {
+        console.error(`[socio] Aviso de WhatsApp sin firma válida desde ${ipDe(req)}: se descarta`);
+        return texto(res, 401, 'Firma inválida');
+      }
+      texto(res, 200, 'ok'); // Meta necesita la respuesta rápido; el mensaje se atiende después
+      return socio.procesar(raw).catch(err => console.error('[socio]', err.message));
+    }
     if (route === 'GET /api/demo/pagar' || route === 'GET /api/demo/resultado') {
       const [status, out] = pagos.demo(url.searchParams.get('pedido'), p.endsWith('pagar') ? 'pagar' : 'resultado', url.searchParams.get('r'));
       return status === 303 ? redirigir(res, out, 303) : html(res, status, out, { 'Cache-Control': 'no-store' });
@@ -233,6 +248,7 @@ server.listen(PORT, HOST, () => {
   console.log(`  Datos: ${DATOS}`);
   console.log(`  ${pagos.lineaArranque('gocuotas')}`);
   console.log(`  ${pagos.lineaArranque('mercadopago')}`);
+  console.log(`  WhatsApp del socio: ${socio.configurado() ? 'conectado' : 'sin configurar'}`);
   console.log(`  Panel: ${BASE_URL}/admin/`);
   if (!HTTPS) console.log('  Aviso: con BASE_URL sin https los avisos de pago (webhooks) no pueden llegar desde internet.\n');
 });

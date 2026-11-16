@@ -763,12 +763,38 @@
     review: 'Revisar en la financiera', error: 'Error al conectar',
   };
   const METHOD_NAMES = { gocuotas: 'GO cuotas', mercadopago: 'Mercado Pago' };
+  // modo que informa el servidor → [texto, clase del chip]
+  const PAY_MODES = {
+    real: ['Real: cobra de verdad', ''], prueba: ['Prueba: no cobra', ''], 'sin-probar': ['Clave cargada', ''],
+    demo: ['Pago simulado', ''], apagado: ['Apagado', ' off'],
+  };
+  function gatewaysCard(G) {
+    const T = S.payTest || {};
+    const rows = Object.entries(G).map(([key, g]) => {
+      const [label, cls] = PAY_MODES[g.modo] || [g.modo, ''];
+      const t = T[key];
+      const conn = t ? (t.ok ? 'Conecta bien' : `<b style="color:var(--bad)">No conecta: ${esc(t.error)}</b>`)
+        : g.modo === 'demo' || g.modo === 'apagado' ? '<span class="muted">Sin clave</span>' : '<span class="muted">Sin probar</span>';
+      return `<tr>
+        <td><b>${esc(g.name)}</b>${g.cuenta ? `<span class="sub">${esc(g.cuenta)}</span>` : ''}</td>
+        <td><span class="chip${cls}">${label}</span></td>
+        <td>${conn}</td>
+        <td>${g.ultimoAviso ? when(g.ultimoAviso) : '<span class="muted">Ninguno desde que arrancó la tienda</span>'}</td>
+      </tr>`;
+    }).join('');
+    return `<section class="card">
+      <div class="card-head"><h2>Pasarelas de pago</h2><p>"Prueba" usa cuentas de prueba de la financiera; "Pago simulado" ni siquiera pasa por ella.</p></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Medio</th><th>Modo</th><th>Conexión</th><th>Último aviso de pago</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+      <div class="row"><button class="btn small" type="button" data-act="test-pay"${S.payTesting ? ' disabled' : ''}>${S.payTesting ? 'Probando…' : 'Probar conexión'}</button></div>
+      <p class="muted">Las claves se cargan en el servidor y nunca pasan por el panel. En una terminal de la computadora: <code>ssh -t xoxo-vps xoxo-claves</code></p>
+    </section>`;
+  }
   function viewOrders() {
     const head = '<div class="page-head"><h1>Pedidos</h1><button class="btn small" type="button" data-act="reload-orders">Actualizar</button></div>';
     const P = S.orders;
     if (!P) return head + loading;
-    const methods = Object.entries(P.config.methods).map(([k, m]) =>
-      `${METHOD_NAMES[k]}: ${m.enabled ? (m.demo ? '<b>modo demo</b> (no cobra)' : 'activo') : 'apagado'}`).join(' · ');
     const list = P.pedidos;
     const paid = list.filter(o => o.status === 'approved');
     const rows = list.map(o => {
@@ -784,7 +810,7 @@
       </tr>`;
     }).join('');
     return `${head}
-      <p class="muted">${methods}</p>
+      ${P.pasarelas ? gatewaysCard(P.pasarelas) : ''}
       <section class="card">
         <div class="card-head"><h2>${n(list.length)} pedidos · ${n(paid.length)} pagados</h2><p>Los pagos se confirman consultando a la financiera, nunca solo por la vuelta del comprador.</p></div>
         ${list.length ? `<div class="table-wrap"><table>
@@ -908,6 +934,20 @@
     Revisá que se haya subido (los archivos que empiezan con punto a veces no se suben) o pedile al soporte del hosting que habilite .htaccess.
     Otra opción: mové la carpeta <code>data</code> un nivel más arriba que la tienda, fuera de la parte pública, y renombrala <code>xoxo-datos</code>.</p>`;
 
+  function partnerCard(w) {
+    const rows = [
+      ['Conexión con Meta', w.configurado ? 'Cargada' : '<b style="color:var(--bad)">Falta cargar las claves</b> (en el servidor: <code>xoxo-claves</code>, opción 4)'],
+      ['Dirección del webhook', `<code style="word-break:break-all">${esc(w.webhook)}</code>`],
+      ['Números autorizados', w.autorizados.length ? esc(w.autorizados.join(', ')) : '<span class="muted">Ninguno: no le contesta a nadie</span>'],
+      ['Último mensaje', w.ultimoMensaje ? `${when(w.ultimoMensaje.at)} · ${esc(w.ultimoMensaje.de)}` : '<span class="muted">Ninguno desde que arrancó la tienda</span>'],
+      ...(w.ultimoError ? [['Último problema', `<b style="color:var(--bad)">${esc(w.ultimoError.msg)}</b><span class="sub">${when(w.ultimoError.at)}</span>`]] : []),
+    ];
+    return `<section class="card">
+      <div class="card-head"><h2>WhatsApp del socio</h2><p>Tu socio pide cambios por WhatsApp. Por ahora solo contesta que el mensaje llegó.</p></div>
+      <div class="table-wrap"><table><tbody>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</tbody></table></div>
+    </section>`;
+  }
+
   function viewAccount() {
     const sv = S.server;
     const yes = (ok, good, bad) => (ok ? good : `<b style="color:var(--bad)">${bad}</b>`);
@@ -936,6 +976,7 @@
         </form>
         <p class="muted">¿Te la olvidaste? En el servidor, abrí <code>datos/config.json</code>, escribí una nueva en <code>"clave"</code> y entrá con esa.</p>
       </section>
+      ${sv && sv.socio ? partnerCard(sv.socio) : ''}
       <section class="card">
         <div class="card-head"><h2>Servidor</h2></div>
         ${sv ? `<div class="table-wrap"><table><tbody>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</tbody></table></div>` : loading}
@@ -1001,6 +1042,18 @@
   const ACTIONS = {
     'reload-stats': () => go('estadisticas'),
     'reload-orders': () => go('pedidos'),
+    async 'test-pay'() {
+      S.payTesting = true;
+      render();
+      try {
+        const r = await api('/pagos/probar', { method: 'POST' });
+        S.payTest = r.probado;
+        if (S.orders) S.orders.pasarelas = r.pasarelas;
+        if (!Object.keys(r.probado).length) toast('Todavía no hay claves cargadas: no hay nada para probar.');
+      } catch (err) { toast(err.message, true); }
+      S.payTesting = false;
+      render();
+    },
     metric: el => { S.metric = el.dataset.k; render(); },
     'prod-sort': el => { S.prodSort = el.dataset.k; render(); },
     async recalc() {

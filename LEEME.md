@@ -26,7 +26,8 @@ desaparece de ese archivo. ¿Te la olvidaste? Escribí una nueva en `"clave"` (1
 
 Las claves van en `.env` (ver `.env.example`): `MP_ACCESS_TOKEN` para Mercado Pago y `GOCUOTAS_EMAIL` /
 `GOCUOTAS_PASSWORD` para GO cuotas. `BASE_URL` tiene que ser la dirección pública con https, para que las pasarelas
-avisen los pagos.
+avisen los pagos. En el VPS se cargan con `ssh -t xoxo-vps xoxo-claves`, que además las prueba y explica cómo
+probar la pasarela sin cobrar (ver [deploy/LEEME.md](deploy/LEEME.md)).
 
 - Con al menos un medio activo, las páginas muestran **Comprar ahora** y el checkout. Sin ninguno, la tienda funciona
   solo con WhatsApp.

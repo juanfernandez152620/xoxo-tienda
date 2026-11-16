@@ -1,0 +1,46 @@
+# Publica la tienda en el VPS cada vez que se sube un cambio a la rama main.
+# Primero revisa que el código arranque; después entra al servidor con una llave que solo puede correr
+# el script de publicación (deploy/desplegar.sh). Si la tienda no responde, el servidor vuelve solo a la
+# versión anterior. Ver deploy/LEEME.md.
+name: Publicar en el VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Un deploy por vez, en el orden en que llegan
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Revisar que el código arranque
+        run: |
+          for f in servidor.js nucleo/*.js deploy/*.js publico/shared/*.js publico/*/js/app.js publico/admin/app.js; do node --check "$f"; done
+          DATOS="$RUNNER_TEMP/datos" PORT=3999 node servidor.js &
+          for i in $(seq 1 15); do sleep 1; curl -fsS -o /dev/null http://127.0.0.1:3999/red-social/ && break; done
+          curl -fsS -o /dev/null http://127.0.0.1:3999/red-social/
+          curl -fsS -o /dev/null http://127.0.0.1:3999/minimalista/
+          kill %1
+
+      - name: Publicar en el servidor
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/publicar
+          chmod 600 ~/.ssh/publicar
+          # La llave pública del servidor: si alguien se hace pasar por él, la conexión se corta
+          echo '[149.50.148.61]:5576 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMzcP4flPOrIDQEdoKkUA7T0NPmfKc+j8oDuF46HsbyZ' > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/publicar -p 5576 -o StrictHostKeyChecking=yes xoxo@149.50.148.61 "$GITHUB_SHA"

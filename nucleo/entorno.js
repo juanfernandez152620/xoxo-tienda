@@ -12,7 +12,10 @@ function cargarEnv(file) {
   if (!fs.existsSync(file)) return;
   for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
-    if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^(['"])(.*)\1$/, '$2');
+    if (!m || process.env[m[1]] !== undefined) continue;
+    // Entre comillas dobles, \" y \\ son una comilla y una barra (como lo lee systemd)
+    const v = m[2];
+    process.env[m[1]] = /^".*"$/.test(v) ? v.slice(1, -1).replace(/\\(["\\])/g, '$1') : v.replace(/^'(.*)'$/, '$1');
   }
 }
 
@@ -46,5 +49,15 @@ module.exports = {
     email: env('GOCUOTAS_EMAIL'),
     password: env('GOCUOTAS_PASSWORD'),
     base: env('GOCUOTAS_SANDBOX', 'false') === 'true' ? 'https://sandbox.gocuotas.com' : 'https://www.gocuotas.com',
+  },
+  // WhatsApp del socio (API de WhatsApp Business de Meta): recibe sus pedidos de cambios
+  WA: {
+    token: env('WA_TOKEN'),
+    phoneId: env('WA_PHONE_ID'),
+    appSecret: env('WA_APP_SECRET'),
+    verifyToken: env('WA_VERIFY_TOKEN'),
+    // Quiénes pueden escribirle, separados por coma: Juan:3815616404,Socio:3811234567
+    numeros: env('SOCIO_NUMEROS'),
+    api: `${env('WA_API_URL', 'https://graph.facebook.com').replace(/\/+$/, '')}/${env('WA_API_VERSION', 'v23.0')}`,
   },
 };

@@ -11,6 +11,7 @@ const estadisticas = require('./estadisticas');
 const reparto = require('./reparto');
 const sesion = require('./sesion');
 const pagos = require('./pagos');
+const socio = require('./socio');
 
 const SUBIDAS = path.join(DATOS, 'subidas');
 const MAX_FOTO = 8 * 1048576;
@@ -161,7 +162,11 @@ async function api(req, res, url, h) {
     }
 
     case 'GET /pedidos':
-      return h.json(200, { pedidos: pagos.leerPedidos().slice().reverse(), config: pagos.configPublica() });
+      return h.json(200, { pedidos: pagos.leerPedidos().slice().reverse(), config: pagos.configPublica(), pasarelas: pagos.estadoAdmin() });
+
+    case 'POST /pagos/probar':
+      if (!limite('probar-pagos', h.ip, 20, 600)) throw new Problema('Demasiadas pruebas seguidas. Esperá unos minutos.', 429);
+      return h.json(200, await pagos.probar());
 
     case 'GET /servidor': {
       const escribe = dir => { try { asegurarCarpeta(dir); fs.accessSync(dir, fs.constants.W_OK); return true; } catch { return false; } };
@@ -178,6 +183,7 @@ async function api(req, res, url, h) {
         user: sesion.config().usuario,
         backupHours: BACKUP_HORAS,
         timezone: process.env.TZ,
+        socio: socio.estado(),
         now: `${diaLocal(now)} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
       });
     }

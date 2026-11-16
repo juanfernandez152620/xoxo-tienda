@@ -238,7 +238,7 @@ function demoPagina(order) {
   <h1>Pagar con ${esc(method)}</h1>
   <p>${esc(order.product.name)} · pedido #${esc(order.ref)}</p>
   <p class="amount">${money(order.amount)}</p>
-  <p>Esta pantalla reemplaza a ${esc(method)} mientras no esté cargada su clave en el archivo .env.</p>
+  <p>Esta pantalla reemplaza a ${esc(method)} mientras no esté cargada su clave.</p>
   <a class="ok" href="/api/demo/resultado?pedido=${order.id}&r=ok">Simular pago aprobado</a>
   <a class="no" href="/api/demo/resultado?pedido=${order.id}&r=error">Simular pago rechazado</a>
 </main></body></html>`;
@@ -296,7 +296,11 @@ async function estado(id, paymentId) {
   return [200, pedidoPublico(order)];
 }
 
+// Último aviso (webhook) de cada pasarela desde que arrancó la tienda: sirve para ver que llegan
+const ultimoAviso = {};
+
 async function avisoMercadoPago(body, url) {
+  ultimoAviso.mercadopago = new Date().toISOString();
   const type = body.type || body.topic || url.searchParams.get('type') || url.searchParams.get('topic');
   const paymentId = (body.data && body.data.id) || url.searchParams.get('data.id') || (type === 'payment' && url.searchParams.get('id'));
   if (type !== 'payment' || !paymentId || !MP_TOKEN) return;
@@ -310,6 +314,7 @@ async function avisoMercadoPago(body, url) {
 }
 
 async function avisoGoCuotas(body) {
+  ultimoAviso.gocuotas = new Date().toISOString();
   const order = body.order_reference_id && buscar(String(body.order_reference_id));
   if (!order || order.method !== 'gocuotas') return;
   if (!body.order_id) return void actualizar(order.id, { status: 'review' });
@@ -336,9 +341,51 @@ function lineaArranque(key) {
   const s = estadoMedio(key);
   const extra = key === 'gocuotas' && GC.base.includes('sandbox') && METHODS.gocuotas.live() ? ' · sandbox'
     : key === 'mercadopago' && MP_TOKEN.startsWith('TEST-') ? ' · credenciales de prueba' : '';
-  return `${METHODS[key].name.padEnd(13)} ${s.demo ? 'MODO DEMO (falta la clave en .env)' : s.enabled ? 'activo' : 'apagado (falta la clave en .env)'}${extra}`;
+  return `${METHODS[key].name.padEnd(13)} ${s.demo ? 'pago simulado (falta la clave)' : s.enabled ? 'activo' : 'apagado (falta la clave)'}${extra}`;
+}
+
+/* ---------- Estado para el panel ---------- */
+// modo: real (cobra), prueba (credenciales o sandbox de prueba), demo (pago simulado) o apagado
+function modoDe(key) {
+  const s = estadoMedio(key);
+  if (s.demo) return 'demo';
+  if (!s.enabled) return 'apagado';
+  if (key === 'gocuotas') return GC.base.includes('sandbox') ? 'prueba' : 'real';
+  if (MP_TOKEN.startsWith('TEST-')) return 'prueba';
+  return probado.mercadopago ? (probado.mercadopago.prueba ? 'prueba' : 'real') : 'sin-probar';
+}
+const probado = {};
+const estadoAdmin = () => Object.fromEntries(Object.keys(METHODS).map(k => [k, {
+  name: METHODS[k].name, modo: modoDe(k), ultimoAviso: ultimoAviso[k] || null,
+  cuenta: k === 'mercadopago' && probado.mercadopago ? probado.mercadopago.cuenta : k === 'gocuotas' && METHODS.gocuotas.live() ? GC.email : null,
+  webhook: `${BASE_URL}/api/webhooks/${k}`,
+}]));
+
+// "Probar conexión" del panel: inicia sesión en cada pasarela con su clave, sin crear ningún pago
+async function probar() {
+  const out = {};
+  if (MP_TOKEN) {
+    try {
+      const res = await fetch('https://api.mercadopago.com/users/me', { headers: { Authorization: `Bearer ${MP_TOKEN}` }, signal: AbortSignal.timeout(15000) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(res.status === 401 ? 'la clave no es válida' : `respondió con un error (${res.status})`);
+      probado.mercadopago = {
+        cuenta: d.nickname || String(d.id || ''),
+        prueba: MP_TOKEN.startsWith('TEST-') || (Array.isArray(d.tags) && d.tags.includes('test_user')) || /^TEST/i.test(d.nickname || ''),
+      };
+      out.mercadopago = { ok: true };
+    } catch (err) { out.mercadopago = { ok: false, error: err.message }; }
+  }
+  if (METHODS.gocuotas.live()) {
+    try {
+      await gcIngresar(true);
+      out.gocuotas = { ok: true };
+    } catch (err) { out.gocuotas = { ok: false, error: err.message }; }
+  }
+  return { probado: out, pasarelas: estadoAdmin() };
 }
 
 module.exports = {
+  estadoAdmin, probar,
   METHODS, activo, configPublica, leerPedidos, crear, estado, avisoMercadoPago, avisoGoCuotas, demo, lineaArranque,
 };
