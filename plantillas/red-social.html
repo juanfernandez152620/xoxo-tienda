@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{{texto:seoTitle}}</title>
+  <meta name="description" content="{{texto:seoDescription}}">
+  <meta name="theme-color" content="#ededed" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#08274d" media="(prefers-color-scheme: dark)">
+  <meta property="og:title" content="{{texto:seoTitle}}">
+  <meta property="og:description" content="{{texto:seoDescription}}">
+  <meta property="og:image" content="{{og_image}}">
+  <link rel="icon" href="../media/marca/xoxo-avatar.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:ital,wght@0,500..900;1,700..900&display=swap">
+  <link rel="stylesheet" href="{{asset:/red-social/css/styles.css}}">
+  <link rel="stylesheet" href="{{asset:/shared/vidriera.css}}">
+  <link rel="stylesheet" href="{{asset:/shared/checkout.css}}">
+</head>
+<body>
+  <!-- Avisos: se arman con los textos de /admin -->
+  <div class="topbar"></div>
+
+  <header class="site-head">
+    <a class="brand" href="./" aria-label="XOXO Tecno, inicio">
+      <span class="logo-xoxo"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 667 270"><g transform="translate(6 6)" fill="none" stroke="currentColor" stroke-width="6.4" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0 0)"><path d="M3 5L52 75"/><path d="M28 5L75 72L2 177"/><path d="M140 5L70 110L108 165"/><path d="M83 50L106 16"/><path d="M35 165L59 133"/><path d="M93 108L140 177"/><circle cx="112" cy="5" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(157 0)"><path d="M51 9.5A80 87 0 1 0 79.5 2.0999999999999943L76.5 24A58 65 0 1 0 99.9 27"/><circle cx="60.5" cy="5.700000000000003" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(335 0)"><path d="M3 5L52 75"/><path d="M28 5L75 72L2 177"/><path d="M140 5L70 110L108 165"/><path d="M83 50L106 16"/><path d="M35 165L59 133"/><path d="M93 108L140 177"/><circle cx="112" cy="5" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(492 0)"><path d="M51 9.5A80 87 0 1 0 79.5 2.0999999999999943L76.5 24A58 65 0 1 0 99.9 27"/><circle cx="60.5" cy="5.700000000000003" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(257.28499999999997 252) scale(0.93)" stroke-width="2.6" fill="none"><path transform="translate(0 0)" d="M6 -36V-7Q6 0 13 0M0 -27H13"/><path transform="translate(22 0)" d="M1 -14H27.5A13.5 13.5 0 1 0 23.5 -4.5"/><path transform="translate(57 0)" d="M24 -23A14 14 0 1 0 24 -5"/><path transform="translate(89 0)" d="M1.5 -28V0M1.5 -15C1.5 -24 8 -28 14 -28C21 -28 25 -23 25 -15V0"/><circle cx="137" cy="-14" r="13.5"/><circle cx="137" cy="-38" r="2.6" fill="currentColor" stroke="none"/></g></g></svg></span>
+      <small class="brand-city">📍 <span data-store="city"></span></small>
+    </a>
+    <a class="head-wa js-wa js-wa-general" data-icon="wa" target="_blank" rel="noopener"><span>Escribinos</span></a>
+  </header>
+
+  <main>
+    <section class="hero">
+      {{hero_logo}}
+      <h1 class="hero-title"><span class="hl">{{texto:heroTitle1}}</span> <em>{{texto:heroTitle2}}</em></h1>
+      <p class="hero-debito" id="hero-debito"></p>
+      <p class="hero-sub">{{texto:heroSub}}</p>
+      <!-- Banner: va pasando por todos los celulares -->
+      <div class="hero-reel" id="hero-reel"></div>
+    </section>
+
+    <section class="sucursales" id="sucursales" aria-labelledby="sucursales-title">
+      <h2 class="sec-title" id="sucursales-title">Nuestras sucursales</h2>
+      <ul class="suc-list">{{sucursales}}</ul>
+    </section>
+
+    <nav class="stories-row" id="stories" aria-label="Marcas"></nav>
+
+    <section class="filters" aria-label="Filtrar por cuota">
+      <p class="filters-label">{{texto:budgetQuestion}} <span>(en 12 cuotas)</span></p>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <div class="feed" id="feed"></div>
+    <div id="sentinel" aria-hidden="true"></div>
+  </main>
+
+  <a class="fab js-wa js-wa-general" data-icon="wa" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp"></a>
+
+  <!-- Modo "shorts": pantalla completa, un celular por pantalla, deslizar para el siguiente -->
+  <div class="shorts" id="shorts" role="dialog" aria-modal="true" aria-label="Videos de los celulares" hidden>
+    <div class="shorts-stage">
+      <button class="shorts-close js-close" id="shorts-close" type="button" aria-label="Cerrar" data-icon="close"></button>
+      <div class="shorts-track" id="shorts-track"></div>
+      <p class="shorts-hint" id="shorts-hint"></p>
+    </div>
+    <div class="shorts-nav">
+      <button type="button" id="shorts-prev" aria-label="Anterior" data-icon="up"></button>
+      <button type="button" id="shorts-next" aria-label="Siguiente" data-icon="down"></button>
+    </div>
+  </div>
+
+  <!-- Historia "Cómo comprar" -->
+  <div class="story" id="story" role="dialog" aria-modal="true" aria-label="Cómo comprar" hidden>
+    <div class="story-stage" id="story-stage">
+      <div class="segs" id="story-segs"></div>
+      <button class="story-close js-close" id="story-close" type="button" aria-label="Cerrar" data-icon="close"></button>
+      <button class="story-tap prev" id="story-prev" type="button" aria-label="Paso anterior"></button>
+      <button class="story-tap next" id="story-next" type="button" aria-label="Paso siguiente"></button>
+      <div class="story-body" id="story-body"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  {{datos}}
+  <script src="{{asset:/shared/seguimiento.js}}" data-variante="red-social"></script>
+  {{pago}}
+  <script src="{{asset:/shared/vidriera.js}}"></script>
+  <script src="{{asset:/red-social/js/app.js}}"></script>
+</body>
+</html>

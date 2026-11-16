@@ -1,0 +1,272 @@
+/* Vidriera: los productos que no son celulares (micrófonos, trípodes, luces…).
+ * No tienen video ni cuotas: se ven en tarjetas con foto y precio, y al tocarlas se abre una ficha con la galería.
+ * La usan los dos diseños y toma los colores del diseño donde se usa (vidriera.css).
+ * Los productos se editan en /admin → Otros productos (window.EXTRAS).
+ * Links compartidos: #x=tripode-soul-j500 abre directo esa ficha.
+ */
+(() => {
+  'use strict';
+
+  const { STORE, EXTRAS } = window;
+  const byId = Object.fromEntries(EXTRAS.map(p => [p.id, p]));
+  const groups = [...new Set(EXTRAS.map(p => p.group))];
+  // Pago online: el botón principal abre el checkout (shared/checkout.js) en vez de WhatsApp
+  const PAY = window.TB_MODE === 'pago' && Boolean(window.Checkout);
+  const isWeb = /^https?:$/.test(location.protocol);
+
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
+  const fmt = new Intl.NumberFormat('es-AR');
+  const money = n => '$' + fmt.format(n);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const baseUrl = () => location.href.split('#')[0];
+  const productUrl = p => `${baseUrl()}#x=${p.id}`;
+  const percentOff = p => (p.listPrice > p.price ? Math.round((1 - p.price / p.listPrice) * 100) : 0);
+  const kicker = p => [p.group, p.brand].filter(Boolean).join(' · ');
+  const filter = group => EXTRAS.filter(p => !group || p.group === group);
+
+  const line = d => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const ICON = {
+    wa: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>',
+    mic: line('<rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"/>'),
+    tripode: line('<rect x="7.5" y="2.5" width="9" height="6" rx="1.5"/><path d="M12 8.5v5M12 13.5l-6.5 8M12 13.5l6.5 8M12 13.5v8"/>'),
+    luz: line('<path d="M9.5 18.5h5M10.5 21.5h3"/><path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.8.6 1.3 1.4 1.3 2.2v2h5v-2c0-.8.5-1.6 1.3-2.2A6.5 6.5 0 0 0 12 2.5z"/>'),
+    cart: line('<path d="M3 4h2.2l2.3 11h10.3l2.1-8H6.3"/><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="16.5" cy="19.5" r="1.5"/>'),
+    share: line('<path d="M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M12 15V3M7 8l5-5 5 5"/>'),
+    close: line('<path d="M6 6l12 12M18 6L6 18"/>'),
+    left: line('<path d="M15 6l-6 6 6 6"/>'),
+    right: line('<path d="M9 6l6 6-6 6"/>'),
+  };
+
+  /* ---------- Foto, o dibujo de la marca mientras no haya foto ---------- */
+  const rhombus = (x, y, r, color) => `<polygon points="${x},${y - r} ${x + r},${y} ${x},${y + r} ${x - r},${y}" style="fill:var(--${color})"/>`;
+  const DIAMONDS = [
+    [[80, 16, 34, 'azul-xoxo'], [104, 52, 24, 'acero'], [12, 92, 18, 'profundo']],
+    [[18, 14, 30, 'azul-xoxo'], [96, 84, 34, 'profundo'], [62, 108, 18, 'acero']],
+    [[100, 20, 30, 'profundo'], [6, 62, 24, 'acero'], [84, 104, 26, 'azul-xoxo']],
+  ];
+  function artHTML(p) {
+    const shapes = DIAMONDS[EXTRAS.indexOf(p) % DIAMONDS.length].map(d => rhombus(...d)).join('');
+    return `<span class="x-art" aria-hidden="true"><svg class="x-shapes" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">${shapes}</svg>${ICON[p.icon] || ICON.luz}</span>`;
+  }
+  const photoHTML = (p, src, alt) => `<img class="x-photo" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async">`;
+  const coverHTML = p => ((p.gallery || [])[0] ? photoHTML(p, p.gallery[0], p.name) : artHTML(p));
+
+  /* ---------- Precio y botones ---------- */
+  function priceHTML(p) {
+    const off = percentOff(p);
+    return `<p class="x-price"><b>${money(p.price)}</b>${off ? `<s aria-label="Precio normal ${money(p.listPrice)}">${money(p.listPrice)}</s>` : ''}</p>`;
+  }
+
+  const cuotasText = () => `${STORE.extras.cuotas} cuotas con ${STORE.financing}`;
+  const cuotasHTML = () => `<p class="x-cuotas">${esc(cuotasText())}</p>`;
+
+  function buyMessage(p) {
+    const lines = ['¡Hola! Vi este producto en la web y me interesa:', `🛒 ${p.name}`, `💵 ${money(p.price)}`, `💳 ${cuotasText()}`, '¿Sigue disponible?'];
+    if (isWeb) lines.push(productUrl(p));
+    return lines.join('\n');
+  }
+
+  const waLink = (p, text, cls = '') => `<a class="x-btn ${cls} js-wa" target="_blank" rel="noopener" data-x="${esc(p.id)}" href="${esc(window.TB_WA(buyMessage(p)))}">${ICON.wa}${text}</a>`;
+  const buyButton = (p, text) => `<button class="x-btn js-x-buy" type="button" data-x="${esc(p.id)}">${ICON.cart}${text}</button>`;
+
+  /* ---------- Tarjetas ---------- */
+  function cardHTML(p) {
+    const off = percentOff(p);
+    return `
+      <article class="xcard">
+        <a class="xcard-media js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}" aria-label="Ver ${esc(p.name)}">
+          ${coverHTML(p)}
+          ${off ? `<span class="x-off">${off}% OFF</span>` : ''}
+        </a>
+        <div class="xcard-info">
+          <p class="x-kicker">${esc(kicker(p))}</p>
+          <h3 class="x-name"><a class="js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}">${esc(p.name)}</a></h3>
+          ${priceHTML(p)}
+          ${cuotasHTML()}
+          ${PAY ? buyButton(p, 'Comprar') : waLink(p, 'Pedilo')}
+        </div>
+      </article>`;
+  }
+
+  const gridHTML = group => `<div class="xgrid">${filter(group).map(cardHTML).join('')}</div>`;
+
+  // Estante para mezclar con otros productos: fila que se desliza y botón para ver todo
+  const shelfHTML = () => `
+    <section class="xshelf" aria-label="${esc(STORE.extras.title)}">
+      <div class="xshelf-head">
+        <div><p class="x-eyebrow">${esc(STORE.extras.eyebrow)}</p><h2>${esc(STORE.extras.title)}</h2></div>
+        <button class="x-more js-x-all" type="button">Ver todo</button>
+      </div>
+      <div class="xrow">${EXTRAS.map(cardHTML).join('')}</div>
+    </section>`;
+
+  /* ---------- Ficha del producto: galería de fotos, precio y descripción ---------- */
+  let root = null, current = null, lastFocus = null;
+
+  function build() {
+    root = document.createElement('div');
+    root.className = 'ficha';
+    root.hidden = true;
+    root.innerHTML = `
+      <div class="ficha-panel" role="dialog" aria-modal="true" aria-labelledby="ficha-title">
+        <button class="ficha-x" type="button" aria-label="Cerrar">${ICON.close}</button>
+        <div class="ficha-content"></div>
+      </div>`;
+    document.body.append(root);
+  }
+
+  function galleryHTML(p) {
+    const photos = p.gallery || [];
+    const slides = photos.length
+      ? photos.map((src, i) => `<div class="ficha-slide">${photoHTML(p, src, `${p.name}, foto ${i + 1}`)}</div>`).join('')
+      : `<div class="ficha-slide">${artHTML(p)}</div>`;
+    const many = photos.length > 1;
+    return `
+      <div class="ficha-gal">
+        <div class="ficha-slides" tabindex="0" aria-label="Fotos de ${esc(p.name)}">${slides}</div>
+        ${many ? `
+        <button class="ficha-arrow prev" type="button" data-d="-1" aria-label="Foto anterior">${ICON.left}</button>
+        <button class="ficha-arrow next" type="button" data-d="1" aria-label="Foto siguiente">${ICON.right}</button>
+        <div class="ficha-thumbs" role="group" aria-label="Elegir foto">${photos.map((src, i) => `
+          <button class="ficha-thumb" type="button" data-i="${i}" aria-pressed="${i === 0}" aria-label="Foto ${i + 1}"><img src="${esc(src)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
+      </div>`;
+  }
+
+  function relatedHTML(p) {
+    const others = EXTRAS.filter(x => x !== p).sort((a, b) => (b.group === p.group) - (a.group === p.group)).slice(0, 3);
+    if (!others.length) return '';
+    return `
+      <div class="ficha-rel">
+        <h3>También te puede servir</h3>
+        ${others.map(x => `
+          <a class="ficha-rel-item js-ficha" href="#x=${esc(x.id)}" data-x="${esc(x.id)}">
+            <span class="ficha-rel-art">${coverHTML(x)}</span>
+            <span><b>${esc(x.name)}</b><small>${money(x.price)}</small></span>
+          </a>`).join('')}
+      </div>`;
+  }
+
+  function paint(p) {
+    const off = percentOff(p);
+    $('.ficha-content', root).innerHTML = `
+      ${galleryHTML(p)}
+      <div class="ficha-body">
+        <p class="x-kicker">${esc(kicker(p))}</p>
+        <h2 class="ficha-name" id="ficha-title">${esc(p.name)}</h2>
+        ${priceHTML(p)}
+        ${off ? `<p class="ficha-off"><span class="x-off">${off}% OFF</span> Ahorrás ${money(p.listPrice - p.price)}</p>` : ''}
+        ${cuotasHTML()}
+        ${p.pitch ? `<p class="ficha-pitch">${esc(p.pitch)}</p>` : ''}
+        ${(p.details || []).length ? `<ul class="ficha-details">${p.details.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : ''}
+        <div class="ficha-ctas">
+          ${PAY ? `${buyButton(p, 'Comprar ahora')}${waLink(p, 'Consultar por WhatsApp', 'ghost')}` : waLink(p, 'Pedilo por WhatsApp')}
+          <button class="x-btn ghost js-x-share" type="button">${ICON.share}Compartir</button>
+        </div>
+        <p class="ficha-note">¿Tenés dudas de medidas o compatibilidad? Preguntanos por WhatsApp.</p>
+        ${relatedHTML(p)}
+      </div>`;
+    $('.ficha-panel', root).scrollTop = 0;
+    $('.ficha-slides', root).addEventListener('scroll', syncThumbs, { passive: true });
+  }
+
+  const slideWidth = () => $('.ficha-slides', root).clientWidth || 1;
+  const slideIndex = () => Math.round($('.ficha-slides', root).scrollLeft / slideWidth());
+  function goSlide(i) {
+    const box = $('.ficha-slides', root);
+    const last = box.children.length - 1;
+    box.scrollTo({ left: Math.max(0, Math.min(last, i)) * slideWidth(), behavior: 'smooth' });
+  }
+  function syncThumbs() {
+    const at = slideIndex();
+    $$('.ficha-thumb', root).forEach((b, i) => b.setAttribute('aria-pressed', String(i === at)));
+  }
+
+  function show(p) {
+    if (!root) build();
+    current = p;
+    paint(p);
+    if (root.hidden) lastFocus = document.activeElement;
+    root.hidden = false;
+    document.documentElement.classList.add('x-lock');
+    $('.ficha-x', root).focus({ preventScroll: true });
+  }
+
+  function hide() {
+    if (!root || root.hidden) return;
+    root.hidden = true;
+    current = null;
+    document.documentElement.classList.remove('x-lock');
+    if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+  }
+
+  // El "atrás" del celular cierra la ficha
+  function open(id) {
+    const p = byId[id];
+    if (!p) return;
+    const url = `#x=${id}`;
+    if (window.TB_TRACK) window.TB_TRACK('abrir', id, { como: 'ficha' });
+    try {
+      if (current) history.replaceState({ ficha: id }, '', url);
+      else history.pushState({ ficha: id }, '', url);
+    } catch {}
+    show(p);
+  }
+  function close() {
+    if (history.state && history.state.ficha) return history.back();
+    try { history.replaceState(null, '', baseUrl()); } catch {}
+    hide();
+  }
+
+  addEventListener('popstate', () => {
+    const m = /^#x=([\w-]+)$/.exec(location.hash);
+    if (m && byId[m[1]]) show(byId[m[1]]);
+    else hide();
+  });
+
+  async function share(p) {
+    const text = `Mirá este ${p.name}: ${money(p.price)}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: p.name, text, url: productUrl(p) }); } catch {}
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${text}\n${productUrl(p)}`)}`, '_blank', 'noopener');
+  }
+
+  /* ---------- Eventos ---------- */
+  const plainClick = e => !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button);
+
+  document.addEventListener('click', e => {
+    const t = e.target;
+    let el;
+    if ((el = t.closest('.js-ficha')) && plainClick(e)) {
+      e.preventDefault();
+      return open(el.dataset.x);
+    }
+    if ((el = t.closest('.js-x-buy'))) {
+      if (window.TB_TRACK) window.TB_TRACK('checkout', el.dataset.x);
+      return window.Checkout.open(el.dataset.x);
+    }
+    if (t.closest('.js-x-share')) return share(current);
+    if ((el = t.closest('.ficha-arrow'))) return goSlide(slideIndex() + Number(el.dataset.d));
+    if ((el = t.closest('.ficha-thumb'))) return goSlide(Number(el.dataset.i));
+    if (t.closest('.ficha-x') || (root && t === root)) return close();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (!current || !root || root.hidden) return;
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft') goSlide(slideIndex() - 1);
+    else if (e.key === 'ArrowRight') goSlide(slideIndex() + 1);
+  });
+
+  // Link compartido: "atrás" vuelve a la tienda en vez de salir
+  addEventListener('load', () => {
+    const m = /^#x=([\w-]+)$/.exec(location.hash);
+    if (!m || !byId[m[1]]) return;
+    try { history.replaceState(null, '', baseUrl()); } catch {}
+    open(m[1]);
+  });
+
+  window.Vidriera = { title: STORE.extras.title, short: STORE.extras.short, groups, filter, gridHTML, shelfHTML, icon: key => ICON[key], open, close };
+})();

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Panel · XOXO Tecno</title>
+  <link rel="icon" href="{{asset:/media/marca/xoxo-avatar.svg}}">
+  <link rel="stylesheet" href="{{asset:/admin/admin.css}}">
+</head>
+<body>
+  <!-- Ingreso -->
+  <div class="login" id="login" hidden>
+    <form id="login-form" autocomplete="on">
+      <span class="logo" aria-hidden="true"><img src="{{asset:/media/marca/xoxo-isotipo-blanco.svg}}" alt=""></span>
+      <h1>Panel de la tienda</h1>
+      <label class="field">Usuario
+        <input type="text" name="user" autocomplete="username" required autocapitalize="none" spellcheck="false">
+      </label>
+      <label class="field">Contraseña
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <p class="error" id="login-error" role="alert"></p>
+      <button class="btn primary" type="submit">Entrar</button>
+    </form>
+  </div>
+
+  <!-- Panel -->
+  <div id="app" hidden>
+    <header class="top">
+      <span class="logo" aria-hidden="true"><img src="{{asset:/media/marca/xoxo-isotipo-blanco.svg}}" alt=""></span>
+      <b>Panel</b>
+      <nav class="tabs" id="tabs" aria-label="Secciones">
+        <button type="button" data-tab="estadisticas">Estadísticas</button>
+        <button type="button" data-tab="pedidos">Pedidos</button>
+        <button type="button" data-tab="anuncio">Anuncio</button>
+        <button type="button" data-tab="productos">Celulares</button>
+        <button type="button" data-tab="accesorios">Otros productos</button>
+        <button type="button" data-tab="tienda">Tienda y textos</button>
+        <button type="button" data-tab="registro">Registro</button>
+        <button type="button" data-tab="copias">Copias</button>
+        <button type="button" data-tab="cuenta">Cuenta</button>
+      </nav>
+      <a class="btn small" href="/" target="_blank" rel="noopener">Ver tienda</a>
+      <button class="btn small" type="button" id="logout">Salir</button>
+    </header>
+    <main id="view"></main>
+  </div>
+
+  <div class="savebar" id="savebar" hidden>
+    <span>Tenés cambios sin guardar</span>
+    <button class="btn ghost small" type="button" id="discard">Descartar</button>
+    <button class="btn light small" type="button" id="save">Guardar cambios</button>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4" hidden>
+
+  <script>window.TB_BASE = "";</script>
+  <script src="{{asset:/admin/app.js}}"></script>
+</body>
+</html>

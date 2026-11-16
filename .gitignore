@@ -1,0 +1,7 @@
+# Claves y ajustes de cada servidor
+.env
+
+# Contenido editado, estadísticas, registro con IP, pedidos y fotos subidas (viven en el servidor)
+datos/
+
+node_modules/

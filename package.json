@@ -1,0 +1,13 @@
+{
+  "name": "xoxo-tecno-tienda",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tienda de XOXO Tecno: dos diseños, panel /admin, estadísticas, reparto de WhatsApp entre sucursales y pago online con GO cuotas y Mercado Pago",
+  "main": "servidor.js",
+  "scripts": {
+    "start": "node servidor.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
