@@ -1025,7 +1025,7 @@
   function toggleTheme() {
     const next = isDark() ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
-    try { localStorage.setItem('cc:theme', next); } catch {}
+    try { localStorage.setItem('xoxo:tema', next); } catch {}
     paintTheme();
   }
   systemDark.addEventListener('change', paintTheme);

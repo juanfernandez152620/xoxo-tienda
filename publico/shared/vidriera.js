@@ -66,6 +66,11 @@
     ${auto ? 'muted loop data-auto' : ''} playsinline preload="none"${controls ? ' controls' : ''} aria-label="Video de ${esc(p.name)}"></video>`;
   // En la tarjeta va siempre la foto (con fondo blanco); si el producto tiene video, un aviso y se ve en la ficha
   const coverHTML = p => `${(p.gallery || [])[0] ? photoHTML(p, p.gallery[0], p.name) : artHTML(p)}${p.video ? `<span class="x-vtag">${ICON.play}Video</span>` : ''}`;
+  // Red social (<script ... data-preview>): la tarjeta trae el video escondido y arranca al pasar el mouse
+  // o cuando queda en el medio de la pantalla del celular (ver "Videos de las tarjetas" más abajo)
+  const PREVIEW = Boolean(document.currentScript && document.currentScript.hasAttribute('data-preview'));
+  const previewHTML = p => (PREVIEW && p.video
+    ? `<video class="x-video x-preview" src="${esc(p.video)}" muted loop playsinline preload="none" tabindex="-1" aria-hidden="true"></video>` : '');
 
   /* ---------- Precio y botones ---------- */
   function priceHTML(p) {
@@ -97,7 +102,7 @@
     return `
       <article class="xcard">
         <a class="xcard-media js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}" aria-label="Ver ${esc(p.name)}">
-          ${coverHTML(p)}
+          ${coverHTML(p)}${previewHTML(p)}
           ${off ? (FL ? `<span class="x-off fl-only">-${off}%</span>` : `<span class="x-off">${off}% OFF</span>`) : ''}
         </a>
         <div class="xcard-info">
@@ -141,21 +146,23 @@
 
   function galleryHTML(p) {
     const photos = p.gallery || [];
-    // Primero el video (con controles, para activar el sonido) y después las fotos
-    const slides = (p.video ? `<div class="ficha-slide ficha-video">${videoHTML(p, true)}</div>` : '') + (photos.length
-      ? photos.map((src, i) => `<div class="ficha-slide">${photoHTML(p, src, `${p.name}, foto ${i + 1}`)}</div>`).join('')
-      : (p.video ? '' : `<div class="ficha-slide">${artHTML(p)}</div>`));
-    const total = photos.length + (p.video ? 1 : 0);
-    const many = total > 1;
+    // Lo primero que se ve es el producto: la foto principal. El video va segundo (con controles, para el sonido).
+    const items = photos.map((src, i) => ({ src, i }));
+    if (!items.length && !p.video) items.push({ arte: true });
+    if (p.video) items.splice(Math.min(1, items.length), 0, { video: true });
+    const slides = items.map(it => (it.video ? `<div class="ficha-slide ficha-video">${videoHTML(p, true)}</div>`
+      : it.arte ? `<div class="ficha-slide">${artHTML(p)}</div>`
+      : `<div class="ficha-slide">${photoHTML(p, it.src, `${p.name}, foto ${it.i + 1}`)}</div>`)).join('');
+    const many = items.length > 1;
     return `
       <div class="ficha-gal">
         <div class="ficha-slides" tabindex="0" aria-label="Fotos de ${esc(p.name)}">${slides}</div>
         ${many ? `
         <button class="ficha-arrow prev" type="button" data-d="-1" aria-label="Foto anterior">${ICON.left}</button>
         <button class="ficha-arrow next" type="button" data-d="1" aria-label="Foto siguiente">${ICON.right}</button>
-        <div class="ficha-thumbs" role="group" aria-label="Elegir foto">${p.video ? `
-          <button class="ficha-thumb ficha-thumb-video" type="button" data-i="0" aria-pressed="true" aria-label="Video"><img src="${esc(photos[0] || '')}" alt="" loading="lazy">${ICON.play}</button>` : ''}${photos.map((src, i) => `
-          <button class="ficha-thumb" type="button" data-i="${i + (p.video ? 1 : 0)}" aria-pressed="${!p.video && i === 0}" aria-label="Foto ${i + 1}"><img src="${esc(src)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
+        <div class="ficha-thumbs" role="group" aria-label="Elegir foto">${items.map((it, k) => (it.video ? `
+          <button class="ficha-thumb ficha-thumb-video" type="button" data-i="${k}" aria-pressed="${k === 0}" aria-label="Video">${ICON.play}<span>Video</span></button>` : `
+          <button class="ficha-thumb" type="button" data-i="${k}" aria-pressed="${k === 0}" aria-label="Foto ${it.i + 1}"><img src="${esc(it.src)}" alt="" loading="lazy"></button>`)).join('')}</div>` : ''}
       </div>`;
   }
 
@@ -182,8 +189,10 @@
         <p class="x-kicker">${esc(kicker(p))}</p>
         <h2 class="ficha-name" id="ficha-title">${esc(p.name)}</h2>
         ${priceHTML(p)}
-        ${FL ? `<p class="ficha-off fl-only"><span class="x-off">-${off}% flash</span> con el cupón <b>${esc(FL.cupon())}</b> · termina en <b class="js-flash-reloj">${FL.reloj(FL.restante())}</b></p>`
-          : off ? `<p class="ficha-off"><span class="x-off">${off}% OFF</span> Ahorrás ${money(p.listPrice - p.price)}</p>` : ''}
+        ${FL ? `<div class="ficha-off ficha-flash fl-only"><span class="x-off">-${off}% flash</span>
+            <span class="ficha-off-txt">Termina en <b class="js-flash-reloj">${FL.reloj(FL.restante())}</b></span>
+            <span class="ficha-off-cupon">Con el cupón <b>${esc(FL.cupon())}</b></span></div>`
+          : off ? `<div class="ficha-off"><span class="x-off">${off}% OFF</span><span class="ficha-off-txt">Ahorrás ${money(p.listPrice - p.price)}</span></div>` : ''}
         ${cuotasHTML()}
         ${p.pitch ? `<p class="ficha-pitch">${esc(p.pitch)}</p>` : ''}
         ${(p.details || []).length ? `<ul class="ficha-details">${p.details.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : ''}
@@ -213,6 +222,7 @@
   function show(p) {
     if (!root) build();
     current = p;
+    pararPrevia();
     paint(p);
     if (root.hidden) lastFocus = document.activeElement;
     root.hidden = false;
@@ -311,6 +321,70 @@
   if (vio) {
     new MutationObserver(() => mirarVideos()).observe(document.documentElement, { childList: true, subtree: true });
     addEventListener('DOMContentLoaded', () => mirarVideos());
+  }
+
+  /* ---------- Videos de las tarjetas (Red social): la foto es lo principal; el video arranca sin sonido al pasar
+     el mouse (compu) o cuando la tarjeta queda en el medio de la pantalla (celular). De a uno. ---------- */
+  let previa = null;
+  function pararPrevia() {
+    if (!previa) return;
+    previa.pause();
+    previa.parentElement.classList.remove('vprev');
+    previa = null;
+  }
+  function empezarPrevia(media) {
+    const v = media && media.querySelector('.x-preview');
+    if (!v || (v === previa && !v.paused)) return;
+    if (root && !root.hidden) return;
+    // No le corta el sonido a un video que alguien puso a propósito
+    if ($$('video').some(x => !x.paused && !x.muted && !x.classList.contains('x-preview'))) return;
+    pararPrevia();
+    previa = v;
+    const r = v.play();
+    if (r && r.catch) r.catch(() => {});
+  }
+  if (PREVIEW && !quieto) {
+    // El video aparece recién cuando arranca, así no se ve un cuadro negro mientras carga
+    document.addEventListener('playing', e => { if (e.target === previa) previa.parentElement.classList.add('vprev'); }, true);
+    document.addEventListener('pause', e => {
+      if (e.target.classList && e.target.classList.contains('x-preview')) e.target.parentElement.classList.remove('vprev');
+    }, true);
+    if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      document.addEventListener('mouseover', e => { const m = e.target.closest && e.target.closest('.xcard-media'); if (m) empezarPrevia(m); });
+      document.addEventListener('mouseout', e => {
+        const m = e.target.closest && e.target.closest('.xcard-media');
+        if (m && !m.contains(e.relatedTarget)) pararPrevia();
+      });
+    } else if ('IntersectionObserver' in window) {
+      // Celular: la franja del medio de la pantalla; si entran dos tarjetas (grilla de 2), la más centrada
+      const enMedio = new Set();
+      const elegir = () => {
+        const mitad = innerHeight / 2;
+        let mejor = null;
+        let dist = Infinity;
+        for (const m of enMedio) {
+          const r = m.getBoundingClientRect();
+          const d = Math.abs(r.top + r.height / 2 - mitad) + r.left / 1000;
+          if (d < dist) { dist = d; mejor = m; }
+        }
+        if (mejor) empezarPrevia(mejor);
+        else pararPrevia();
+      };
+      const io = new IntersectionObserver(entries => {
+        for (const e of entries) {
+          if (e.isIntersecting) enMedio.add(e.target);
+          else enMedio.delete(e.target);
+        }
+        elegir();
+      }, { rootMargin: '-38% 0px -38% 0px' });
+      const mirar = () => $$('.xcard-media:not([data-prev])').forEach(m => {
+        if (!m.querySelector('.x-preview')) return;
+        m.dataset.prev = '1';
+        io.observe(m);
+      });
+      new MutationObserver(mirar).observe(document.documentElement, { childList: true, subtree: true });
+      addEventListener('DOMContentLoaded', mirar);
+    }
   }
 
   document.addEventListener('play', e => {

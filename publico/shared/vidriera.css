@@ -218,7 +218,14 @@ html.x-lock, html.x-lock body { overflow: hidden; }
 .ficha-body .x-kicker { padding-right: 44px; }
 .ficha-name { margin: 0; padding-right: 20px; font-size: 26px; font-weight: 800; line-height: 1.15; }
 .ficha-body .x-price b { font-size: 30px; }
-.ficha-off { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--x-muted); font-size: 14px; font-weight: 600; }
+/* Descuento de la ficha: la etiqueta y al lado una sola frase (antes cada palabra quedaba en su columna) */
+.ficha-off { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; color: var(--x-muted); font-size: 14px; font-weight: 600; line-height: 1.4; }
+.ficha-off .x-off { flex: none; white-space: nowrap; }
+.ficha-off-txt { min-width: 0; }
+.ficha-off b { color: var(--x-ink); white-space: nowrap; }
+/* Flash: un recuadro con la etiqueta y la cuenta regresiva arriba, y el cupón abajo */
+.ficha-flash { justify-self: start; align-self: flex-start; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--fl-tag-bg, #ec4899) 9%, transparent); }
+.ficha-off-cupon { flex-basis: 100%; }
 .ficha-pitch { margin: 4px 0 0; font-size: 16px; line-height: 1.45; }
 .ficha-details { display: grid; gap: 4px; margin: 0; padding-left: 18px; font-size: 15px; }
 .ficha-ctas { display: grid; gap: 8px; margin-top: 6px; }
@@ -271,8 +278,14 @@ html.x-lock, html.x-lock body { overflow: hidden; }
 .x-vtag svg { width: 13px; height: 13px; }
 .ficha-video { position: relative; background: #000; }
 .ficha-video .x-video { object-fit: contain; }
-.ficha-thumb-video { position: relative; }
-.ficha-thumb-video svg { position: absolute; inset: 0; margin: auto; width: 22px; height: 22px; color: #fff; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .6)); }
+.ficha-thumb-video { display: grid; place-items: center; align-content: center; gap: 1px; background: #16161b; color: #fff; font-size: 11px; font-weight: 700; }
+.ficha-thumb-video svg { width: 20px; height: 20px; }
+
+/* Red social: el video de la tarjeta queda escondido detrás de la foto y aparece solo mientras se reproduce */
+.xcard-media .x-preview { z-index: 1; opacity: 0; background: #fff; pointer-events: none; transition: opacity .3s; }
+.xcard-media.vprev .x-preview { opacity: 1; }
+.xcard-media .x-vtag, .xcard-media .x-off { z-index: 2; }
+.xcard-media.vprev .x-vtag { opacity: 0; }
 
 /* Fondo blanco y parejo detrás de las fotos, en todos los diseños y también en modo oscuro (las fotos de los
    productos vienen con fondo blanco). Va con html:root para ganarle al fondo de color de cada diseño. */

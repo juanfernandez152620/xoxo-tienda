@@ -24,6 +24,8 @@
 .sx-page > section { width: min(var(--sx-max), 100% - 2 * var(--sx-gutter)); margin: 0 auto; padding-block: clamp(36px, 6vw, 72px); }
 .sx-page > section + section { border-top: 1px solid var(--sx-line); }
 .sx-page > .sx-benefits { border-top: 0; padding-top: 0; }
+/* Después de la portada con foto, los puntos de confianza van separados (como en Historia) */
+.sx-page > .sx-banner + .sx-benefits { padding-top: clamp(40px, 6vw, 72px); padding-bottom: clamp(24px, 4vw, 40px); }
 
 /* ---------- Menú de las 4 vistas ---------- */
 .sx-nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }

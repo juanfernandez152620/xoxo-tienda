@@ -210,7 +210,8 @@ html.co-lock, html.co-lock body { overflow: hidden; }
 .co-sum dt, .co-sum dd { margin: 0; }
 .co-sum dd { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .co-sum .co-save { color: #15803d; font-weight: 700; }
-@media (prefers-color-scheme: dark) { .co-coupon-msg.ok, .co-sum .co-save { color: #4ade80; } .co-coupon-msg.bad { color: #f87171; } }
+:root[data-theme="dark"] .co-coupon-msg.ok, :root[data-theme="dark"] .co-sum .co-save { color: #4ade80; }
+:root[data-theme="dark"] .co-coupon-msg.bad { color: #f87171; }
 
 /* El checkout cerrado no se ve, aunque el diseño no tenga la regla general de [hidden] */
 .co[hidden] { display: none !important; }

@@ -114,7 +114,7 @@ function entrada(url, origen, cat = '') {
 <meta property="og:description" content="${esc(t.seoDescription)}">
 <meta property="og:image" content="${esc(sitio.ogImage())}">
 <link rel="icon" href="/media/marca/xoxo-avatar.svg">
-<style>html{background:#fff}@media (prefers-color-scheme:dark){html{background:#0b0b0c}}</style>
+<style>html{background:#fff}</style>
 <script>
 (function (c) {
   var key = 'tb:variante', a = null;

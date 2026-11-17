@@ -526,7 +526,7 @@
     btn.addEventListener('click', () => {
       const next = dark() ? 'light' : 'dark';
       document.documentElement.dataset.theme = next;
-      try { localStorage.setItem('cc:theme', next); } catch {}
+      try { localStorage.setItem('xoxo:tema', next); } catch {}
       paint();
     });
     system.addEventListener('change', paint);

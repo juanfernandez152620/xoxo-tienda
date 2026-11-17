@@ -1,12 +1,11 @@
 <!doctype html>
-<html lang="es-AR" data-cat="{{cat}}">
+<html data-theme="light" lang="es-AR" data-cat="{{cat}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{{titulo}}</title>
   <meta name="description" content="{{descripcion}}">
-  <meta name="theme-color" content="#f7f0f9" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#12061a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f7f0f9">
   <meta property="og:title" content="{{texto:seoTitle}}">
   <meta property="og:description" content="{{texto:seoDescription}}">
   <meta property="og:image" content="{{og_image}}">
@@ -92,7 +91,7 @@
   <script src="{{asset:/shared/envios.js}}"></script>
   <script src="{{asset:/shared/flash.js}}"></script>
   {{pago}}
-  <script src="{{asset:/shared/vidriera.js}}"></script>
+  <script src="{{asset:/shared/vidriera.js}}" data-preview></script>
   <script src="{{asset:/shared/secciones.js}}"></script>
   <script src="{{asset:/red-social/js/app.js}}"></script>
 </body>
