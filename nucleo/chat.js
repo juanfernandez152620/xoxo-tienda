@@ -42,6 +42,7 @@ function marcarVisto() {
   if (todos.length) guardarEstado({ visto: todos[todos.length - 1].id, vistoAt: ahoraIso() });
 }
 // "Claude está escribiendo…" en el panel por unos minutos (o hasta que contesta)
+const dejarDeEscribir = () => guardarEstado({ escribiendoHasta: null });
 const escribiendo = (segundos = 300) => guardarEstado({ escribiendoHasta: new Date(Date.now() + segundos * 1000).toISOString() });
 function estado() {
   const e = leerEstado();
@@ -106,4 +107,4 @@ function agregar({ rol, de, texto, adjuntos, audio, duracion, transcripcion }) {
   return m;
 }
 
-module.exports = { ARCHIVO, leer, pendientes, agregar, marcarVisto, escribiendo, estado };
+module.exports = { ARCHIVO, leer, pendientes, agregar, marcarVisto, escribiendo, dejarDeEscribir, estado };

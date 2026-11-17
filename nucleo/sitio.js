@@ -9,9 +9,14 @@ const { ruta, Problema, fallar, escribir, leerJson, aJson, archivosJson, cuarent
 
 const SITIO = ruta('sitio.json');
 const COPIAS = ruta('backups', 'sitio');
-const VARIANTS = ['red-social', 'minimalista'];
+// Diseños: A = Red social, B = Minimalista, C1 = Historia (animada con el scroll), C2 = Profesional (clásica, blanca)
+const VARIANTS = ['red-social', 'minimalista', 'historia', 'profesional'];
+// Las 3 categorías de la tienda (1, 2 y 3): cada diseño tiene una página para cada una (/historia/audio/…)
+const CATS = ['ventilacion', 'contenido', 'audio'];
 const SPEC_ICONS = ['pantalla', 'camara', 'bateria', 'memoria', 'ram', 'parlante', 'update', 'carga'];
-const EXTRA_ICONS = ['mic', 'tripode', 'luz'];
+const EXTRA_ICONS = ['mic', 'tripode', 'luz', 'ventilador', 'parlante', 'auricular'];
+// Categoría que corresponde a cada ícono, para los productos guardados antes de que existieran las categorías
+const CAT_DE_ICONO = { ventilador: 'ventilacion', parlante: 'audio', auricular: 'audio' };
 
 /* ---------- Revisión del contenido ---------- */
 const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
@@ -98,13 +103,20 @@ function normalizarOtro(p, i, ids) {
   const label = `Otro producto ${i + 1}${p.name ? ` (${txt(p.name, 60)})` : ''}`;
   const id = codigo(p, label, ids, 'tripode-soul-j500');
   const lista = p.listPrice;
+  const icon = EXTRA_ICONS.includes(p.icon) ? p.icon : 'luz';
+  const peso = p.weight === '' || p.weight === null || p.weight === undefined ? 0 : num(p.weight, `${label}: peso`, 0, 100);
   return {
     id,
     hidden: Boolean(p.hidden),
+    // Producto de ejemplo (para ver el diseño): se reemplaza por los reales
+    ...(p.example ? { example: true } : {}),
+    cat: CATS.includes(p.cat) ? p.cat : CAT_DE_ICONO[icon] || 'contenido',
     group: txt(p.group, 40) || fallar(`${label}: falta el tipo (ej. Micrófonos)`),
     brand: txt(p.brand, 40),
     name: txt(p.name, 60) || fallar(`${label}: falta el nombre`),
-    icon: EXTRA_ICONS.includes(p.icon) ? p.icon : 'luz',
+    icon,
+    // Peso con la caja, en kg: lo usa la calculadora de envíos (0 = el de su categoría)
+    weight: Math.round(peso * 100) / 100,
     price: num(p.price, `${label}: precio`, 1),
     listPrice: lista === '' || lista === null || lista === undefined ? 0 : num(lista, `${label}: precio normal`),
     pitch: txt(p.pitch, 200),
@@ -125,9 +137,11 @@ function normalizarSucursales(list) {
     ids.add(id);
     let phone = txt(b.whatsapp, 30).replace(/\D/g, '');
     if (phone.length === 10) phone = `549${phone}`; // característica + número
-    if (!/^\d{11,15}$/.test(phone)) fallar(`Sucursal ${name}: el WhatsApp tiene que ser la característica y el número, sin 0 ni 15 (ej. 3813629235)`);
-    return { id, name, whatsapp: phone, address: txt(b.address, 150), on: Boolean(b.on) };
-  }, 6);
+    const on = Boolean(b.on);
+    // Una sucursal que no recibe mensajes puede no tener WhatsApp (solo se muestra en la página)
+    if ((on || phone) && !/^\d{11,15}$/.test(phone)) fallar(`Sucursal ${name}: el WhatsApp tiene que ser la característica y el número, sin 0 ni 15 (ej. 3813629235)`);
+    return { id, name, province: txt(b.province, 40), whatsapp: phone, address: txt(b.address, 150), on };
+  }, 12);
   if (!out.some(b => b.on)) fallar('Dejá al menos una sucursal recibiendo mensajes');
   return out;
 }
@@ -143,11 +157,115 @@ function pasos(list, nombre) {
   }, 6);
 }
 
+// Las 3 categorías, siempre en el mismo orden (1 ventilación, 2 contenido, 3 audio)
+function normalizarCategorias(list) {
+  const porId = Object.fromEntries(items(list, c => [txt(obj(c).id, 20), obj(c)], 10));
+  return CATS.map((id, i) => {
+    const c = porId[id] || {};
+    const name = txt(c.name, 40) || fallar(`Categoría ${i + 1}: falta el nombre`);
+    // Contenido propio de la home de cada categoría: "Título | texto" por renglón
+    const pares = (v, max) => lineas(v, max, 300);
+    return {
+      id, num: i + 1, name, short: txt(c.short, 20) || name,
+      title: txt(c.title, 90), text: txt(c.text, 400),
+      color: hexColor(c.color || '#7c3aed', `Categoría ${name}: color`),
+      benefits: pares(c.benefits, 6),
+      guideTitle: txt(c.guideTitle, 90),
+      guide: pares(c.guide, 6),
+      faq: pares(c.faq, 8),
+    };
+  });
+}
+
+// Descuento flash: cada visitante tiene unos minutos con el cupón xoxo-<mes>. El precio cobrado es el de la página.
+function normalizarFlash(f) {
+  f = obj(f);
+  return {
+    on: f.on !== false,
+    percent: Math.round(num(f.percent ?? 20, 'Descuento flash: porcentaje', 5, 70)),
+    minutes: Math.round(num(f.minutes ?? 60, 'Descuento flash: minutos', 5, 1440)),
+  };
+}
+
+// Calculadora de envíos: precio por zona (1 Tucumán, 2 NOA, 3 centro, 4 sur) para cada empresa y servicio
+const EMPRESAS = { andreani: 'Andreani', correo: 'Correo Argentino' };
+function normalizarEnvios(e) {
+  e = obj(e);
+  const r = obj(e.rates);
+  const zonas = (v, label) => {
+    const a = items(v, (x, i) => Math.round(num(x, `${label}, zona ${i + 1}`, 0, 1e7)), 4);
+    if (a.length !== 4) fallar(`${label}: faltan precios (son 4 zonas)`);
+    return a;
+  };
+  const rates = {};
+  for (const [k, nombre] of Object.entries(EMPRESAS)) {
+    const x = obj(r[k]);
+    rates[k] = {
+      on: x.on !== false,
+      domicilio: zonas(x.domicilio, `Envíos ${nombre} a domicilio`),
+      sucursal: zonas(x.sucursal, `Envíos ${nombre} a sucursal`),
+      extraKg: Math.round(num(x.extraKg ?? 0, `Envíos ${nombre}: cada kg de más`, 0, 1e6)),
+    };
+  }
+  const days = items(e.days, (d, i) => {
+    const a = items(d, x => Math.round(num(x, `Envíos: días de la zona ${i + 1}`, 0, 60)), 2);
+    return [a[0] ?? 1, Math.max(a[1] ?? a[0] ?? 3, a[0] ?? 1)];
+  }, 4);
+  while (days.length < 4) days.push([3, 7]);
+  return {
+    pickup: e.pickup !== false,
+    freeFrom: Math.round(num(e.freeFrom ?? 0, 'Envío gratis desde', 0, 1e9)),
+    rates, days,
+  };
+}
+
+// Textos de la página Historia (diseño C): los socios, el equipo, las sucursales y la garantía
+function normalizarHistoria(h) {
+  h = obj(h);
+  const persona = (p, label) => {
+    p = obj(p);
+    return { name: txt(p.name, 40), role: txt(p.role, 60), photo: mediaUrl(p.photo, `${label}: foto`) };
+  };
+  return {
+    kicker: txt(h.kicker, 60), title: txt(h.title, 120), text: txt(h.text, 600),
+    foundersTitle: txt(h.foundersTitle, 90), foundersText: txt(h.foundersText, 600),
+    founders: items(h.founders, (p, i) => persona(p, `Socio ${i + 1}`), 3),
+    teamTitle: txt(h.teamTitle, 90), teamText: txt(h.teamText, 400),
+    team: items(h.team, (p, i) => persona(p, `Equipo ${i + 1}`), 12),
+    branchesTitle: txt(h.branchesTitle, 90), branchesText: txt(h.branchesText, 400),
+    warrantyDays: Math.round(num(h.warrantyDays ?? 3, 'Garantía: días', 0, 3650)),
+    warrantyTitle: txt(h.warrantyTitle, 90), warrantyText: txt(h.warrantyText, 400),
+    stats: items(h.stats, x => ({ v: txt(obj(x).v, 12), l: txt(obj(x).l, 40) }), 4).filter(x => x.v || x.l),
+  };
+}
+
+// Contenido guardado antes de las categorías (16/11/2026): suma lo nuevo desde el contenido de fábrica.
+// Pasa una sola vez: al guardar, el contenido ya tiene "categories".
+function migrar(s) {
+  if (Array.isArray(s.categories)) {
+    // Categorías guardadas antes de tener su home propia (17/11/2026): se completan desde el contenido de fábrica
+    if (s.categories.every(c => c && c.faq !== undefined)) return s;
+    const semilla = leerJson(SEMILLA) || {};
+    const fab = Object.fromEntries((semilla.categories || []).map(c => [c.id, c]));
+    return { ...s, categories: s.categories.map(c => ({ ...(fab[c && c.id] || {}), ...c, ...Object.fromEntries(['benefits', 'guideTitle', 'guide', 'faq'].filter(k => !c || c[k] === undefined).map(k => [k, (fab[c && c.id] || {})[k]])) })) };
+  }
+  const semilla = leerJson(SEMILLA) || {};
+  const out = { ...s, store: { ...s.store } };
+  for (const k of ['categories', 'flash', 'shipping', 'story']) if (out[k] === undefined) out[k] = semilla[k];
+  const ids = new Set([...(s.products || []), ...(s.extras || [])].map(p => p && p.id));
+  out.extras = [...(Array.isArray(s.extras) ? s.extras : []), ...(semilla.extras || []).filter(p => p.example && !ids.has(p.id))];
+  const sucursales = Array.isArray(s.store.branches) ? s.store.branches : [];
+  const sucIds = new Set(sucursales.map(b => b && b.id));
+  out.store.branches = [...sucursales, ...((semilla.store || {}).branches || []).filter(b => !b.on && !sucIds.has(b.id))];
+  return out;
+}
+
 // Revisa y ordena el contenido antes de guardarlo: si algo está mal, devuelve un mensaje claro y no guarda.
 function normalizar(s) {
   if (!s || typeof s !== 'object' || !s.store || typeof s.store !== 'object' || !Array.isArray(s.products)) {
     fallar('El contenido no tiene el formato esperado');
   }
+  s = migrar(s);
   const st = s.store;
   const logo = obj(st.financingLogo);
   const closing = st.closing && typeof st.closing === 'object' ? st.closing : null;
@@ -211,15 +329,27 @@ function normalizar(s) {
   if (footer.email && !/^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(footer.email)) fallar('El email del pie de página no es válido');
   const a = obj(s.ab);
   if (!['split', ...VARIANTS].includes(a.mode)) fallar('Anuncio: elegí qué diseño mostrar');
+  // Reparto entre los 3 diseños, en partes (no hace falta que sumen 100). Antes había solo un porcentaje para A.
+  const w = obj(a.weights);
+  const viejo = a.weights === undefined && a.redSocialPercent !== undefined;
+  const weights = Object.fromEntries(VARIANTS.map(v => [v, Math.round(num(
+    // Contenido de antes: A y B como estaban y la parte de C dividida entre C1 y C2
+    w[v] ?? (viejo || a.weights ? { 'red-social': 34, minimalista: 33, historia: 17, profesional: 16 }[v] ?? 16 : 1),
+    `Anuncio: parte de ${v}`, 0, 100))]));
+  if (a.mode === 'split' && !Object.values(weights).some(Boolean)) fallar('Anuncio: poné al menos un diseño con más de 0');
   const ab = {
     mode: a.mode,
-    redSocialPercent: Math.round(num(a.redSocialPercent ?? 50, 'Anuncio: porcentaje', 0, 100)),
+    weights,
     round: Math.max(1, Math.round(num(a.round ?? 1, 'Anuncio: ronda', 1))),
   };
   return {
     rev: Math.max(1, Math.round(Number(s.rev) || 1)),
     updatedAt: typeof s.updatedAt === 'string' ? s.updatedAt : null,
     store, texts, footer, ab, products, extras,
+    categories: normalizarCategorias(s.categories),
+    flash: normalizarFlash(s.flash),
+    shipping: normalizarEnvios(s.shipping),
+    story: normalizarHistoria(s.story),
   };
 }
 
@@ -309,9 +439,15 @@ function publico() {
   const { closing, financingLogo, ...store } = site.store;
   store.closing = closing.show && closing.title ? { title: closing.title, text: closing.text } : null;
   store.financingLogo = financingLogo.color ? { color: financingLogo.color, icon: financingLogo.icon || financingLogo.color } : null;
-  store.branches = store.branches.map(b => ({ name: b.name, address: b.address }));
+  store.branches = store.branches.map(b => ({ id: b.id, name: b.name, province: b.province, address: b.address }));
   const visibles = list => list.filter(p => !p.hidden).map(({ hidden, ...p }) => p);
-  return { store, products: visibles(site.products), extras: visibles(site.extras), site: { texts: site.texts, footer: site.footer } };
+  return {
+    store, products: visibles(site.products), extras: visibles(site.extras),
+    site: {
+      texts: site.texts, footer: site.footer, categories: site.categories, flash: site.flash,
+      shipping: site.shipping, story: site.story,
+    },
+  };
 }
 
-module.exports = { VARIANTS, SITIO, COPIAS, txt, normalizar, cargar, guardar, copiar, publico, ogImage, absoluta };
+module.exports = { VARIANTS, CATS, EMPRESAS, SITIO, COPIAS, txt, normalizar, cargar, guardar, copiar, publico, ogImage, absoluta };

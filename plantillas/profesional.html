@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es-AR" data-cat="{{cat}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{{titulo}}</title>
+  <meta name="description" content="{{descripcion}}">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111214" media="(prefers-color-scheme: dark)">
+  <meta property="og:title" content="{{titulo}}">
+  <meta property="og:description" content="{{descripcion}}">
+  <meta property="og:image" content="{{og_image}}">
+  <link rel="icon" href="/media/marca/xoxo-avatar.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{{asset:/profesional/css/styles.css}}">
+  <link rel="stylesheet" href="{{asset:/shared/vidriera.css}}">
+  <link rel="stylesheet" href="{{asset:/shared/checkout.css}}">
+  <link rel="stylesheet" href="{{asset:/shared/flash.css}}">
+  <link rel="stylesheet" href="{{asset:/shared/secciones.css}}">
+  <link rel="stylesheet" href="{{asset:/profesional/css/secciones.css}}">
+  <!-- Modo claro/oscuro elegido por el visitante, antes de pintar (evita un parpadeo) -->
+  <script>try { var t = localStorage.getItem('cc:theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
+</head>
+<body>
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+  <p class="util" id="util"></p>
+
+  <header class="head">
+    <div class="head-row">
+      <a class="head-link" href="#sucursales" data-sx-go="sucursales">Sucursales</a>
+      <a class="logo" href="/profesional/" aria-label="XOXO Tecno, inicio">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 667 270"><g transform="translate(6 6)" fill="none" stroke="currentColor" stroke-width="6.4" stroke-linecap="round" stroke-linejoin="round"><g><path d="M3 5L52 75"/><path d="M28 5L75 72L2 177"/><path d="M140 5L70 110L108 165"/><path d="M83 50L106 16"/><path d="M35 165L59 133"/><path d="M93 108L140 177"/><circle cx="112" cy="5" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(157 0)"><path d="M51 9.5A80 87 0 1 0 79.5 2.1L76.5 24A58 65 0 1 0 99.9 27"/><circle cx="60.5" cy="5.7" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(335 0)"><path d="M3 5L52 75"/><path d="M28 5L75 72L2 177"/><path d="M140 5L70 110L108 165"/><path d="M83 50L106 16"/><path d="M35 165L59 133"/><path d="M93 108L140 177"/><circle cx="112" cy="5" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(492 0)"><path d="M51 9.5A80 87 0 1 0 79.5 2.1L76.5 24A58 65 0 1 0 99.9 27"/><circle cx="60.5" cy="5.7" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(257.3 252) scale(0.93)" stroke-width="2.6"><path d="M6 -36V-7Q6 0 13 0M0 -27H13"/><path transform="translate(22 0)" d="M1 -14H27.5A13.5 13.5 0 1 0 23.5 -4.5"/><path transform="translate(57 0)" d="M24 -23A14 14 0 1 0 24 -5"/><path transform="translate(89 0)" d="M1.5 -28V0M1.5 -15C1.5 -24 8 -28 14 -28C21 -28 25 -23 25 -15V0"/><circle cx="137" cy="-14" r="13.5"/><circle cx="137" cy="-38" r="2.6" fill="currentColor" stroke="none"/></g></g></svg>
+      </a>
+      <div class="head-actions">
+        <button class="icon-btn js-theme" type="button" aria-label="Cambiar entre modo claro y oscuro"></button>
+        <a class="head-wa js-wa js-wa-general" data-donde="encabezado" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+    </div>
+    <div class="head-nav" id="nav"></div>
+  </header>
+
+  <main id="contenido"></main>
+
+  <footer class="foot" id="foot"></footer>
+
+  <a class="fab js-wa js-wa-general" data-donde="boton-flotante" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp"></a>
+
+  {{datos}}
+  <script src="{{asset:/shared/seguimiento.js}}" data-variante="profesional"></script>
+  <script src="{{asset:/shared/envios.js}}"></script>
+  <script src="{{asset:/shared/flash.js}}"></script>
+  {{pago}}
+  <script src="{{asset:/shared/vidriera.js}}"></script>
+  <script src="{{asset:/shared/secciones.js}}"></script>
+  <script src="{{asset:/profesional/js/app.js}}"></script>
+</body>
+</html>

@@ -172,3 +172,42 @@ html.co-lock, html.co-lock body { overflow: hidden; }
 @keyframes co-fade { from { opacity: 0; } }
 @keyframes co-slide { from { transform: translateX(40px); opacity: 0; } }
 @keyframes co-up { from { transform: translateY(40px); opacity: 0; } }
+
+/* ---------- Entrega: retiro gratis o envío con Andreani / Correo Argentino (shared/envios.js) ---------- */
+.co-field select {
+  width: 100%; min-height: 48px; padding: 0 12px; border: 1.5px solid var(--co-line); border-radius: 12px;
+  background: var(--co-bg); color: inherit; font: inherit; font-size: 16px;
+}
+.co-field select:focus { outline: none; border-color: var(--co-ink); }
+.co-options { display: grid; gap: 8px; }
+.co-opt {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  padding: 12px 14px; border: 1.5px solid var(--co-line); border-radius: 14px; cursor: pointer;
+}
+.co-opt:has(input:checked) { border-color: var(--co-ink); box-shadow: inset 0 0 0 1px var(--co-ink); }
+.co-opt input { width: 20px; height: 20px; margin: 0; accent-color: var(--co-ink); }
+.co-opt-main { display: grid; gap: 2px; }
+.co-opt-main b { font-size: 15px; }
+.co-opt-main small { color: var(--co-muted); font-size: 12.5px; }
+.co-opt-price { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.co-ship-hint { margin: 2px 0 0; color: var(--co-muted); font-size: 13px; }
+.co-branch[hidden], .co-street[hidden], .co-coupon[hidden] { display: none; }
+
+/* ---------- Cupón y resumen ---------- */
+.co-coupon-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.co-coupon-row input {
+  min-height: 48px; padding: 0 14px; border: 1.5px dashed var(--co-line); border-radius: 12px;
+  background: var(--co-bg); color: inherit; font: inherit; font-size: 16px; font-weight: 700; letter-spacing: .02em;
+}
+.co-coupon-row input:focus { outline: none; border-color: var(--co-ink); }
+.co-apply { min-height: 48px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--co-soft); color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
+.co-coupon-msg { margin: 0; font-size: 13px; font-weight: 700; }
+.co-coupon-msg:empty { display: none; }
+.co-coupon-msg.ok { color: #15803d; }
+.co-coupon-msg.bad { color: #b91c1c; }
+.co-sum { display: grid; gap: 4px; margin: 0; font-size: 14px; }
+.co-sum > div { display: flex; justify-content: space-between; gap: 12px; color: var(--co-muted); }
+.co-sum dt, .co-sum dd { margin: 0; }
+.co-sum dd { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.co-sum .co-save { color: #15803d; font-weight: 700; }
+@media (prefers-color-scheme: dark) { .co-coupon-msg.ok, .co-sum .co-save { color: #4ade80; } .co-coupon-msg.bad { color: #f87171; } }

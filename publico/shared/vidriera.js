@@ -1,6 +1,7 @@
-/* Vidriera: los productos que no son celulares (micrófonos, trípodes, luces…).
+/* Vidriera: los productos que no son celulares (ventiladores, contenido y audio).
  * No tienen video ni cuotas: se ven en tarjetas con foto y precio, y al tocarlas se abre una ficha con la galería.
- * La usan los dos diseños y toma los colores del diseño donde se usa (vidriera.css).
+ * La usan los tres diseños y toma los colores del diseño donde se usa (vidriera.css).
+ * Con el descuento flash (shared/flash.js), arriba del precio va el precio de lista tachado.
  * Los productos se editan en /admin → Otros productos (window.EXTRAS).
  * Links compartidos: #x=tripode-soul-j500 abre directo esa ficha.
  */
@@ -10,6 +11,8 @@
   const { STORE, EXTRAS } = window;
   const byId = Object.fromEntries(EXTRAS.map(p => [p.id, p]));
   const groups = [...new Set(EXTRAS.map(p => p.group))];
+  const CATS = (window.SITE && window.SITE.categories) || [];
+  const FL = window.Flash && window.Flash.cfg && window.Flash.cfg.on && window.Flash.cfg.percent > 0 ? window.Flash : null;
   // Pago online: el botón principal abre el checkout (shared/checkout.js) en vez de WhatsApp
   const PAY = window.TB_MODE === 'pago' && Boolean(window.Checkout);
   const isWeb = /^https?:$/.test(location.protocol);
@@ -21,9 +24,9 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const baseUrl = () => location.href.split('#')[0];
   const productUrl = p => `${baseUrl()}#x=${p.id}`;
-  const percentOff = p => (p.listPrice > p.price ? Math.round((1 - p.price / p.listPrice) * 100) : 0);
+  const percentOff = p => (FL ? FL.cfg.percent : p.listPrice > p.price ? Math.round((1 - p.price / p.listPrice) * 100) : 0);
   const kicker = p => [p.group, p.brand].filter(Boolean).join(' · ');
-  const filter = group => EXTRAS.filter(p => !group || p.group === group);
+  const filter = (group, cat) => EXTRAS.filter(p => (!group || p.group === group) && (!cat || p.cat === cat));
 
   const line = d => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const ICON = {
@@ -31,6 +34,9 @@
     mic: line('<rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"/>'),
     tripode: line('<rect x="7.5" y="2.5" width="9" height="6" rx="1.5"/><path d="M12 8.5v5M12 13.5l-6.5 8M12 13.5l6.5 8M12 13.5v8"/>'),
     luz: line('<path d="M9.5 18.5h5M10.5 21.5h3"/><path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.8.6 1.3 1.4 1.3 2.2v2h5v-2c0-.8.5-1.6 1.3-2.2A6.5 6.5 0 0 0 12 2.5z"/>'),
+    ventilador: line('<circle cx="12" cy="10" r="1.6"/><path d="M12 8.4c-.4-2.6.6-5 3-5.4 2.2-.3 2.9 2.2 1 3.6-1.3 1-2.6 1.4-4 1.8M13.4 11c2.3 1.2 3.7 3.4 2.7 5.6-.9 2-3.3 1.3-3.4-1-.1-1.6.3-3 .7-4.6M10.6 10.8c-2.1 1.6-4.7 1.9-6.1 0-1.3-1.8.5-3.6 2.6-2.6 1.4.7 2.4 1.7 3.5 2.6M12 11.6V19M8 21.5h8"/>'),
+    parlante: line('<rect x="5.5" y="2.5" width="13" height="19" rx="3"/><circle cx="12" cy="14.5" r="3.5"/><circle cx="12" cy="6.8" r="1.4"/>'),
+    auricular: line('<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13.5" width="4.5" height="7" rx="1.8"/><rect x="16.5" y="13.5" width="4.5" height="7" rx="1.8"/>'),
     cart: line('<path d="M3 4h2.2l2.3 11h10.3l2.1-8H6.3"/><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="16.5" cy="19.5" r="1.5"/>'),
     share: line('<path d="M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M12 15V3M7 8l5-5 5 5"/>'),
     close: line('<path d="M6 6l12 12M18 6L6 18"/>'),
@@ -54,11 +60,14 @@
 
   /* ---------- Precio y botones ---------- */
   function priceHTML(p) {
+    // Descuento flash: el precio de lista tachado va arriba y el precio de la página, grande
+    if (FL) return `<p class="x-price x-price-flash">${FL.tachado(p.price, 'x-was')}<b>${money(p.price)}</b></p>`;
     const off = percentOff(p);
     return `<p class="x-price"><b>${money(p.price)}</b>${off ? `<s aria-label="Precio normal ${money(p.listPrice)}">${money(p.listPrice)}</s>` : ''}</p>`;
   }
 
-  const cuotasText = () => `${STORE.extras.cuotas} cuotas con ${STORE.financing}`;
+  // Mercado Pago es el medio principal: las cuotas se eligen ahí
+  const cuotasText = () => 'Hasta 12 cuotas con Mercado Pago';
   const cuotasHTML = () => `<p class="x-cuotas">${esc(cuotasText())}</p>`;
 
   function buyMessage(p) {
@@ -77,7 +86,7 @@
       <article class="xcard">
         <a class="xcard-media js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}" aria-label="Ver ${esc(p.name)}">
           ${coverHTML(p)}
-          ${off ? `<span class="x-off">${off}% OFF</span>` : ''}
+          ${off ? (FL ? `<span class="x-off fl-only">-${off}%</span>` : `<span class="x-off">${off}% OFF</span>`) : ''}
         </a>
         <div class="xcard-info">
           <p class="x-kicker">${esc(kicker(p))}</p>
@@ -89,13 +98,15 @@
       </article>`;
   }
 
-  const gridHTML = group => `<div class="xgrid">${filter(group).map(cardHTML).join('')}</div>`;
+  const gridHTML = (group, cat) => `<div class="xgrid">${filter(group, cat).map(cardHTML).join('')}</div>`;
 
   // Estante para mezclar con otros productos: fila que se desliza y botón para ver todo
+  // Con las 3 categorías, el estante mezcla ventilación, contenido y audio
+  const shelfTitle = () => (CATS.length ? CATS.map(c => c.short || c.name).join(', ').replace(/, ([^,]*)$/, ' y $1') : STORE.extras.title);
   const shelfHTML = () => `
-    <section class="xshelf" aria-label="${esc(STORE.extras.title)}">
+    <section class="xshelf" aria-label="${esc(shelfTitle())}">
       <div class="xshelf-head">
-        <div><p class="x-eyebrow">${esc(STORE.extras.eyebrow)}</p><h2>${esc(STORE.extras.title)}</h2></div>
+        <div><p class="x-eyebrow">${esc(STORE.extras.eyebrow)}</p><h2>${esc(shelfTitle())}</h2></div>
         <button class="x-more js-x-all" type="button">Ver todo</button>
       </div>
       <div class="xrow">${EXTRAS.map(cardHTML).join('')}</div>
@@ -134,7 +145,8 @@
   }
 
   function relatedHTML(p) {
-    const others = EXTRAS.filter(x => x !== p).sort((a, b) => (b.group === p.group) - (a.group === p.group)).slice(0, 3);
+    const others = EXTRAS.filter(x => x !== p)
+      .sort((a, b) => (b.group === p.group) - (a.group === p.group) || (b.cat === p.cat) - (a.cat === p.cat)).slice(0, 3);
     if (!others.length) return '';
     return `
       <div class="ficha-rel">
@@ -155,7 +167,8 @@
         <p class="x-kicker">${esc(kicker(p))}</p>
         <h2 class="ficha-name" id="ficha-title">${esc(p.name)}</h2>
         ${priceHTML(p)}
-        ${off ? `<p class="ficha-off"><span class="x-off">${off}% OFF</span> Ahorrás ${money(p.listPrice - p.price)}</p>` : ''}
+        ${FL ? `<p class="ficha-off fl-only"><span class="x-off">-${off}% flash</span> con el cupón <b>${esc(FL.cupon())}</b> · termina en <b class="js-flash-reloj">${FL.reloj(FL.restante())}</b></p>`
+          : off ? `<p class="ficha-off"><span class="x-off">${off}% OFF</span> Ahorrás ${money(p.listPrice - p.price)}</p>` : ''}
         ${cuotasHTML()}
         ${p.pitch ? `<p class="ficha-pitch">${esc(p.pitch)}</p>` : ''}
         ${(p.details || []).length ? `<ul class="ficha-details">${p.details.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : ''}
@@ -268,5 +281,9 @@
     open(m[1]);
   });
 
-  window.Vidriera = { title: STORE.extras.title, short: STORE.extras.short, groups, filter, gridHTML, shelfHTML, icon: key => ICON[key], open, close };
+  const byCat = cat => filter('', cat);
+  window.Vidriera = {
+    title: STORE.extras.title, short: STORE.extras.short, groups, cats: CATS, filter, byCat, gridHTML, shelfHTML,
+    cardHTML, priceHTML, coverHTML, icon: key => ICON[key], open, close,
+  };
 })();

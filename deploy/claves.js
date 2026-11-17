@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /* Carga las claves de la tienda en el VPS sin que pasen por el chat ni por GitHub: Mercado Pago, GO cuotas,
- * el pago simulado y el WhatsApp del socio.
+ * el pago simulado, el WhatsApp del socio, Claude y el correo de la tienda (SMTP).
  *
  *   ssh -t xoxo-vps xoxo-claves
  *
@@ -15,6 +15,8 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const net = require('net');
+const tls = require('tls');
 const { execFileSync } = require('child_process');
 
 const ARCHIVO = path.resolve(process.argv[2] || '/etc/xoxo-tienda.env');
@@ -25,10 +27,12 @@ const TTY = Boolean(process.stdin.isTTY);
 /* ---------- Archivo de ajustes ---------- */
 // Comentario que encabeza cada grupo la primera vez que se agrega al archivo
 const GRUPOS = [
-  { claves: ['MP_ACCESS_TOKEN'], titulo: '# Mercado Pago: Access Token (lo carga xoxo-claves)' },
+  { claves: ['MP_ACCESS_TOKEN', 'MP_WEBHOOK_SECRET'], titulo: '# Mercado Pago: Access Token y clave secreta de los avisos (lo carga xoxo-claves)' },
   { claves: ['GOCUOTAS_EMAIL', 'GOCUOTAS_PASSWORD', 'GOCUOTAS_SANDBOX'], titulo: '# GO cuotas: usuario de sucursal con la API Redirect V1 (lo carga xoxo-claves)' },
   { claves: ['PAGOS_DEMO'], titulo: '# true = los medios sin clave muestran un pago simulado que no cobra' },
   { claves: ['WA_PHONE_ID', 'WA_TOKEN', 'WA_APP_SECRET', 'WA_VERIFY_TOKEN', 'SOCIO_NUMEROS'], titulo: '# WhatsApp del socio: API de WhatsApp Business de Meta (lo carga xoxo-claves)' },
+  { claves: ['ANTHROPIC_API_KEY', 'CLAUDE_MODELO'], titulo: '# Claude: contesta solo el chat "Cambios por IA" del panel (lo carga xoxo-claves)' },
+  { claves: ['SMTP_HOST', 'SMTP_PUERTO', 'SMTP_SEGURO', 'SMTP_USUARIO', 'SMTP_CLAVE', 'CORREO_DE', 'CORREO_RESPONDER', 'CORREO_AVISOS'], titulo: '# Correo de la tienda por SMTP: aviso de compra y de venta (lo carga xoxo-claves, ver deploy/CORREO.md)' },
 ];
 
 function desenvolver(v) {
@@ -167,6 +171,63 @@ async function probarGo(email, password, sandbox) {
   } catch (err) { return fallo(err); }
 }
 
+// SMTP: se conecta, pasa a conexión cifrada, inicia sesión y se va. No manda ningún correo.
+function probarSmtp({ host, puerto, seguro, usuario, clave, de }) {
+  return new Promise(resolve => {
+    let socket = null, buffer = '', paso = 0, terminado = false;
+    const nombre = (String(de).match(/@([^>\s]+)/) || [])[1] || 'localhost';
+    const fin = r => { if (terminado) return; terminado = true; try { socket.destroy(); } catch {} resolve(r); };
+    const mal = texto => fin({ ok: false, error: texto });
+    const escribir = l => socket.write(`${l}\r\n`);
+    let ehlo = '';
+    function respuesta(code, text) {
+      if (paso === 0) { if (code !== 220) return mal(`el servidor respondió: ${text}`); paso = 1; return escribir(`EHLO ${nombre}`); }
+      if (paso === 1) {
+        if (code !== 250) return mal(`EHLO: ${text}`);
+        ehlo = text;
+        if (seguro === 'starttls' && !(socket instanceof tls.TLSSocket)) {
+          if (!/STARTTLS/i.test(text)) return mal('el servidor no ofrece STARTTLS (probá "tls" con el puerto 465)');
+          paso = 2; return escribir('STARTTLS');
+        }
+        return autenticar();
+      }
+      if (paso === 2) {
+        if (code !== 220) return mal(`STARTTLS: ${text}`);
+        const plano = socket;
+        plano.removeAllListeners('data');
+        socket = tls.connect({ socket: plano, servername: host }, () => { paso = 1; escribir(`EHLO ${nombre}`); });
+        socket.setEncoding('utf8');
+        socket.on('data', leer);
+        socket.on('error', e => mal(`el cifrado falló (${e.message})`));
+        return;
+      }
+      if (paso === 3) { if (code !== 235) return mal('el usuario o la clave no son correctos'); return listo(); }
+      if (paso === 4) { if (code !== 334) return mal(`AUTH: ${text}`); paso = 5; return escribir(Buffer.from(usuario).toString('base64')); }
+      if (paso === 5) { if (code !== 334) return mal(`AUTH: ${text}`); paso = 3; return escribir(Buffer.from(clave).toString('base64')); }
+    }
+    function autenticar() {
+      if (!usuario) return listo();
+      if (/AUTH[ =][^\n]*PLAIN/i.test(ehlo)) { paso = 3; return escribir(`AUTH PLAIN ${Buffer.from(`\0${usuario}\0${clave}`).toString('base64')}`); }
+      paso = 4; return escribir('AUTH LOGIN');
+    }
+    function listo() { escribir('QUIT'); fin({ ok: true, cifrado: socket instanceof tls.TLSSocket }); }
+    function leer(d) {
+      buffer += d;
+      let m;
+      while ((m = buffer.match(/^(?:\d{3}-[^\n]*\n)*(\d{3})(?: [^\n]*)?\r?\n/))) {
+        buffer = buffer.slice(m[0].length);
+        respuesta(Number(m[1]), m[0].trim().split('\n').pop().slice(0, 160));
+      }
+    }
+    const opts = { host, port: Number(puerto), servername: host };
+    socket = seguro === 'tls' ? tls.connect(opts) : net.connect(opts);
+    socket.setEncoding('utf8');
+    socket.setTimeout(20000, () => mal(`${host}:${puerto} no respondió a tiempo`));
+    socket.on('data', leer);
+    socket.on('error', e => mal(`no se pudo conectar con ${host}:${puerto} (${e.code || e.message})`));
+  });
+}
+
 async function probarWa(v) {
   const api = `${(v.WA_API_URL || 'https://graph.facebook.com').replace(/\/+$/, '')}/${v.WA_API_VERSION || 'v23.0'}`;
   // appsecret_proof: así Meta confirma el token y la clave secreta de la app en la misma consulta
@@ -182,13 +243,15 @@ async function probarWa(v) {
 }
 
 /* ---------- Estado ---------- */
-const enmascarar = t => (t ? `${t.slice(0, t.startsWith('APP_USR-') ? 8 : t.startsWith('TEST-') ? 5 : 4)}…${t.slice(-4)}` : '');
+const enmascarar = t => (t ? `${t.slice(0, t.startsWith('APP_USR-') ? 8 : t.startsWith('sk-ant-') ? 7 : t.startsWith('TEST-') ? 5 : 4)}…${t.slice(-4)}` : '');
 const nombres = s => String(s || '').split(',').map(x => x.split(':')[0].trim()).filter(Boolean);
 const listo = v => ({
   mp: Boolean(v.MP_ACCESS_TOKEN),
   go: Boolean(v.GOCUOTAS_EMAIL && v.GOCUOTAS_PASSWORD),
   wa: Boolean(v.WA_TOKEN && v.WA_PHONE_ID && v.WA_APP_SECRET),
+  correo: Boolean(v.SMTP_HOST && v.CORREO_DE),
 });
+const smtpDe = v => ({ host: v.SMTP_HOST, puerto: v.SMTP_PUERTO || (v.SMTP_SEGURO === 'tls' ? '465' : '587'), seguro: v.SMTP_SEGURO || 'starttls', usuario: v.SMTP_USUARIO || '', clave: v.SMTP_CLAVE || '', de: v.CORREO_DE });
 
 function resumen(v, probado, cambios) {
   const l = listo(v);
@@ -198,6 +261,8 @@ function resumen(v, probado, cambios) {
     ? `prendido${l.mp && l.go ? ' (no se usa: los dos medios tienen clave)' : ': los medios sin clave muestran un pago de prueba'}`
     : `apagado${l.mp || l.go ? '' : ': sin claves, la tienda queda solo con WhatsApp'}`;
   const wa = l.wa ? `cargado · autorizados: ${nombres(v.SOCIO_NUMEROS).join(', ') || 'nadie todavía'}` : 'sin cargar';
+  const ia = v.ANTHROPIC_API_KEY ? `${enmascarar(v.ANTHROPIC_API_KEY)} · ${v.CLAUDE_MODELO || 'claude-opus-5-5'}` : 'sin cargar: el chat no contesta solo';
+  const mail = l.correo ? `${v.CORREO_DE} · ${v.SMTP_HOST}${v.CORREO_AVISOS ? ` · avisa a ${v.CORREO_AVISOS}` : ''}` : 'sin cargar: los mails se guardan en el panel';
   const n = Object.keys(cambios).length;
   console.log(`
 Claves de la tienda XOXO Tecno · ${ARCHIVO}
@@ -206,7 +271,9 @@ Claves de la tienda XOXO Tecno · ${ARCHIVO}
   2) GO cuotas        ${go}
   3) Pago simulado    ${demo}
   4) WhatsApp socio   ${wa}
-  5) Probar todo lo cargado
+  5) Claude (chat)    ${ia}
+  6) Correo (SMTP)    ${mail}
+  7) Probar todo lo cargado
 
   g) Guardar${EN_SERVIDOR ? ' y reiniciar la tienda' : ''}    s) Salir sin guardar${n ? `\n\n  Hay ${n} ${n === 1 ? 'cambio' : 'cambios'} sin guardar.` : ''}
 `);
@@ -234,13 +301,21 @@ Mercado Pago · Access Token
   if (!r.prueba && !(await siNo('¿La guardo igual?'))) return;
   set('MP_ACCESS_TOKEN', t);
   probado.mp = r;
+  console.log(`
+  Opcional: la clave secreta de los avisos de pago (Tus integraciones → tu aplicación → Webhooks → "Clave secreta").
+  Con ella la tienda revisa la firma de cada aviso. Enter solo = no cargarla.`);
+  const sec = await preguntar('Clave secreta de webhooks: ', { oculto: true });
+  if (sec === '-') set('MP_WEBHOOK_SECRET', '');
+  else if (sec) set('MP_WEBHOOK_SECRET', sec);
 }
 
 async function seccionGo(v, set) {
   console.log(`
-GO cuotas · usuario de sucursal
-  Se crea en el panel de GO cuotas → Otros → Sucursales → Nueva. Para que funcione, integraciones@gocuotas.com
-  tiene que habilitar la "API Redirect V1" en esa sucursal. Para probar, pediles un usuario del sandbox.
+GO cuotas · sucursal
+  Panel de GO cuotas → Sucursales → Editar → "Ver ApiKeys de la sucursal". Hay una API key para
+  sandbox (prueba) y otra para producción. Va el email de la sucursal y, en vez de la contraseña,
+  la API key del entorno que elijas. Si no anda, integraciones@gocuotas.com tiene que habilitar la
+  "API Redirect V1" en esa sucursal.
   ${AYUDA_VACIO}`);
   const email = await preguntar(`Email${v.GOCUOTAS_EMAIL ? ` [${v.GOCUOTAS_EMAIL}]` : ''}: `);
   if (email === '-') {
@@ -251,9 +326,9 @@ GO cuotas · usuario de sucursal
   const nuevoEmail = email || v.GOCUOTAS_EMAIL;
   if (!nuevoEmail) return;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nuevoEmail)) return console.log('Ese email no parece válido. No lo guardo.');
-  const pass = (await preguntar('Contraseña: ', { oculto: true })) || v.GOCUOTAS_PASSWORD;
-  if (!pass) return console.log('Falta la contraseña. No lo guardo.');
-  const sandbox = await siNo('¿Es un usuario de prueba (sandbox.gocuotas.com)?');
+  const sandbox = await siNo('¿Vas a probar en el sandbox (no cobra)?');
+  const pass = (await preguntar(`API key de ${sandbox ? 'sandbox' : 'producción'} (o la contraseña): `, { oculto: true })) || v.GOCUOTAS_PASSWORD;
+  if (!pass) return console.log('Falta la API key. No lo guardo.');
   process.stdout.write(`Probando con GO cuotas${sandbox ? ' (sandbox)' : ''}… `);
   const r = await probarGo(nuevoEmail, pass, sandbox);
   if (!r.ok) return console.log(`no anduvo: ${r.error}. No lo guardo.`);
@@ -333,9 +408,65 @@ Para Meta → WhatsApp → Configuración → Webhook → Editar (después de gu
   Y en "Campos del webhook" suscribite a: messages`);
 }
 
+async function seccionClaude(v, set) {
+  console.log(`
+Claude · contesta solo el chat "Cambios por IA" del panel
+  La API key se crea en console.anthropic.com → API Keys → Create Key (empieza con sk-ant-).
+  Antes cargale crédito en Billing: se paga por uso. Conviene poner un límite de gasto por mes.
+  Pegala y apretá Enter: en pantalla solo se ven puntos. ${AYUDA_VACIO}`);
+  const k = await preguntar('API key: ', { oculto: true });
+  if (!k) return;
+  if (k === '-') {
+    set('ANTHROPIC_API_KEY', '');
+    return console.log('Se borra al guardar: el chat deja de contestar solo.');
+  }
+  if (!/^sk-ant-[\w-]{20,}$/.test(k)) return console.log('Eso no parece una API key de Anthropic (empieza con sk-ant-). No la guardo.');
+  set('ANTHROPIC_API_KEY', k);
+  if (!v.CLAUDE_MODELO) set('CLAUDE_MODELO', 'claude-opus-5-5');
+  console.log('Lista. Se prueba al guardar: cuando la tienda arranca, dice si Claude quedó conectado.');
+}
+
+async function seccionCorreo(v, set) {
+  console.log(`
+Correo de la tienda · servidor SMTP
+  Con esto la tienda manda el aviso de compra al cliente y el aviso de venta a ustedes, desde @xoxotecno.com.ar.
+  Sirve cualquier proveedor: Brevo (smtp-relay.brevo.com, 587), Zoho (smtp.zoho.com, 465), Gmail/Workspace
+  (smtp.gmail.com, 587) o el servidor de correo propio. Antes, el dominio tiene que estar verificado en el proveedor
+  (registros SPF, DKIM y DMARC: ver deploy/CORREO.md).
+  ${AYUDA_VACIO}`);
+  const host = await preguntar(`Servidor${v.SMTP_HOST ? ` [${v.SMTP_HOST}]` : ''}: `);
+  if (host === '-') {
+    for (const k of ['SMTP_HOST', 'SMTP_PUERTO', 'SMTP_SEGURO', 'SMTP_USUARIO', 'SMTP_CLAVE']) set(k, '');
+    return console.log('Se borra al guardar: los mails vuelven a guardarse en el panel sin salir.');
+  }
+  const h = host || v.SMTP_HOST;
+  if (!h) return;
+  if (!/^[a-z0-9.-]+$/i.test(h)) return console.log('Ese servidor no parece válido. No lo guardo.');
+  const puertoTxt = await preguntar(`Puerto (587 o 465)${v.SMTP_PUERTO ? ` [${v.SMTP_PUERTO}]` : ' [587]'}: `);
+  const puerto = puertoTxt || v.SMTP_PUERTO || '587';
+  if (!/^\d{2,5}$/.test(puerto)) return console.log('El puerto tiene que ser un número. No lo guardo.');
+  const seguro = puerto === '465' ? 'tls' : puerto === '25' && /^(127\.|localhost)/.test(h) ? 'no' : 'starttls';
+  const usuario = (await preguntar(`Usuario${v.SMTP_USUARIO ? ` [${v.SMTP_USUARIO}]` : ''}: `)) || v.SMTP_USUARIO || '';
+  const clave = (await preguntar('Clave o clave SMTP del proveedor: ', { oculto: true })) || v.SMTP_CLAVE || '';
+  const de = (await preguntar(`Quién manda [${v.CORREO_DE || 'XOXO Tecno <ventas@xoxotecno.com.ar>'}]: `)) || v.CORREO_DE || 'XOXO Tecno <ventas@xoxotecno.com.ar>';
+  if (!/@[a-z0-9.-]+\.[a-z]{2,}/i.test(de)) return console.log('Falta el email de quién manda. No lo guardo.');
+  const avisos = (await preguntar(`A quién avisar cada venta, separados por coma${v.CORREO_AVISOS ? ` [${v.CORREO_AVISOS}]` : ''}: `)) || v.CORREO_AVISOS || '';
+  process.stdout.write(`Probando con ${h}:${puerto}… `);
+  const r = await probarSmtp({ host: h, puerto, seguro, usuario, clave, de });
+  if (!r.ok) return console.log(`no anduvo: ${r.error}. No lo guardo.`);
+  console.log(`anda${r.cifrado ? ' (conexión cifrada)' : ''}. Para mandar un mail de prueba: panel → Pedidos → Correos.`);
+  set('SMTP_HOST', h);
+  set('SMTP_PUERTO', puerto);
+  set('SMTP_SEGURO', seguro);
+  set('SMTP_USUARIO', usuario);
+  set('SMTP_CLAVE', clave);
+  set('CORREO_DE', de);
+  set('CORREO_AVISOS', avisos);
+}
+
 async function probarTodo(v, probado) {
   const l = listo(v);
-  if (!l.mp && !l.go && !l.wa) return console.log('\nTodavía no hay nada cargado para probar.');
+  if (!l.mp && !l.go && !l.wa && !l.correo) return console.log('\nTodavía no hay nada cargado para probar.');
   console.log('');
   if (l.mp) {
     const r = await probarMp(v.MP_ACCESS_TOKEN);
@@ -349,6 +480,10 @@ async function probarTodo(v, probado) {
   if (l.wa) {
     const r = await probarWa(v);
     console.log(`WhatsApp       ${r.ok ? `anda · ${r.numero}` : r.error}`);
+  }
+  if (l.correo) {
+    const r = await probarSmtp(smtpDe(v));
+    console.log(`Correo (SMTP)  ${r.ok ? `anda · ${v.SMTP_HOST}` : r.error}`);
   }
 }
 
@@ -368,9 +503,10 @@ async function guardarYReiniciar(lineas, v, cambios) {
     try {
       if ((await conTiempo(url)).ok) {
         console.log('lista.\n');
-        // Las líneas de arranque dicen cómo quedó cada medio de pago
+        // Las líneas de arranque dicen cómo quedó cada medio de pago y si Claude se conectó (eso tarda unos segundos)
+        await new Promise(r => setTimeout(r, 4000));
         try {
-          const log = execFileSync('journalctl', ['-u', SERVICIO, '-n', '8', '--no-pager', '-o', 'cat'], { encoding: 'utf8' });
+          const log = execFileSync('journalctl', ['-u', SERVICIO, '-n', '15', '--no-pager', '-o', 'cat'], { encoding: 'utf8' });
           const desde = log.lastIndexOf('XOXO Tecno en');
           if (desde >= 0) console.log(log.slice(desde).trimEnd());
         } catch {}
@@ -403,7 +539,9 @@ async function main() {
     else if (op === '2') await seccionGo(v, set);
     else if (op === '3') await seccionDemo(v, set);
     else if (op === '4') await seccionWa(v, set);
-    else if (op === '5') await probarTodo(v, probado);
+    else if (op === '5') await seccionClaude(v, set);
+    else if (op === '6') await seccionCorreo(v, set);
+    else if (op === '7') await probarTodo(v, probado);
     else if (op === 'g') {
       if (!Object.keys(cambios).length) console.log('\nNo hay cambios para guardar.');
       else await guardarYReiniciar(lineas, v, cambios);

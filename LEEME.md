@@ -1,8 +1,11 @@
 # XOXO Tecno · Tienda (Node)
 
-La tienda completa en Node.js: los dos diseños (**Red social** y **Minimalista**) con prueba A/B, el panel **/admin**,
-las estadísticas, el reparto de WhatsApp entre sucursales y el **pago online con GO cuotas y Mercado Pago**.
-No usa dependencias: alcanza con Node 18 o más nuevo.
+La tienda completa en Node.js: cuatro diseños (**A · Red social**, **B · Minimalista**, **C1 · Historia**, animada, y
+**C2 · Profesional**, clásica y blanca) con prueba A/B/C. Cada diseño tiene **4 vistas** con un menú arriba: el inicio con
+todo y una **home propia para cada categoría** (ventilación, creación de contenido y audio). El panel **/admin**,
+las estadísticas, el reparto de WhatsApp entre sucursales, el **pago online con Mercado Pago** (principal) y GO cuotas,
+la **calculadora de envíos** (Andreani y Correo Argentino), el **descuento flash** y los **correos** de la tienda.
+Necesita Node 20 o más nuevo. La única dependencia es el SDK de Anthropic (`npm ci`), que usa el chat del panel para que Claude conteste solo.
 
 ## Arrancarla
 
@@ -17,9 +20,11 @@ desaparece de ese archivo. ¿Te la olvidaste? Escribí una nueva en `"clave"` (1
 
 | Dirección | Qué es |
 |---|---|
-| `/` | Entrada: manda a cada visitante a uno de los dos diseños |
+| `/` | Entrada: manda a cada visitante a uno de los tres diseños |
 | `/anuncio/` | Lo mismo, para los anuncios (queda registrado como origen "anuncio"; `?src=instagram` separa la red) |
-| `/red-social/` y `/minimalista/` | Cada diseño (con `?ver` se ve aunque esté apagado) |
+| `/anuncio/audio/` (y `ventilacion`, `contenido`) | Anuncio de una categoría: entra directo a esa categoría, en su diseño |
+| `/red-social/`, `/minimalista/`, `/historia/` y `/profesional/` | Cada diseño (con `?ver` se ve aunque esté apagado) |
+| `/profesional/audio/` (en los 4 diseños) | La home de una categoría (`shared/secciones.js`): portada, beneficios, productos, guía, cómo comprar, envíos, garantía y preguntas |
 | `/admin/` | Panel: estadísticas, pedidos, anuncio y sucursales, productos, textos, registro, copias y cuenta |
 
 ## Pago online
@@ -34,8 +39,15 @@ probar la pasarela sin cobrar (ver [deploy/LEEME.md](deploy/LEEME.md)).
 - `PAGOS_DEMO=true` muestra un pago simulado en los medios sin clave, para probar el recorrido sin cobrar.
 - El precio sale del contenido de la tienda, nunca del navegador. Un pago se da por aprobado solo después de
   consultarlo en la API de la pasarela.
-- Cuotas: celulares en 12 con tarjeta de crédito (Mercado Pago) o 9 con débito (GO cuotas); los otros productos en 6
-  con GO cuotas o en un pago con Mercado Pago. Las cuotas reales se configuran en cada pasarela.
+- **Mercado Pago es el medio principal**: va primero y elegido, con hasta 12 cuotas para todo. GO cuotas queda como
+  segunda opción (9 cuotas con débito en celulares). Las cuotas reales y su interés se configuran en cada pasarela.
+- **Envío**: en el checkout se elige retiro gratis en sucursal o Andreani / Correo Argentino (a domicilio o a sucursal).
+  El costo sale de la tabla de /admin → Tienda y textos → Envíos (por zona y peso) y lo calcula el servidor; en
+  Mercado Pago va como un ítem aparte. Son precios estimados hasta tener contrato con cada empresa.
+- **Descuento flash**: cada visitante tiene una hora con el cupón `xoxo-<mes>` (xoxo-noviembre). Arriba de cada
+  precio se ve el precio de lista tachado; se cobra siempre el precio de la página y el cupón queda en el pedido.
+- **Correos**: al aprobarse un pago, el cliente recibe el detalle y la tienda un aviso de venta (ver
+  [deploy/CORREO.md](deploy/CORREO.md)).
 - Los pedidos se ven en **/admin → Pedidos**, con el WhatsApp del comprador para coordinar la entrega.
 
 ## Sucursales y WhatsApp

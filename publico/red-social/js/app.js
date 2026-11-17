@@ -4,6 +4,12 @@
 
   const { STORE, PRODUCTS, Vidriera } = window;
   const TEXT = (window.SITE && window.SITE.texts) || {};
+  // Las 3 categorías (ventilación, contenido, audio) y la de esta página (/red-social/audio/)
+  const CATS = (window.SITE && window.SITE.categories) || [];
+  const CAT = CATS.find(c => c.id === window.CATEGORIA) || null;
+  const CAT_ICON = { ventilacion: 'ventilador', contenido: 'mic', audio: 'auricular' };
+  // Descuento flash: precio de lista tachado arriba de cada cuota (shared/flash.js)
+  const FL = window.Flash && window.Flash.cfg && window.Flash.cfg.on ? window.Flash : null;
   // Estadísticas para comparar los dos diseños (/shared/seguimiento.js)
   const stat = (type, id, data) => { if (window.TB_TRACK) window.TB_TRACK(type, id, data); };
   const byId = Object.fromEntries(PRODUCTS.map(p => [p.id, p]));
@@ -368,7 +374,7 @@
       <div class="price-pill">
         <span class="pp-n js-n"></span>
         <span class="pp-l">${STORE.sinInteres ? 'Cuotas<br>sin interés' : 'Cuotas<br>de'}</span>
-        <span class="pp-amt"><strong class="js-amount"></strong><small>c/u</small></span>
+        <span class="pp-amt"><span class="js-was"></span><strong class="js-amount"></strong><small>c/u</small></span>
       </div>
       <div class="plans" role="group" aria-label="Elegí la cantidad de cuotas">
         ${PLANS.map(n => `<button type="button" data-n="${n}">${n} cuotas<small>${esc(medio(n))}</small></button>`).join('')}
@@ -418,6 +424,8 @@
     const n = planOf(p);
     $('.js-n', root).textContent = n;
     $('.js-amount', root).textContent = money(p.cuotas[n]);
+    const was = $('.js-was', root);
+    if (was) was.innerHTML = FL ? FL.tachado(p.cuotas[n]) : '';
     $('.js-total', root).textContent = `Total ${money(p.cuotas[n] * n)}`;
     $('.js-medio', root).innerHTML = `Con ${medioHTML(n)}`;
     $$('.plans button', root).forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.n === n)));
@@ -539,9 +547,10 @@
   /* ---------- Feed infinito con recomendaciones ---------- */
   const feed = $('#feed');
   const sentinel = $('#sentinel');
-  const filters = { brand: '', max: 0, group: '' };
-  const SEQUENCE = ['howto', 'sucursales', 'foryou', 'cheap', 'share', 'memory', 'brands', 'ask'];
-  const PROMOS = ['sucursales', 'share', 'ask', 'howto'];
+  const filters = { brand: '', max: 0, group: '', cat: '' };
+  // Entre los celulares aparecen la calculadora de envíos y la garantía como posts (shared/secciones.js)
+  const SEQUENCE = ['howto', 'envios', 'sucursales', 'foryou', 'garantia', 'cheap', 'share', 'memory', 'brands', 'ask'];
+  const PROMOS = ['sucursales', 'share', 'ask', 'howto', 'envios', 'garantia'];
   const MORE_TITLES = ['Seguí mirando', 'Más para vos', 'No te los pierdas', 'Mirá otra vez'];
   let step = 0, recent = [];
 
@@ -570,7 +579,10 @@
   function promoEl(key) {
     const el = document.createElement('aside');
     el.className = `promo promo-${key}`;
-    if (key === 'howto') {
+    if (key === 'envios' || key === 'garantia') {
+      el.className = `promo-sx sx-page promo-${key}`;
+      el.innerHTML = key === 'envios' ? window.Secciones.calculadora() : window.Secciones.garantia() + window.Secciones.pasos();
+    } else if (key === 'howto') {
       el.innerHTML = `
         <div class="p-icon" aria-hidden="true">🛍️</div>
         <div><h3>Comprar es así de fácil</h3>
@@ -616,9 +628,10 @@
     recent = [];
     buildChips();
     if (filters.brand === EXTRAS_KEY) {
-      const extras = Vidriera.filter(filters.group);
-      feed.append(headEl('Catálogo', filters.group || Vidriera.title, `${extras.length} ${extras.length === 1 ? 'producto' : 'productos'}`));
-      feed.insertAdjacentHTML('beforeend', Vidriera.gridHTML(filters.group));
+      const extras = Vidriera.filter(filters.group, filters.cat);
+      const titulo = filters.group || (CAT ? CAT.name : 'Ventilación, contenido y audio');
+      feed.append(headEl(CAT ? `Categoría ${String(CAT.num).padStart(2, '0')}` : 'Catálogo', titulo, `${extras.length} ${extras.length === 1 ? 'producto' : 'productos'}`));
+      feed.insertAdjacentHTML('beforeend', Vidriera.gridHTML(filters.group, filters.cat));
       return;
     }
     const list = PRODUCTS.filter(matches);
@@ -647,7 +660,12 @@
       key = i % 3 === 2 ? PROMOS[Math.floor(i / 3) % PROMOS.length] : 'more';
     }
     step++;
-    if (PROMOS.includes(key)) { feed.append(promoEl(key)); return; }
+    if (PROMOS.includes(key)) {
+      const el = promoEl(key);
+      feed.append(el);
+      window.Secciones.init(el);
+      return;
+    }
 
     const a = affinity();
     let eyebrow, title, note = '', list;
@@ -686,7 +704,8 @@
   }
 
   function fill() {
-    if (filters.brand === EXTRAS_KEY) return;
+    // En la home de una categoría no hay feed de celulares
+    if (CAT || filters.brand === EXTRAS_KEY) return;
     let guard = 0;
     while (sentinel.getBoundingClientRect().top < innerHeight + 1400 && guard++ < 8) nextBlock();
   }
@@ -703,18 +722,24 @@
       { key: 'howto', label: 'Cómo comprar', inner: `<span class="ring-icon wa">${ICON.wa}</span>` },
       { key: 'likes', label: 'Tus likes', inner: `<span class="ring-icon likes">${ICON.heart}</span>` },
       { key: '', label: 'Todos', inner: `<span class="ring-icon all">${ICON.grid}</span>` },
-      { key: EXTRAS_KEY, label: Vidriera.short, inner: `<span class="ring-icon extras">${Vidriera.icon('mic')}</span>` },
+
       ...brands.map(b => {
         const p = PRODUCTS.find(x => x.brand === b);
         const art = photoOf(p) ? `<img src="${esc(photoOf(p))}" alt="" loading="lazy">` : phoneSVG(p);
         return { key: b, label: b, inner: `<span class="ring-phone">${art}</span>` };
       }),
     ];
-    $('#stories').innerHTML = items.map(it => `
+    // Las 3 categorías van primero, como historias: cada una abre su página
+    const cats = CATS.map(c => `
+      <a class="story-btn" href="/red-social/${c.id}/"${CAT && CAT.id === c.id ? ' aria-current="page"' : ''}>
+        <span class="ring"><span class="ring-icon cat" style="--c:${esc(c.color)}">${Vidriera.icon(CAT_ICON[c.id])}</span></span><span class="label">${esc(c.short)}</span>
+      </a>`).join('');
+    $('#stories').innerHTML = cats + (CAT ? `
+      <a class="story-btn" href="/red-social/"><span class="ring"><span class="ring-icon all">${ICON.grid}</span></span><span class="label">Celulares</span></a>` : items.map(it => `
       <button class="story-btn" type="button" data-key="${esc(it.key)}"${it.key === 'howto' ? '' : ` aria-pressed="${it.key === filters.brand}"`}>
         <span class="ring">${it.inner}</span><span class="label">${esc(it.label)}</span>
         ${it.key === 'likes' ? '<span class="badge js-like-count"></span>' : ''}
-      </button>`).join('');
+      </button>`).join(''));
     if (mem.get('cc:howto-seen', false)) $('[data-key="howto"]').classList.add('seen');
     paintLikeCount();
   }
@@ -725,7 +750,7 @@
     const extras = filters.brand === EXTRAS_KEY;
     $('.filters-label').innerHTML = extras ? '¿Qué estás buscando?' : budgetLabel;
     $('#chips').innerHTML = extras
-      ? ['', ...Vidriera.groups].map(g =>
+      ? ['', ...new Set(Vidriera.filter('', filters.cat).map(p => p.group))].map(g =>
         `<button class="chip" type="button" data-group="${esc(g)}" aria-pressed="${g === filters.group}">${esc(g || 'Todos')}</button>`).join('')
       : [0, ...STORE.budgets].map(v =>
         `<button class="chip" type="button" data-max="${v}" aria-pressed="${v === filters.max}">${v ? 'Hasta ' + money(v) : 'Todas'}</button>`).join('');
@@ -980,7 +1005,7 @@
     if (t.closest('.js-story')) return openStory();
     if (t.closest('.js-close')) return exitOverlay();
     if ((el = t.closest('.js-brand'))) { exitOverlay(); return setBrand(el.dataset.brand); }
-    if ((el = t.closest('.story-btn'))) return el.dataset.key === 'howto' ? openStory() : setBrand(el.dataset.key);
+    if ((el = t.closest('button.story-btn'))) return el.dataset.key === 'howto' ? openStory() : setBrand(el.dataset.key);
     if ((el = t.closest('.chip'))) return el.dataset.group != null ? setGroup(el.dataset.group) : setMax(+el.dataset.max);
     if (t.closest('.js-x-all')) return setBrand(EXTRAS_KEY);
     if (t.closest('#shorts-prev')) return slideBy(-1);
@@ -1043,9 +1068,18 @@
   buildTopbar();
   $('#hero-debito').innerHTML = boldText(TEXT.heroDebito);
   $('#hero-debito').hidden = !TEXT.heroDebito || (!STORE.financing && TEXT.heroDebito.includes('{financiera}'));
-  buildStories();
-  showReel(reelOrder[0]);
-  resetFeed();
+  // Menú de las 4 vistas (Inicio y la home de cada categoría) y, en una categoría, su home (shared/secciones.js)
+  $('#rs-nav').innerHTML = window.Secciones.nav('/red-social', CAT ? CAT.id : '');
+  if (CAT) {
+    document.body.classList.add('cat-page');
+    $('main').insertAdjacentHTML('afterbegin', `<div id="cat-home">${window.Secciones.categoria(CAT, '/red-social')}</div>`);
+    window.Secciones.init($('#cat-home'));
+  } else {
+    buildStories();
+    showReel(reelOrder[0]);
+    resetFeed();
+  }
+  if (FL) FL.montar();
 
   // Links compartidos: #p=moto-g06-128 abre directo ese celular en pantalla completa.
   const deep = location.hash.match(/^#p=([\w-]+)/);

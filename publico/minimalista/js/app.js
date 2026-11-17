@@ -5,6 +5,11 @@
 
   const { STORE, PRODUCTS, Vidriera } = window;
   const SITE = window.SITE || {};
+  // Las 3 categorías (ventilación, contenido, audio) y la de esta página (/minimalista/audio/)
+  const CATS = SITE.categories || [];
+  const CAT = CATS.find(c => c.id === window.CATEGORIA) || null;
+  // Descuento flash: precio de lista tachado arriba de cada precio (shared/flash.js)
+  const FL = window.Flash && window.Flash.cfg && window.Flash.cfg.on ? window.Flash : null;
   const TEXT = SITE.texts || {};
   const FOOT = SITE.footer || {};
   // Estadísticas para comparar los dos diseños (/shared/seguimiento.js)
@@ -405,6 +410,7 @@
     const n = planOf(p);
     own(root, '.js-n').forEach(el => { el.textContent = n; });
     own(root, '.js-amount').forEach(el => { el.textContent = money(p.cuotas[n]); });
+    own(root, '.js-was').forEach(el => { el.innerHTML = FL ? FL.tachado(p.cuotas[n]) : ''; });
     own(root, '.js-total').forEach(el => { el.textContent = `Total ${money(p.cuotas[n] * n)}`; });
     own(root, '.js-medio').forEach(el => { el.innerHTML = medioHTML(n); });
     own(root, '[data-n]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.n === n)));
@@ -435,7 +441,7 @@
         <p class="label">${offerLabel}</p>
         <h3 class="name">${esc(p.name)}</h3>
         <p class="sub">${esc(p.brand)} · ${memory(p)}</p>
-        <p class="price"><span class="js-n"></span> x <span class="js-amount"></span></p>
+        <p class="price"><span class="js-was"></span><span class="js-n"></span> x <span class="js-amount"></span></p>
         <p class="total js-total"></p>
       </a>`;
     paint(el, p);
@@ -480,22 +486,38 @@
       const art = photoOf(p) ? `<img src="${esc(photoOf(p))}" alt="" loading="lazy">` : phoneSVG(p);
       return `<button class="brand-tile js-brand" type="button" data-brand="${esc(b)}">
         <span class="tile">${art}</span><span>${esc(b)}</span></button>`;
-    }).join('') + `<button class="brand-tile js-extras" type="button">
-        <span class="tile"><span class="x-tile">${Vidriera.icon('mic')}</span></span><span>${esc(Vidriera.title)}</span></button>`;
-    $('#nav').innerHTML = ['', ...brands].map(b =>
-      `<button type="button" class="js-brand" data-brand="${esc(b)}">${esc(b || 'Celulares')}</button>`).join('') +
-      `<button type="button" class="js-extras">${esc(Vidriera.short)}</button>`;
+    }).join('') + CATS.map(c => `<a class="brand-tile" href="/minimalista/${c.id}/">
+        <span class="tile"><span class="x-tile" style="--c:${esc(c.color)}">${Vidriera.icon(CAT_ICON[c.id])}</span></span><span>${esc(c.name)}</span></a>`).join('');
+    // Menú de las 4 vistas: Inicio y la home de cada categoría (shared/secciones.js)
+    $('#nav').innerHTML = window.Secciones.nav('/minimalista', CAT ? CAT.id : '');
   }
 
   /* ---------- Vidriera: productos que no son celulares ---------- */
-  function renderExtras(group = '') {
-    const list = Vidriera.filter(group);
+  const CAT_ICON = { ventilacion: 'ventilador', contenido: 'mic', audio: 'auricular' };
+  // En el inicio filtra por categoría; en la página de una categoría, por tipo de producto (Parlantes, Auriculares…)
+  function renderExtras(sel = '') {
+    const cat = CAT ? CAT.id : sel;
+    const group = CAT ? sel : '';
+    const c = CATS.find(x => x.id === cat);
+    const list = Vidriera.filter(group, cat);
+    const chips = CAT
+      ? ['', ...new Set(Vidriera.byCat(cat).map(p => p.group))].map(g => [g, g || 'Todos'])
+      : [['', 'Todos'], ...CATS.map(x => [x.id, x.name])];
     $('#contenido').innerHTML = `
-      <h2 class="plp-title">${esc(Vidriera.title)} <span class="count">(${list.length})</span></h2>
-      <div class="x-chips" role="group" aria-label="Filtrar por tipo">${['', ...Vidriera.groups].map(g => `
-        <button class="x-chip js-x-group" type="button" data-group="${esc(g)}" aria-pressed="${g === group}">${esc(g || 'Todos')}</button>`).join('')}</div>
-      ${Vidriera.gridHTML(group)}`;
+      <h2 class="plp-title">${esc(c ? (CAT && group ? group : c.name) : 'Ventilación, contenido y audio')} <span class="count">(${list.length})</span></h2>
+      ${chips.length > 2 ? `<div class="x-chips" role="group" aria-label="Filtrar">${chips.map(([v, label]) => `
+        <button class="x-chip js-x-group" type="button" data-group="${esc(v)}" aria-pressed="${v === sel}">${esc(label)}</button>`).join('')}</div>` : ''}
+      ${Vidriera.gridHTML(group, cat)}
+      ${!CAT && c ? `<p class="x-more-cat"><a href="/minimalista/${c.id}/">Ver la página de ${esc(c.name)} →</a></p>` : ''}`;
   }
+
+  // Home de una categoría (/minimalista/audio/): la arma shared/secciones.js, sin el catálogo de celulares
+  function buildCategory() {
+    if (!CAT) return;
+    document.body.classList.add('cat-page');
+    $('#home').insertAdjacentHTML('afterbegin', `<div id="cat-home">${window.Secciones.categoria(CAT, '/minimalista')}</div>`);
+  }
+
 
   function toExtras() {
     if (view !== 'home') { homeScroll = 0; go(baseUrl()); }
@@ -662,7 +684,7 @@
           <p class="label">${offerLabel}</p>
           <h1 class="pdp-name">${esc(p.name)}</h1>
           <p class="pdp-sub">${esc(p.brand)} · ${memory(p)}</p>
-          <p class="pdp-price"><span class="js-n"></span> cuotas${sinInteres} de <strong class="js-amount"></strong> con <span class="js-medio"></span></p>
+          <p class="pdp-price"><span class="js-was"></span><span class="js-n"></span> cuotas${sinInteres} de <strong class="js-amount"></strong> con <span class="js-medio"></span></p>
           <p class="pdp-total js-total"></p>
           <div class="plan-head"><span>Elegí tus cuotas</span></div>
           <div class="plan-grid" role="group" aria-label="Cantidad de cuotas">
@@ -767,7 +789,7 @@
       <div class="slide-info">
         <p class="label">${offerLabel}</p>
         <h2 class="slide-name">${esc(p.name)} <span>${memory(p)}</span></h2>
-        <p class="slide-price"><span class="js-n"></span> cuotas${sinInteres} de <strong class="js-amount"></strong> con <span class="js-medio"></span><small class="js-total"></small></p>
+        <p class="slide-price"><span class="js-was"></span><span class="js-n"></span> cuotas${sinInteres} de <strong class="js-amount"></strong> con <span class="js-medio"></span><small class="js-total"></small></p>
         <div class="slide-ctas">
           ${PAY
             ? `<button class="btn-primary js-buy" type="button">${ICON.cart}Comprar</button>`
@@ -1035,8 +1057,13 @@
   $$('.js-wa-general').forEach(a => { a.href = waHref(STORE.greeting); });
   $('#year').textContent = new Date().getFullYear();
   buildFooter();
+  buildCategory();
   buildHero();
   buildBrands();
+  // Inicio: garantía, cómo comprar y calculadora de envíos, después de los productos
+  if (!CAT) $('#contenido').insertAdjacentHTML('afterend', window.Secciones.info());
+  window.Secciones.init(document);
+  if (FL) FL.montar();
   paintLikeCount();
   paintTheme();
   setHeadH();

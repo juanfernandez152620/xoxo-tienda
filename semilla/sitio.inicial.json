@@ -66,14 +66,32 @@
         "name": "Muñecas",
         "whatsapp": "5493813629235",
         "address": "Ildefonso de las Muñecas 394, T4000 San Miguel de Tucumán, Tucumán",
-        "on": true
+        "on": true,
+        "province": "Tucumán"
       },
       {
         "id": "maipu",
         "name": "Maipú",
         "whatsapp": "5493815616404",
         "address": "Maipú 167, T4000 San Miguel de Tucumán, Tucumán",
-        "on": true
+        "on": true,
+        "province": "Tucumán"
+      },
+      {
+        "id": "catamarca",
+        "name": "Catamarca",
+        "province": "Catamarca",
+        "whatsapp": "",
+        "address": "Dirección a confirmar, San Fernando del Valle de Catamarca",
+        "on": false
+      },
+      {
+        "id": "buenos-aires",
+        "name": "Buenos Aires",
+        "province": "Buenos Aires",
+        "whatsapp": "",
+        "address": "Dirección a confirmar, Buenos Aires",
+        "on": false
       }
     ],
     "howtoPay": [
@@ -129,7 +147,12 @@
   },
   "ab": {
     "mode": "split",
-    "redSocialPercent": 50,
+    "weights": {
+      "red-social": 34,
+      "minimalista": 33,
+      "historia": 17,
+      "profesional": 16
+    },
     "round": 1
   },
   "products": [
@@ -674,7 +697,9 @@
       "gallery": [
         "/media/productos/microfono-aitech-1.png",
         "/media/productos/microfono-aitech-2.png"
-      ]
+      ],
+      "cat": "contenido",
+      "weight": 0.3
     },
     {
       "id": "microfono-soul-furry-tc",
@@ -696,7 +721,9 @@
       "gallery": [
         "/media/productos/microfono-soul-furry-tc-1.png",
         "/media/productos/microfono-soul-furry-tc-2.png"
-      ]
+      ],
+      "cat": "contenido",
+      "weight": 0.3
     },
     {
       "id": "tripode-soul-j500",
@@ -719,7 +746,9 @@
         "/media/productos/tripode-soul-j500-1.png",
         "/media/productos/tripode-soul-j500-2.png",
         "/media/productos/tripode-soul-j500-3.png"
-      ]
+      ],
+      "cat": "contenido",
+      "weight": 1
     },
     {
       "id": "luz-led-rgb-jl60",
@@ -741,7 +770,9 @@
       "gallery": [
         "/media/productos/luz-led-rgb-jl60-1.png",
         "/media/productos/luz-led-rgb-jl60-2.png"
-      ]
+      ],
+      "cat": "contenido",
+      "weight": 0.4
     },
     {
       "id": "luz-led-full-jl80",
@@ -763,7 +794,394 @@
       "gallery": [
         "/media/productos/luz-led-full-jl80-1.png",
         "/media/productos/luz-led-full-jl80-2.png"
+      ],
+      "cat": "contenido",
+      "weight": 0.4
+    },
+    {
+      "id": "ventilador-torre",
+      "hidden": false,
+      "example": true,
+      "cat": "ventilacion",
+      "group": "Ventiladores",
+      "brand": "",
+      "name": "Ventilador de torre",
+      "icon": "ventilador",
+      "weight": 5,
+      "price": 89999,
+      "listPrice": 0,
+      "pitch": "Lorem ipsum dolor sit amet, aire parejo en todo el ambiente.",
+      "details": [
+        "Lorem ipsum dolor sit amet",
+        "Consectetur adipiscing elit",
+        "Sed do eiusmod tempor"
+      ],
+      "gallery": []
+    },
+    {
+      "id": "ventilador-pie",
+      "hidden": false,
+      "example": true,
+      "cat": "ventilacion",
+      "group": "Ventiladores",
+      "brand": "",
+      "name": "Ventilador de pie 18\"",
+      "icon": "ventilador",
+      "weight": 6,
+      "price": 74999,
+      "listPrice": 0,
+      "pitch": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+      "details": [
+        "Lorem ipsum dolor sit amet",
+        "Consectetur adipiscing elit",
+        "Sed do eiusmod tempor"
+      ],
+      "gallery": []
+    },
+    {
+      "id": "ventilador-escritorio-usb",
+      "hidden": false,
+      "example": true,
+      "cat": "ventilacion",
+      "group": "Ventiladores",
+      "brand": "",
+      "name": "Ventilador de escritorio USB",
+      "icon": "ventilador",
+      "weight": 0.6,
+      "price": 18999,
+      "listPrice": 0,
+      "pitch": "Lorem ipsum: silencioso y se conecta a la compu.",
+      "details": [
+        "Lorem ipsum dolor sit amet",
+        "Consectetur adipiscing elit",
+        "Sed do eiusmod tempor"
+      ],
+      "gallery": []
+    },
+    {
+      "id": "ventilador-mano",
+      "hidden": false,
+      "example": true,
+      "cat": "ventilacion",
+      "group": "Ventiladores",
+      "brand": "",
+      "name": "Mini ventilador de mano",
+      "icon": "ventilador",
+      "weight": 0.3,
+      "price": 12999,
+      "listPrice": 0,
+      "pitch": "Lorem ipsum dolor sit amet, recargable por USB-C.",
+      "details": [
+        "Lorem ipsum dolor sit amet",
+        "Consectetur adipiscing elit",
+        "Sed do eiusmod tempor"
+      ],
+      "gallery": []
+    },
+    {
+      "id": "parlante-bluetooth",
+      "hidden": false,
+      "example": true,
+      "cat": "audio",
+      "group": "Parlantes",
+      "brand": "",
+      "name": "Parlante Bluetooth portátil",
+      "icon": "parlante",
+      "weight": 0.8,
+      "price": 39999,
+      "listPrice": 0,
+      "pitch": "Lorem ipsum dolor sit amet, sonido fuerte en un tamaño chico.",
+      "details": [
+        "Lorem ipsum dolor sit amet",
+        "Consectetur adipiscing elit",
+        "Sed do eiusmod tempor"
+      ],
+      "gallery": []
+    },
+    {
+      "id": "torre-de-sonido",
+      "hidden": false,
+      "example": true,
+      "cat": "audio",
+      "group": "Parlantes",
+      "brand": "",
+      "name": "Torre de sonido con luces",
+      "icon": "parlante",
+      "weight": 9,
+      "price": 159999,
+      "listPrice": 0,
+      "pitch": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+      "details": [
+        "Lorem ipsum dolor sit amet",
+        "Consectetur adipiscing elit",
+        "Sed do eiusmod tempor"
+      ],
+      "gallery": []
+    },
+    {
+      "id": "auriculares-tws",
+      "hidden": false,
+      "example": true,
+      "cat": "audio",
+      "group": "Auriculares",
+      "brand": "",
+      "name": "Auriculares inalámbricos",
+      "icon": "auricular",
+      "weight": 0.2,
+      "price": 24999,
+      "listPrice": 0,
+      "pitch": "Lorem ipsum dolor sit amet, estuche de carga incluido.",
+      "details": [
+        "Lorem ipsum dolor sit amet",
+        "Consectetur adipiscing elit",
+        "Sed do eiusmod tempor"
+      ],
+      "gallery": []
+    },
+    {
+      "id": "auriculares-vincha",
+      "hidden": false,
+      "example": true,
+      "cat": "audio",
+      "group": "Auriculares",
+      "brand": "",
+      "name": "Auriculares de vincha Bluetooth",
+      "icon": "auricular",
+      "weight": 0.4,
+      "price": 34999,
+      "listPrice": 0,
+      "pitch": "Lorem ipsum dolor sit amet, cómodos para todo el día.",
+      "details": [
+        "Lorem ipsum dolor sit amet",
+        "Consectetur adipiscing elit",
+        "Sed do eiusmod tempor"
+      ],
+      "gallery": []
+    }
+  ],
+  "categories": [
+    {
+      "id": "ventilacion",
+      "name": "Ventilación",
+      "short": "Ventilación",
+      "title": "Aire fresco todo el verano",
+      "text": "Ventiladores de torre, de pie, de escritorio y de mano. Elegí el tamaño justo para cada ambiente y pagalo en cuotas con Mercado Pago.",
+      "color": "#38bdf8",
+      "benefits": [
+        "Silenciosos | Para dormir o trabajar sin ruido de fondo.",
+        "Bajo consumo | Gastan mucho menos que un aire acondicionado.",
+        "Para cada ambiente | Del living al escritorio, o en la mano.",
+        "30 días de garantía | Si algo falla, lo resolvemos."
+      ],
+      "guideTitle": "¿Qué ventilador te conviene?",
+      "guide": [
+        "De torre | Livings y dormitorios: ocupa poco lugar y reparte el aire parejo.",
+        "De pie | Ambientes grandes: más potencia y altura regulable.",
+        "De escritorio | Oficina o mesa de luz: se conecta por USB a la compu.",
+        "De mano | Para llevar a todos lados: recargable y liviano."
+      ],
+      "faq": [
+        "¿Cuánto consume un ventilador? | Mucho menos que un aire acondicionado: lorem ipsum dolor sit amet.",
+        "¿Hacen ruido? | Los de torre y los de escritorio son los más silenciosos.",
+        "¿Hacen envíos? | Sí, a todo el país con Andreani o Correo Argentino. Calculá el costo más abajo.",
+        "¿Tienen garantía? | Todos los productos tienen 30 días de garantía."
+      ]
+    },
+    {
+      "id": "contenido",
+      "name": "Creación de contenido",
+      "short": "Contenido",
+      "title": "Todo para crear y grabar",
+      "text": "Micrófonos, luces y trípodes para que tus videos se vean y se escuchen como los de los que más saben. Armá tu kit y pagalo en cuotas.",
+      "color": "#ec4899",
+      "benefits": [
+        "Audio claro | Micrófonos inalámbricos con protector antiviento.",
+        "Luz pareja | Luces LED de tono cálido a frío, o de colores.",
+        "Estabilidad | Trípodes con control remoto para grabarte solo.",
+        "30 días de garantía | Si algo falla, lo resolvemos."
+      ],
+      "guideTitle": "Armá tu kit",
+      "guide": [
+        "Kit para empezar | Un micrófono corbatero y un trípode: lo justo para tus primeros videos.",
+        "Kit de streaming | Micrófono, luz LED y trípode para vivos y videos con buena imagen.",
+        "Kit para fotos | Luz de colores y trípode con control remoto.",
+        "¿No sabés qué elegir? | Escribinos por WhatsApp y te armamos el kit."
+      ],
+      "faq": [
+        "¿Los micrófonos funcionan con cualquier celular? | Los inalámbricos traen receptor USB-C; lorem ipsum dolor sit amet.",
+        "¿Las luces son recargables? | Sí, se cargan por USB-C.",
+        "¿Hacen envíos? | Sí, a todo el país con Andreani o Correo Argentino.",
+        "¿Tienen garantía? | Todos los productos tienen 30 días de garantía."
+      ]
+    },
+    {
+      "id": "audio",
+      "name": "Audio",
+      "short": "Audio",
+      "title": "Tu música, más fuerte",
+      "text": "Parlantes portátiles, torres de sonido y auriculares inalámbricos. Para la juntada, el gimnasio o el colectivo, pagalo en cuotas con Mercado Pago.",
+      "color": "#8b5cf6",
+      "benefits": [
+        "Bluetooth | Se conectan al celular en segundos.",
+        "Batería que dura | Horas de música sin cargar.",
+        "Sonido potente | Del auricular a la torre con luces.",
+        "30 días de garantía | Si algo falla, lo resolvemos."
+      ],
+      "guideTitle": "¿Cómo escuchás tu música?",
+      "guide": [
+        "En la juntada | Una torre de sonido con luces llena cualquier ambiente.",
+        "Para llevar | Un parlante portátil entra en la mochila.",
+        "Solo para vos | Auriculares inalámbricos con estuche de carga.",
+        "Para todo el día | Auriculares de vincha, cómodos y con buena batería."
+      ],
+      "faq": [
+        "¿Se conectan a cualquier celular? | Sí, por Bluetooth, con Android y iPhone.",
+        "¿Cuánto dura la batería? | Depende del modelo: lorem ipsum dolor sit amet.",
+        "¿Hacen envíos? | Sí, a todo el país con Andreani o Correo Argentino.",
+        "¿Tienen garantía? | Todos los productos tienen 30 días de garantía."
       ]
     }
-  ]
+  ],
+  "flash": {
+    "on": true,
+    "percent": 20,
+    "minutes": 60
+  },
+  "shipping": {
+    "pickup": true,
+    "freeFrom": 0,
+    "rates": {
+      "andreani": {
+        "on": true,
+        "domicilio": [
+          6500,
+          9500,
+          12500,
+          16900
+        ],
+        "sucursal": [
+          4900,
+          7200,
+          9400,
+          12700
+        ],
+        "extraKg": 1200
+      },
+      "correo": {
+        "on": true,
+        "domicilio": [
+          5900,
+          8700,
+          11200,
+          14800
+        ],
+        "sucursal": [
+          4300,
+          6300,
+          8100,
+          10900
+        ],
+        "extraKg": 1000
+      }
+    },
+    "days": [
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        3,
+        6
+      ],
+      [
+        5,
+        9
+      ]
+    ]
+  },
+  "story": {
+    "kicker": "Somos XOXO Tecno",
+    "title": "Tres socios, una idea y sucursales en tres provincias",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
+    "foundersTitle": "Los que empezaron todo",
+    "foundersText": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.",
+    "founders": [
+      {
+        "name": "Socio 1",
+        "role": "Lorem ipsum · Fundador",
+        "photo": ""
+      },
+      {
+        "name": "Socio 2",
+        "role": "Dolor sit amet · Fundador",
+        "photo": ""
+      },
+      {
+        "name": "Socio 3",
+        "role": "Consectetur · Fundador",
+        "photo": ""
+      }
+    ],
+    "teamTitle": "Un equipo que atiende como amigo",
+    "teamText": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "team": [
+      {
+        "name": "Lorem",
+        "role": "Ventas",
+        "photo": ""
+      },
+      {
+        "name": "Ipsum",
+        "role": "Atención por WhatsApp",
+        "photo": ""
+      },
+      {
+        "name": "Dolor",
+        "role": "Envíos",
+        "photo": ""
+      },
+      {
+        "name": "Sit",
+        "role": "Servicio técnico",
+        "photo": ""
+      },
+      {
+        "name": "Amet",
+        "role": "Contenido",
+        "photo": ""
+      },
+      {
+        "name": "Elit",
+        "role": "Sucursal Catamarca",
+        "photo": ""
+      }
+    ],
+    "branchesTitle": "Estamos en Tucumán, Catamarca y Buenos Aires",
+    "branchesText": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "warrantyDays": 30,
+    "warrantyTitle": "Todos los productos tienen garantía",
+    "warrantyText": "Si algo falla en los primeros 30 días, lo resolvemos en la sucursal o por WhatsApp. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    "stats": [
+      {
+        "v": "3",
+        "l": "provincias"
+      },
+      {
+        "v": "+10",
+        "l": "sucursales"
+      },
+      {
+        "v": "+5.000",
+        "l": "clientes"
+      },
+      {
+        "v": "30",
+        "l": "días de garantía"
+      }
+    ]
+  }
 }

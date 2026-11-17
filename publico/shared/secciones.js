@@ -1,0 +1,279 @@
+/* Secciones que comparten los cuatro diseños (window.Secciones):
+ *  - El menú de las 4 vistas de cada diseño: Inicio (todo) y la home de cada categoría.
+ *  - La home de una categoría: portada, beneficios, productos, guía para elegir, cómo comprar, calculadora de
+ *    envíos, garantía y preguntas frecuentes. Cada categoría tiene sus propios textos (/admin → Tienda y textos).
+ *  - Los bloques de "comprá tranquilo" para el inicio: garantía, cómo comprar y calculadora de envíos.
+ * Las clases empiezan con sx-. Cada diseño las pinta con sus variables (shared/secciones.css).
+ * Necesita shared/vidriera.js (tarjetas y ficha de producto) y shared/envios.js (calculadora).
+ */
+(() => {
+  'use strict';
+
+  const { STORE, SITE = {}, EXTRAS = [] } = window;
+  const CATS = SITE.categories || [];
+  const STORY = SITE.story || {};
+  const SHIP = SITE.shipping || null;
+  const V = window.Vidriera;
+  const EN = window.Envios;
+  const PAY = window.TB_MODE === 'pago' && Boolean(window.Checkout);
+
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmt = new Intl.NumberFormat('es-AR');
+  const money = n => '$' + fmt.format(n);
+  const plano = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const par = s => { const [a, ...b] = String(s).split('|'); return { t: a.trim(), x: b.join('|').trim() }; };
+  const email = (SITE.footer && SITE.footer.email) || 'ventas@xoxotecno.com.ar';
+  const dias = () => STORY.warrantyDays || 30;
+
+  const line = d => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const I = {
+    shield: line('<path d="M12 2.8 4.5 5.6v6.1c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V5.6z"/><path d="m8.6 12.2 2.3 2.3 4.6-4.8"/>'),
+    truck: line('<path d="M2.5 6.5h11v9h-11zM13.5 9.5h4l3 3.2v2.8h-7"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>'),
+    card: line('<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19M6 15h4"/>'),
+    mail: line('<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/>'),
+    store: line('<path d="M3.5 9.5h17l-1.2-4.8a1.5 1.5 0 0 0-1.5-1.2H6.2a1.5 1.5 0 0 0-1.5 1.2zM4.5 9.5v10h15v-10M9.5 19.5v-5h5v5"/>'),
+    check: line('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
+    arrow: line('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+    plus: line('<path d="M12 5v14M5 12h14"/>'),
+  };
+  const CAT_ICON = { ventilacion: 'ventilador', contenido: 'mic', audio: 'auricular' };
+  const catIcon = c => (V && V.icon(CAT_ICON[c.id])) || '';
+  const catOf = id => CATS.find(c => c.id === id) || null;
+
+  /* ---------- Menú de las 4 vistas ---------- */
+  function nav(base, actual = '') {
+    const link = (href, label, on, color = '') => `<a href="${href}"${on ? ' aria-current="page"' : ''}${color ? ` style="--sx-dot:${esc(color)}"` : ''}>${color ? '<i aria-hidden="true"></i>' : ''}${esc(label)}</a>`;
+    return `<nav class="sx-nav" aria-label="Secciones de la tienda">
+      ${link(`${base}/`, 'Inicio', !actual)}
+      ${CATS.map(c => link(`${base}/${c.id}/`, c.short || c.name, actual === c.id, c.color)).join('')}
+    </nav>`;
+  }
+
+  /* ---------- Piezas ---------- */
+  const head = (kicker, title, text = '') => `
+    <header class="sx-head">
+      ${kicker ? `<p class="sx-kicker">${esc(kicker)}</p>` : ''}
+      <h2 class="sx-title">${esc(title)}</h2>
+      ${text ? `<p class="sx-text">${esc(text)}</p>` : ''}
+    </header>`;
+
+  function hero(c) {
+    const n = V ? V.byCat(c.id).length : 0;
+    return `
+      <section class="sx-hero" style="--sx-accent:${esc(c.color)}">
+        <div class="sx-hero-copy">
+          <p class="sx-kicker">${esc(STORE.name)} · ${n} producto${n === 1 ? '' : 's'}</p>
+          <h1 class="sx-hero-title">${esc(c.name)}</h1>
+          <p class="sx-hero-sub">${esc(c.title)}</p>
+          <p class="sx-text">${esc(c.text)}</p>
+          <div class="sx-ctas">
+            <a class="sx-btn" href="#sx-productos" data-sx-go="sx-productos">Ver los productos ${I.arrow}</a>
+            <a class="sx-btn ghost" href="#sx-envios" data-sx-go="sx-envios">Calculá tu envío</a>
+          </div>
+        </div>
+        <div class="sx-hero-art" aria-hidden="true"><span class="sx-ring"></span><span class="sx-ico">${catIcon(c)}</span></div>
+      </section>`;
+  }
+
+  function beneficios(c) {
+    const list = (c.benefits || []).map(par);
+    if (!list.length) return '';
+    return `
+      <section class="sx-benefits" style="--sx-accent:${esc(c.color)}" aria-label="Por qué elegir ${esc(c.name)} en ${esc(STORE.name)}">
+        ${list.map(b => `<div class="sx-benefit"><span class="sx-bico">${/garant/i.test(b.t) ? I.shield : I.check}</span><b>${esc(b.t)}</b><span>${esc(b.x)}</span></div>`).join('')}
+      </section>`;
+  }
+
+  function productos(c) {
+    const list = V ? V.byCat(c.id) : [];
+    const grupos = [...new Set(list.map(p => p.group))];
+    return `
+      <section class="sx-products" id="sx-productos" style="--sx-accent:${esc(c.color)}">
+        <div class="sx-products-head">
+          <h2 class="sx-title">${esc(c.name)}</h2>
+          ${grupos.length > 1 ? `<div class="sx-chips" role="group" aria-label="Filtrar">${['', ...grupos].map(g => `<button type="button" class="sx-chip" data-g="${esc(g)}" data-cat="${esc(c.id)}" aria-pressed="${!g}">${esc(g || 'Todos')}</button>`).join('')}</div>` : ''}
+        </div>
+        <div class="sx-grid">${list.length ? V.gridHTML('', c.id) : '<p class="sx-empty">Muy pronto vas a ver los productos de esta categoría acá.</p>'}</div>
+      </section>`;
+  }
+
+  // Guía para elegir: cada tarjeta muestra, si lo hay, el producto que le corresponde (por el nombre)
+  function guia(c) {
+    const list = (c.guide || []).map(par);
+    if (!list.length) return '';
+    const prods = V ? V.byCat(c.id) : [];
+    const STOP = new Set(['de', 'el', 'la', 'en', 'tu', 'mas', 'muy', 'sin', 'por', 'para', 'kit', 'solo', 'todo', 'dia', 'que', 'con', 'una', 'los', 'las', 'del', 'como', 'sabes', 'elegir', 'empezar', 'vos', 'juntada', 'llevar']);
+    const match = t => {
+      const words = plano(t).split(/[^a-z0-9]+/).filter(w => w.length >= 3 && !STOP.has(w));
+      return prods.find(p => words.some(w => plano(p.name).includes(w)));
+    };
+    return `
+      <section class="sx-guide" style="--sx-accent:${esc(c.color)}">
+        ${head('Guía', c.guideTitle || `Cómo elegir en ${c.name}`)}
+        <div class="sx-guide-grid">
+          ${list.map(g => {
+            const p = match(g.t);
+            return `<article class="sx-gcard">
+              <h3>${esc(g.t)}</h3><p>${esc(g.x)}</p>
+              ${p ? `<a class="sx-gprod js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}"><span>${esc(p.name)}</span><b>${money(p.price)}</b></a>` : ''}
+            </article>`;
+          }).join('')}
+        </div>
+      </section>`;
+  }
+
+  function pasos() {
+    const list = [
+      [I.card, 'Comprás online', 'Pagás con Mercado Pago: tarjeta en cuotas, débito, dinero en cuenta o efectivo.'],
+      [I.truck, 'Elegís el envío', 'Andreani o Correo Argentino a tu casa o a la sucursal, o retirás gratis en una de nuestras sucursales.'],
+      [I.mail, 'Te llega el mail', `Apenas se acredita el pago te escribimos desde ${email} con el detalle y el seguimiento.`],
+    ];
+    return `
+      <section class="sx-steps">
+        ${head('Cómo comprar', 'Simple y seguro')}
+        <ol class="sx-steps-list">${list.map(([ico, t, x]) => `<li><span class="sx-sico">${ico}</span><h3>${esc(t)}</h3><p>${esc(x)}</p></li>`).join('')}</ol>
+      </section>`;
+  }
+
+  function garantia() {
+    return `
+      <section class="sx-warranty">
+        <span class="sx-wico">${I.shield}</span>
+        <div><h2 class="sx-title">${esc(dias())} días de garantía</h2>
+          <p class="sx-text">En todos los productos. Si algo falla, lo resolvemos en la sucursal o por WhatsApp.</p></div>
+      </section>`;
+  }
+
+  function calculadora(catId = '') {
+    if (!SHIP || !EN || !V) return '';
+    const orden = catId ? [catOf(catId), ...CATS.filter(c => c.id !== catId)] : CATS;
+    const grupos = orden.filter(Boolean).map(c => {
+      const list = V.byCat(c.id);
+      return list.length ? `<optgroup label="${esc(c.name)}">${list.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</optgroup>` : '';
+    }).join('');
+    return `
+      <section class="sx-calc" id="sx-envios">
+        <div class="sx-calc-copy">
+          ${head('Envíos a todo el país', 'Calculá tu envío', 'Con Andreani y Correo Argentino, a domicilio o a sucursal. O retirás gratis en una de nuestras sucursales.')}
+        </div>
+        <form class="sx-calc-form" novalidate>
+          <label class="sx-fld"><span>¿Qué vas a comprar?</span><select name="producto">${grupos}</select></label>
+          <div class="sx-fld-row">
+            <label class="sx-fld"><span>Provincia</span>
+              <select name="provincia"><option value="">Elegí…</option>${EN.PROVINCIAS.map(p => `<option>${esc(p.nombre)}</option>`).join('')}</select></label>
+            <label class="sx-fld"><span>Código postal</span><input name="cp" maxlength="8" placeholder="4000" autocomplete="postal-code"></label>
+          </div>
+          <div class="sx-calc-out" aria-live="polite"></div>
+        </form>
+      </section>`;
+  }
+
+  function faq(c) {
+    const list = (c.faq || []).map(par);
+    if (!list.length) return '';
+    return `
+      <section class="sx-faq" style="--sx-accent:${esc(c.color)}">
+        ${head('Preguntas frecuentes', `Sobre ${c.name.toLowerCase()}`)}
+        <div class="sx-faq-list">${list.map(q => `<details><summary>${esc(q.t)}<span aria-hidden="true">${I.plus}</span></summary><p>${esc(q.x)}</p></details>`).join('')}</div>
+      </section>`;
+  }
+
+  function otras(c, base) {
+    const list = CATS.filter(x => x.id !== c.id);
+    return `
+      <section class="sx-others">
+        ${head('Seguí mirando', 'Otras categorías')}
+        <div class="sx-others-grid">
+          ${list.map(x => `<a class="sx-ocard" href="${base}/${x.id}/" style="--sx-accent:${esc(x.color)}">
+            <span class="sx-oico">${catIcon(x)}</span><b>${esc(x.name)}</b><span>${esc(x.title)}</span><em>Ver ${I.arrow}</em></a>`).join('')}
+          <a class="sx-ocard" href="${base}/"><span class="sx-oico">${I.store}</span><b>Todo ${esc(STORE.name)}</b><span>Celulares y todas las categorías</span><em>Ver ${I.arrow}</em></a>
+        </div>
+      </section>`;
+  }
+
+  // La home completa de una categoría
+  function categoria(c, base) {
+    return `<div class="sx-page" style="--sx-accent:${esc(c.color)}" data-sx-cat="${esc(c.id)}">
+      ${hero(c)}${beneficios(c)}${productos(c)}${guia(c)}${pasos()}${calculadora(c.id)}${garantia()}${faq(c)}${otras(c, base)}
+    </div>`;
+  }
+
+  // Para el inicio de cada diseño: garantía, cómo comprar y calculadora
+  const info = () => `<div class="sx-page sx-info">${garantia()}${pasos()}${calculadora()}</div>`;
+
+  /* ---------- Comportamiento ---------- */
+  function calc(form) {
+    const out = $('.sx-calc-out', form);
+    const byId = Object.fromEntries(EXTRAS.map(p => [p.id, p]));
+    try {
+      const b = JSON.parse(localStorage.getItem('cc:buyer') || 'null') || {};
+      if (b.province) form.elements.provincia.value = b.province;
+      if (b.cp) form.elements.cp.value = b.cp;
+    } catch {}
+    const recordar = () => {
+      try {
+        const b = JSON.parse(localStorage.getItem('cc:buyer') || 'null') || {};
+        localStorage.setItem('cc:buyer', JSON.stringify({ ...b, province: form.elements.provincia.value, cp: form.elements.cp.value }));
+      } catch {}
+    };
+    function pintar() {
+      const p = byId[form.elements.producto.value];
+      const prov = EN.provincia(form.elements.provincia.value);
+      if (!prov) { out.innerHTML = '<p class="sx-hint">Elegí tu provincia o escribí tu código postal.</p>'; return; }
+      const ops = EN.opciones(SHIP, prov.zona, EN.peso(p), p ? p.price : 0);
+      const cerca = (STORE.branches || []).filter(b => b.province && EN.provincia(b.province) && EN.provincia(b.province).nombre === prov.nombre);
+      out.innerHTML = `
+        <table class="sx-quotes"><tbody>
+          ${SHIP.pickup ? `<tr><td><b>Retiro en sucursal</b><small>${cerca.length ? `${cerca.length} sucursal${cerca.length === 1 ? '' : 'es'} en ${esc(prov.nombre)}` : 'En nuestras sucursales'}</small></td><td>Gratis</td></tr>` : ''}
+          ${ops.map(o => `<tr class="sx-q-${o.empresa}"><td><b>${esc(o.nombre)}</b><small>Llega en ${esc(EN.diasTexto(o.dias))}</small></td><td>${o.costo ? money(o.costo) : 'Gratis'}</td></tr>`).join('')}
+        </tbody></table>
+        <p class="sx-note">Precio estimado para ${esc(p ? p.name : 'tu compra')} a ${esc(prov.nombre)}. El total exacto lo ves antes de pagar.</p>
+        ${p && PAY ? `<button type="button" class="sx-btn js-x-buy" data-x="${esc(p.id)}">Comprar ${esc(p.name)} ${I.arrow}</button>` : ''}`;
+    }
+    form.addEventListener('change', () => { pintar(); recordar(); });
+    form.elements.cp.addEventListener('input', () => {
+      const prov = EN.provinciaDeCp(form.elements.cp.value);
+      if (prov) form.elements.provincia.value = prov.nombre;
+      pintar();
+      recordar();
+    });
+    form.addEventListener('submit', e => e.preventDefault());
+    pintar();
+  }
+
+  // Los botones "Ver los productos" y "Calculá tu envío" bajan sin tocar la dirección (los diseños usan el # para navegar)
+  document.addEventListener('click', e => {
+    const a = e.target.closest('[data-sx-go]');
+    if (!a) return;
+    const el = document.getElementById(a.dataset.sxGo);
+    if (!el) return;
+    e.preventDefault();
+    el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  });
+
+  // Activa lo que haya en root: calculadoras y filtros de productos
+  function init(root = document) {
+    $$('.sx-calc-form', root).forEach(form => {
+      if (form.dataset.sxOn) return;
+      form.dataset.sxOn = '1';
+      const cat = form.closest('[data-sx-cat]');
+      const first = cat && V.byCat(cat.dataset.sxCat)[0];
+      if (first) form.elements.producto.value = first.id;
+      calc(form);
+    });
+    $$('.sx-chips', root).forEach(box => {
+      if (box.dataset.sxOn) return;
+      box.dataset.sxOn = '1';
+      box.addEventListener('click', e => {
+        const b = e.target.closest('.sx-chip');
+        if (!b) return;
+        $$('.sx-chip', box).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+        box.closest('.sx-products').querySelector('.sx-grid').innerHTML = V.gridHTML(b.dataset.g, b.dataset.cat);
+      });
+    });
+  }
+
+  window.Secciones = { nav, categoria, info, hero, beneficios, productos, guia, pasos, garantia, calculadora, faq, otras, init, icon: k => I[k], catIcon, cats: CATS };
+})();

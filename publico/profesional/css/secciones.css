@@ -1,0 +1,29 @@
+/* C2 Profesional: las secciones compartidas (shared/secciones.css) con letra con serifa, bordes finos y sin colores fuertes */
+:root {
+  --sx-radius: 6px;
+  --sx-btn-radius: 6px;
+  --sx-title-font: "Source Serif 4", Georgia, serif;
+  --sx-title-weight: 600;
+  --sx-title-size: clamp(28px, 3.6vw, 42px);
+  --sx-hero-size: clamp(40px, 6vw, 72px);
+  --sx-max: 1160px;
+  --sx-gutter: clamp(18px, 5vw, 64px);
+}
+.sx-nav a { border-radius: 0; padding: 10px 14px; border-bottom: 2px solid transparent; font-size: 15px; }
+.sx-nav a[aria-current="page"] { background: none; color: var(--ink); border-bottom-color: var(--ink); }
+.sx-nav a:hover { background: none; color: var(--ink); }
+.sx-kicker { color: var(--accent); }
+.sx-hero-sub { color: var(--ink); font-family: "Source Serif 4", Georgia, serif; font-style: italic; font-weight: 500; }
+.sx-ring { background: var(--bg-2); border: 1px solid var(--line); }
+.sx-ico { background: transparent; color: var(--sx-accent); box-shadow: none; }
+.sx-ico svg { width: 70%; height: 70%; stroke-width: 1.1; }
+.sx-benefit { background: transparent; border: 1px solid var(--line); }
+.sx-bico { background: transparent; border: 1px solid var(--line); color: var(--sx-accent); }
+.sx-chip { border-radius: 6px; background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.sx-sico { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1px var(--line); }
+.sx-wico { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1px var(--line); }
+.sx-page > .sx-warranty { background: transparent; border: 1px solid var(--line); }
+.sx-calc-form { background: var(--bg-2); }
+.sx-oico { background: transparent; color: var(--sx-accent); box-shadow: inset 0 0 0 1px var(--line); }
+.sx-ocard { background: transparent; border: 1px solid var(--line); }
+.sx-ocard em { color: var(--ink); }

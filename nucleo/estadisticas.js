@@ -68,11 +68,17 @@ function vacias() {
     days: {}, products: {}, sources: {}, places: {},
     // Clicks en WhatsApp de cada sucursal
     branches: {},
-    // Visitantes distintos: id del navegador => qué diseños vio (1 Red social, 2 Minimalista) y en cuáles escribió (4, 8)
+    // Visitantes distintos: id del navegador => qué diseños vio (1 Red social, 2 Minimalista, 16 Historia) y en cuáles escribió (4, 8, 32)
     visitors: {},
     // Visitantes distintos de cada día (solo de los días que todavía pueden recibir eventos)
     seen: {},
   };
+}
+
+// Variantes que se sumaron después (el diseño C): empiezan en cero sin perder lo contado
+function completar(s) {
+  if (s && s.version === 2 && s.variants) for (const v of VARIANTS) s.variants[v] = s.variants[v] || contadores();
+  return s;
 }
 
 const validas = s => Boolean(s && s.version === 2 && s.cursor && typeof s.cursor.done === 'string' && s.cursor.pos
@@ -88,9 +94,10 @@ function aplicar(s, ev, day) {
   if (!s.since || ev.t < s.since) s.since = ev.t;
   s.events++;
   if (!s.lastEventAt || ev.t > s.lastEventAt) s.lastEventAt = ev.t;
-  const bit = v === 'red-social' ? 0 : 1;
-  const seen = 1 << bit;
-  const wa = 4 << bit;
+  // Bits de cada diseño en visitors/seen: A visto 1 y escribió 4, B 2 y 8, C1 16 y 32, C2 64 y 128
+  const i = VARIANTS.indexOf(v);
+  const seen = [1, 2, 16, 64][i];
+  const wa = [4, 8, 32, 128][i];
   const vid = String(ev.vid || '');
   const id = String(ev.id || '');
 
@@ -206,12 +213,12 @@ function ponerAlDia(s) {
 
 // Carga los totales. Si el archivo está dañado: última copia buena + lo que quedó en el registro.
 function cargar() {
-  const s = leerJson(ESTADISTICAS);
+  const s = completar(leerJson(ESTADISTICAS));
   if (validas(s)) return { s, from: 'estadisticas.json' };
   if (!fs.existsSync(ESTADISTICAS) && !archivosJson(COPIAS).length) return { s: vacias(), from: 'nuevo' };
   if (fs.existsSync(ESTADISTICAS)) console.error(`[estadísticas] estadisticas.json está dañado. Se guardó como ${cuarentena(ESTADISTICAS)}`);
   for (const nombre of archivosJson(COPIAS)) {
-    const b = leerJson(path.join(COPIAS, nombre));
+    const b = completar(leerJson(path.join(COPIAS, nombre)));
     if (validas(b)) return { s: b, from: `la copia ${nombre}` };
   }
   return { s: vacias(), from: 'cero (recalculado desde el registro)' };

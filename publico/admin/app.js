@@ -26,6 +26,8 @@
   const VARIANTS = [
     { id: 'red-social', name: 'Red social', cls: 's1', color: '--series-1' },
     { id: 'minimalista', name: 'Minimalista', cls: 's2', color: '--series-2' },
+    { id: 'historia', name: 'Historia (C1)', cls: 's3', color: '--series-3' },
+    { id: 'profesional', name: 'Profesional (C2)', cls: 's4', color: '--series-4' },
   ];
   const vName = id => (VARIANTS.find(v => v.id === id) || {}).name || id;
   const SPEC_ICONS = { pantalla: 'Pantalla', camara: 'Cámara', bateria: 'Batería', memoria: 'Memoria', ram: 'RAM', parlante: 'Parlante', update: 'Actualizaciones', carga: 'Carga rápida' };
@@ -280,7 +282,7 @@
         <div class="table-wrap"><table>
           <thead>
             <tr><th></th>${cols.map(([, l]) => `<th colspan="2" class="th-group">${l}</th>`).join('')}</tr>
-            <tr><th>Producto</th>${cols.map(() => VARIANTS.map(v => `<th class="num"><i class="swatch ${v.cls}" title="${v.name}"></i><span class="muted"> ${v.name === 'Red social' ? 'RS' : 'Min'}</span></th>`).join('')).join('')}</tr>
+            <tr><th>Producto</th>${cols.map(() => VARIANTS.map(v => `<th class="num"><i class="swatch ${v.cls}" title="${v.name}"></i><span class="muted"> ${{ 'red-social': 'A', minimalista: 'B', historia: 'C1', profesional: 'C2' }[v.id] || v.name}</span></th>`).join('')).join('')}</tr>
           </thead>
           <tbody>${prodRows}</tbody>
         </table></div>
@@ -419,18 +421,26 @@
         ${field('Nombre', `${p}.name`)}
         <label class="field">WhatsApp
           <input type="text" ${attrs(`${p}.whatsapp`)} value="${esc(b.whatsapp)}" inputmode="numeric" placeholder="3813629235">
-          <small>Característica y número, sin 0 ni 15.
+          <small>Característica y número, sin 0 ni 15. Si la sucursal no recibe mensajes, puede quedar vacío.
             ${wa ? `<a href="https://wa.me/${esc(wa.length === 10 ? `549${wa}` : wa)}" target="_blank" rel="noopener">Probar este número</a>` : ''}</small></label>
       </div>
-      ${field('Dirección', `${p}.address`, { help: 'Se muestra en la tienda, con el botón "Cómo llegar".' })}
+      <div class="grid-2">
+        ${field('Dirección', `${p}.address`, { help: 'Se muestra en la tienda, con el botón "Cómo llegar".' })}
+        ${field('Provincia', `${p}.province`, { help: 'Agrupa las sucursales en la página Historia. Ej. Tucumán, Catamarca, Buenos Aires.' })}
+      </div>
       <div class="row">${check('Recibe mensajes de WhatsApp', `${p}.on`)}<span class="spacer"></span>
         ${len > 1 ? `<button class="btn small" type="button" data-act="del-branch" data-i="${i}">Quitar sucursal</button>` : ''}</div>
     </div>`;
   }
 
   /* ----- Anuncio (reparto entre los dos diseños) ----- */
-  const splitText = p => `Red social ${p}% · Minimalista ${100 - p}%`;
-  const splitBar = p => `<i class="s1" style="width:${p}%"></i><i class="s2" style="width:${100 - p}%"></i>`;
+  // Reparto entre los 3 diseños: cada uno tiene una parte (no hace falta que sumen 100)
+  const splitPct = w => {
+    const total = VARIANTS.reduce((s, v) => s + (Number(w[v.id]) || 0), 0) || 1;
+    return VARIANTS.map(v => ({ ...v, pct: Math.round(((Number(w[v.id]) || 0) / total) * 100) }));
+  };
+  const splitText = w => splitPct(w).map(v => `${v.name} ${v.pct}%`).join(' · ');
+  const splitBar = w => splitPct(w).map(v => `<i class="${v.cls}" style="width:${v.pct}%"></i>`).join('');
   function viewAb() {
     const ab = S.draft.ab;
     const link = `${location.origin}${BASE}/anuncio/`;
@@ -441,11 +451,16 @@
       <div class="page-head"><h1>Anuncio</h1></div>
       <section class="card">
         <div class="card-head"><h2>Link para anuncio digital</h2></div>
-        <p>Usalo en Instagram, Facebook, TikTok o donde publiques. Cada persona que entra ve uno de los dos diseños y queda registrada en las estadísticas.</p>
+        <p>Usalo en Instagram, Facebook, TikTok o donde publiques. Cada persona que entra ve uno de los cuatro diseños (A, B, C1 y C2) y queda registrada en las estadísticas.</p>
         <div class="link-box"><code>${esc(link)}</code>
           <button class="btn primary" type="button" data-act="copy" data-text="${esc(link)}">Copiar link</button></div>
         <p class="muted">Para saber de qué red vino cada visita, agregale <code>?src=</code> y un nombre, por ejemplo
           <code>${esc(link)}?src=instagram</code>. Aparece en Estadísticas → Origen de las visitas.</p>
+        <p><b>Un link por categoría</b> (la persona entra directo a esa categoría, en su diseño):</p>
+        ${(S.draft.categories || []).map(c => {
+          const l = `${link}${c.id}/`;
+          return `<div class="link-box"><code>${esc(l)}</code><button class="btn small" type="button" data-act="copy" data-text="${esc(l)}">Copiar</button></div>`;
+        }).join('')}
       </section>
       <section class="card">
         <div class="card-head"><h2>Sucursales y reparto de WhatsApp</h2></div>
@@ -458,14 +473,17 @@
       <section class="card">
         <div class="card-head"><h2>Qué diseño se muestra</h2></div>
         <div class="modes">
-          ${mode('split', 'Los dos (prueba A/B)', 'Cada visitante ve uno de los dos, según el porcentaje.')}
-          ${mode('red-social', 'Solo Red social', 'Todos ven Red social. El link de Minimalista también lleva a Red social.')}
-          ${mode('minimalista', 'Solo Minimalista', 'Todos ven Minimalista. El link de Red social también lleva a Minimalista.')}
+          ${mode('split', 'Todos (prueba A/B/C)', 'Cada visitante ve uno de los cuatro diseños, según la parte de cada uno.')}
+          ${mode('red-social', 'Solo Red social (A)', 'Todos ven Red social. Los links de los otros diseños también llevan a Red social.')}
+          ${mode('minimalista', 'Solo Minimalista (B)', 'Todos ven Minimalista. Los links de los otros diseños también llevan a Minimalista.')}
+          ${mode('historia', 'Solo Historia (C1)', 'Todos ven Historia, la página animada. Los links de los otros diseños también llevan a Historia.')}
+          ${mode('profesional', 'Solo Profesional (C2)', 'Todos ven Profesional, la página clásica y blanca. Los links de los otros diseños también llevan a Profesional.')}
         </div>
         ${ab.mode === 'split' ? `<div class="split">
-          <label class="field">Reparto <span id="split-text">${splitText(ab.redSocialPercent)}</span>
-            <input type="range" min="0" max="100" step="5" value="${ab.redSocialPercent}" ${attrs('ab.redSocialPercent', { kind: 'num', live: 'split' })}></label>
-          <div class="split-bar" id="split-bar" aria-hidden="true">${splitBar(ab.redSocialPercent)}</div>
+          <p class="field">Reparto <span id="split-text">${splitText(ab.weights)}</span></p>
+          <div class="grid-3">${VARIANTS.map(v => `<label class="field"><span><i class="swatch ${v.cls}"></i> ${v.name}</span>
+            <input type="range" min="0" max="100" step="5" value="${Number(ab.weights[v.id]) || 0}" ${attrs(`ab.weights.${v.id}`, { kind: 'num', live: 'split' })}></label>`).join('')}</div>
+          <div class="split-bar" id="split-bar" aria-hidden="true">${splitBar(ab.weights)}</div>
         </div>` : ''}
         <p class="note">Cada visitante ve siempre el mismo diseño, porque queda guardado en su navegador. Si cambiás el porcentaje,
           los que ya entraron siguen viendo el suyo. Para volver a repartir a todos, tocá "Repartir de nuevo" (ahora es la ronda ${ab.round}).</p>
@@ -473,6 +491,8 @@
           <button class="btn" type="button" data-act="reround">Repartir de nuevo a todos</button>
           <a class="btn" href="${esc(BASE)}/red-social/?ver" target="_blank" rel="noopener">Ver Red social</a>
           <a class="btn" href="${esc(BASE)}/minimalista/?ver" target="_blank" rel="noopener">Ver Minimalista</a>
+          <a class="btn" href="${esc(BASE)}/historia/?ver" target="_blank" rel="noopener">Ver Historia (C1)</a>
+          <a class="btn" href="${esc(BASE)}/profesional/?ver" target="_blank" rel="noopener">Ver Profesional (C2)</a>
         </div>
       </section>`;
   }
@@ -585,8 +605,9 @@
   }
 
   /* ----- Otros productos (la vidriera de la tienda) ----- */
-  const EXTRA_ICONS = { mic: 'Micrófono', tripode: 'Trípode', luz: 'Luz' };
-  const extraMeta = p => `${[p.group, p.brand].filter(Boolean).join(' · ') || 'Sin tipo'} · ${money(p.price)}${Number(p.listPrice) > Number(p.price) ? ` · antes ${money(p.listPrice)}` : ''}`;
+  const EXTRA_ICONS = { ventilador: 'Ventilador', mic: 'Micrófono', tripode: 'Trípode', luz: 'Luz', parlante: 'Parlante', auricular: 'Auriculares' };
+  const catName = id => ((S.draft && S.draft.categories) || []).find(c => c.id === id)?.name || '';
+  const extraMeta = p => `${p.example ? 'EJEMPLO · ' : ''}${catName(p.cat) ? `${catName(p.cat)} · ` : ''}${[p.group, p.brand].filter(Boolean).join(' · ') || 'Sin tipo'} · ${money(p.price)}${Number(p.listPrice) > Number(p.price) ? ` · antes ${money(p.listPrice)}` : ''}`;
 
   function viewExtras() {
     const list = S.draft.extras;
@@ -594,8 +615,8 @@
     return `
       <div class="page-head"><h1>Otros productos</h1>
         <button class="btn primary" type="button" data-act="add-extra">Agregar producto</button></div>
-      <p class="muted">Micrófonos, trípodes, luces y todo lo que no es un celular. ${visible} visibles · ${list.length - visible} ocultos.
-        Se muestran con ${n(S.draft.store.extras.cuotas)} cuotas con ${esc(S.draft.store.financing)} (se cambia en Tienda y textos).</p>
+      <p class="muted">Ventiladores, creación de contenido, audio y todo lo que no es un celular. ${visible} visibles · ${list.length - visible} ocultos.
+        Cada producto va en una de las 3 categorías. Los que dicen EJEMPLO están para ver el diseño: reemplazalos por los reales.</p>
       <section class="card"><div class="card-head"><h2>Sección de la tienda</h2></div>
         <div class="grid-2">
           ${field('Título', 'store.extras.title')}
@@ -633,7 +654,10 @@
       <fieldset><legend>Datos</legend><div class="grid-2">
         ${field('Nombre', b + '.name', { live: 'title' })}
         ${field('Marca', b + '.brand', { live: 'title' })}
+        <label class="field">Categoría
+          <select ${attrs(b + '.cat', { live: 'title' })}>${(S.draft.categories || []).map(c => `<option value="${c.id}"${p.cat === c.id ? ' selected' : ''}>${c.num}. ${esc(c.name)}</option>`).join('')}</select></label>
         ${field('Tipo', b + '.group', { live: 'title', help: 'Es el filtro de la tienda, ej. "Micrófonos".' })}
+        ${field('Peso con la caja (kg)', b + '.weight', { type: 'number', help: 'Para la calculadora de envíos. Vacío: el de su categoría.' })}
         <label class="field">Ícono si no hay foto
           <select ${attrs(b + '.icon')}>${Object.entries(EXTRA_ICONS).map(([v, l]) => `<option value="${v}"${p.icon === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
         ${field('Código', b + '.id', { ro: saved, ph: 'Se genera solo al guardar',
@@ -651,7 +675,7 @@
       <div class="row">${check('Oculto: no aparece en la tienda', b + '.hidden', true)}</div>
     </div>`;
   }
-  const newExtra = () => ({ id: '', hidden: true, group: '', brand: '', name: 'Producto nuevo', icon: 'luz', price: '', listPrice: '', pitch: '', details: [], gallery: [] });
+  const newExtra = () => ({ id: '', hidden: true, cat: 'contenido', group: '', brand: '', name: 'Producto nuevo', icon: 'luz', weight: '', price: '', listPrice: '', pitch: '', details: [], gallery: [] });
   const listOf = el => S.draft[el.dataset.list || 'products'];
 
   const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -681,6 +705,125 @@
     palette: ['#b49cff', '#ff9fd0', '#8fb8ff'], color: ['#1c2330', '#8b97a8'], video: '', poster: '',
   });
 
+  /* ----- Tienda y textos: descuento flash, envíos, categorías y la página Historia ----- */
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  function flashCard() {
+    const f = S.draft.flash || {};
+    const p = Number(f.percent) || 0;
+    const ej = 10000;
+    const lista = p > 0 && p < 100 ? Math.round(ej / (1 - p / 100) / 100) * 100 : ej;
+    return `<section class="card"><div class="card-head"><h2>Descuento flash</h2></div>
+      <p>Cada visitante tiene ${n(Number(f.minutes) || 0)} minutos con el cupón <b>xoxo-${MESES[new Date().getMonth()]}</b> (cambia solo cada mes).
+        Arriba de cada precio se ve el precio de lista tachado. <b>Se cobra siempre el precio de la página</b>: el cupón queda anotado en el pedido.</p>
+      <p class="muted">Ejemplo: un producto de ${money(ej)} muestra ${money(lista)} tachado (-${p}%).</p>
+      <div class="grid-2">
+        ${field('Porcentaje', 'flash.percent', { type: 'number' })}
+        ${field('Minutos para cada visitante', 'flash.minutes', { type: 'number' })}
+      </div>
+      <div class="row">${check('Prendido', 'flash.on')}</div>
+      <p class="note">Ojo: mostrar como "precio de lista" un precio que nunca se cobró puede considerarse publicidad engañosa (Ley de Lealtad Comercial).
+        Si tienen dudas, consúltenlo con su contador o abogado.</p>
+    </section>`;
+  }
+
+  function enviosCard() {
+    const e = S.draft.shipping;
+    if (!e) return '';
+    const zonas = ['1 · Tucumán', '2 · NOA', '3 · Centro y resto', '4 · Patagonia'];
+    const fila = (emp, srv, label) => `<tr><td>${label}</td>${zonas.map((z, i) =>
+      `<td><input class="num-in" type="number" min="0" inputmode="numeric" ${attrs(`shipping.rates.${emp}.${srv}.${i}`, { kind: 'num' })} value="${esc(e.rates[emp][srv][i])}" aria-label="${esc(label)}, zona ${esc(z)}"></td>`).join('')}</tr>`;
+    return `<section class="card"><div class="card-head"><h2>Envíos (calculadora)</h2></div>
+      <p>Precios de la calculadora de envíos y del checkout. Son <b>estimados</b> hasta conectar las cotizaciones reales de Andreani y
+        Correo Argentino (hace falta el contrato con cada una). Zona 2: Catamarca, Salta, Jujuy, Santiago del Estero y La Rioja.
+        Zona 4: Neuquén, Río Negro, Chubut, Santa Cruz y Tierra del Fuego.</p>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Hasta 1 kg</th>${zonas.map(z => `<th>${z}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${fila('andreani', 'domicilio', 'Andreani a domicilio')}${fila('andreani', 'sucursal', 'Andreani a sucursal')}
+          ${fila('correo', 'domicilio', 'Correo Argentino a domicilio')}${fila('correo', 'sucursal', 'Correo Argentino a sucursal')}
+        </tbody></table></div>
+      <div class="grid-3">
+        ${field('Andreani: cada kg de más', 'shipping.rates.andreani.extraKg', { type: 'number' })}
+        ${field('Correo Argentino: cada kg de más', 'shipping.rates.correo.extraKg', { type: 'number' })}
+        ${field('Envío gratis desde (0 = nunca)', 'shipping.freeFrom', { type: 'number' })}
+      </div>
+      <div class="row">${check('Andreani', 'shipping.rates.andreani.on')}${check('Correo Argentino', 'shipping.rates.correo.on')}${check('Retiro gratis en sucursal', 'shipping.pickup')}</div>
+    </section>`;
+  }
+
+  function categoriasCard() {
+    const cats = S.draft.categories || [];
+    return `<section class="card"><div class="card-head"><h2>Las 3 categorías</h2></div>
+      <p class="muted">Cada una tiene su propia home en los cuatro diseños, por ejemplo <code>/profesional/${esc((cats[0] || {}).id || '')}/</code>. Ahí se ven estos textos: portada, beneficios, guía y preguntas.</p>
+      ${cats.map((c, i) => `<fieldset><legend>${c.num}. ${esc(c.name)}</legend><div class="grid-2">
+        ${field('Nombre', `categories.${i}.name`)}
+        ${field('Nombre corto (menú)', `categories.${i}.short`)}
+        ${field('Título', `categories.${i}.title`)}
+        <label class="field">Color ${color(`categories.${i}.color`, `Color de ${c.name}`)}</label>
+      </div>${area('Texto', `categories.${i}.text`)}
+        ${area('Beneficios (uno por renglón: Título | texto)', `categories.${i}.benefits`, { kind: 'lines', rows: 4 })}
+        ${field('Título de la guía', `categories.${i}.guideTitle`)}
+        ${area('Guía para elegir (uno por renglón: Título | texto)', `categories.${i}.guide`, { kind: 'lines', rows: 4, help: 'Si el título nombra un producto (ej. "De torre"), la tarjeta muestra ese producto con su precio.' })}
+        ${area('Preguntas frecuentes (una por renglón: Pregunta | respuesta)', `categories.${i}.faq`, { kind: 'lines', rows: 4 })}
+      </fieldset>`).join('')}
+    </section>`;
+  }
+
+  function historiaCard() {
+    const h = S.draft.story;
+    if (!h) return '';
+    const persona = (list, i, label) => `<div class="grid-3">
+      ${field(`${label} ${i + 1}: nombre`, `story.${list}.${i}.name`)}
+      ${field('Rol', `story.${list}.${i}.role`)}
+      ${mediaField('Foto', `story.${list}.${i}.photo`)}
+    </div>`;
+    return `<section class="card"><div class="card-head"><h2>Página Historia (diseño C)</h2></div>
+      <p class="muted">Quiénes son, el equipo, las sucursales y la garantía. Ahora tiene textos de ejemplo (lorem ipsum).</p>
+      <div class="grid-2">${field('Texto chico de arriba', 'story.kicker')}${field('Título de la portada', 'story.title')}</div>
+      ${area('Texto de la portada', 'story.text')}
+      <fieldset><legend>Los 3 socios</legend>
+        ${field('Título', 'story.foundersTitle')}${area('Texto', 'story.foundersText')}
+        ${(h.founders || []).map((p, i) => persona('founders', i, 'Socio')).join('')}
+      </fieldset>
+      <fieldset><legend>El equipo</legend>
+        ${field('Título', 'story.teamTitle')}${area('Texto', 'story.teamText')}
+        ${(h.team || []).map((p, i) => persona('team', i, 'Persona')).join('')}
+      </fieldset>
+      <fieldset><legend>Sucursales y garantía</legend>
+        ${field('Título de sucursales', 'story.branchesTitle')}${area('Texto de sucursales', 'story.branchesText')}
+        <div class="grid-2">${field('Días de garantía', 'story.warrantyDays', { type: 'number' })}${field('Título de garantía', 'story.warrantyTitle')}</div>
+        ${area('Texto de garantía', 'story.warrantyText')}
+      </fieldset>
+      <fieldset><legend>Números</legend><div class="grid-2">${(h.stats || []).map((s, i) => `${field(`Número ${i + 1}`, `story.stats.${i}.v`)}${field('Qué es', `story.stats.${i}.l`)}`).join('')}</div></fieldset>
+    </section>`;
+  }
+
+  /* ----- Correos de la tienda (en Pedidos) ----- */
+  function correoCard(c) {
+    const ESTADOS = { enviado: 'Enviado', vista: 'Guardado (sin SMTP)', fallido: 'No salió' };
+    const TIPOS = { compra: 'Compra al cliente', venta: 'Aviso de venta', prueba: 'Prueba' };
+    const api = q => `${apiUrl(q.split('&')[0])}${q.includes('&') ? `&${q.split('&').slice(1).join('&')}` : ''}`;
+    return `<section class="card"><div class="card-head"><h2>Correos</h2>
+        <span class="chip${c.modo === 'smtp' ? '' : ' off'}">${c.modo === 'smtp' ? `Manda como ${esc(c.de)}` : 'Sin servidor de correo'}</span></div>
+      <p>${c.modo === 'smtp'
+        ? `Cuando se aprueba un pago, el cliente recibe el detalle de su compra${c.avisos.length ? ` y se avisa la venta a ${esc(c.avisos.join(', '))}` : ''}.`
+        : 'Todavía no hay servidor de correo (SMTP): los mails no salen, se guardan acá para verlos. Se configura con xoxo-claves, opción Correo (ver deploy/CORREO.md).'}</p>
+      <div class="row">
+        <a class="btn small" href="${esc(api('/correo/ejemplo&tipo=compra'))}" target="_blank" rel="noopener">Ver el mail de compra</a>
+        <a class="btn small" href="${esc(api('/correo/ejemplo&tipo=venta'))}" target="_blank" rel="noopener">Ver el aviso de venta</a>
+      </div>
+      <div class="row"><input id="mail-test" type="email" placeholder="tu@email.com" aria-label="Email para la prueba">
+        <button class="btn small" type="button" data-act="mail-test">Mandar una prueba</button><span id="mail-test-msg" class="muted"></span></div>
+      ${c.pendientes.length ? `<p class="note">${c.pendientes.length} correo${c.pendientes.length === 1 ? '' : 's'} esperando para reintentar: ${esc(c.pendientes[0].error || '')}</p>` : ''}
+      ${c.ultimos.length ? `<div class="table-wrap"><table class="table">
+        <thead><tr><th>Cuándo</th><th>Qué</th><th>Para</th><th>Estado</th></tr></thead>
+        <tbody>${c.ultimos.slice(0, 15).map(m => `<tr>
+          <td>${when(m.t)}</td><td>${esc(TIPOS[m.tipo] || m.tipo)}${m.ref ? ` #${esc(m.ref)}` : ''}</td><td>${esc(m.para)}</td>
+          <td>${m.archivo ? `<a href="${esc(api(`/correo/ver&archivo=${m.archivo}`))}" target="_blank" rel="noopener">${esc(ESTADOS[m.estado] || m.estado)}</a>` : esc(ESTADOS[m.estado] || m.estado)}${m.error ? `<span class="sub">${esc(m.error)}</span>` : ''}</td>
+        </tr>`).join('')}</tbody></table></div>` : ''}
+    </section>`;
+  }
+
   /* ----- Tienda y textos ----- */
   function viewStore() {
     const st = S.draft.store;
@@ -694,7 +837,11 @@
     </div>`;
     return `
       <div class="page-head"><h1>Tienda y textos</h1></div>
-      <p class="muted">Lo que cambies acá se ve en los dos diseños apenas guardes.</p>
+      <p class="muted">Lo que cambies acá se ve en los tres diseños apenas guardes.</p>
+      ${flashCard()}
+      ${enviosCard()}
+      ${categoriasCard()}
+      ${historiaCard()}
 
       <section class="card"><div class="card-head"><h2>Tienda</h2></div>
         <div class="grid-2">
@@ -832,7 +979,7 @@
     const seen = E.visto && L.findIndex(m => m.id === E.visto) >= L.length - 1;
     return `<div class="msg-state mine-state" role="status">${seen
       ? '<b>✓✓</b> Visto por Claude'
-      : '<b>✓</b> Recibido. Claude todavía no lo vio.'}</div>`;
+      : `<b>✓</b> Recibido.${S.chat.auto ? ' Claude lo está por leer…' : ' Claude todavía no lo vio.'}`}</div>`;
   }
   function chatLog() {
     const L = S.chat.list;
@@ -851,7 +998,7 @@
     return `
       <div class="page-head"><h1>Cambios por IA</h1></div>
       <section class="card chat">
-        <p class="muted">Pedile a Claude cambios en la tienda: precios, productos, fotos, textos o algo que no anda. Podés escribir, mandar fotos o grabar un audio. Te contesta acá, te cuenta qué va a cambiar y lo publica cuando le confirmes.</p>
+        <p class="muted">Pedile a Claude cambios en la tienda: precios, productos, fotos, textos o algo que no anda. Podés escribir, mandar fotos o grabar un audio. ${S.chat.auto ? 'Claude contesta solo en unos segundos y anota los cambios para que Juan los aplique.' : 'Claude te contesta acá cuando revisa el chat.'}</p>
         <div class="chat-log" id="chat-log" aria-live="polite">${chatLog()}</div>
         <form class="chat-form" id="chat-form" autocomplete="off">
           <div class="chat-files" id="chat-files">${chatFiles()}</div>
@@ -874,6 +1021,7 @@
       S.chat.list.push(...r.mensajes.filter(m => !have.has(m.id)));
     }
     S.chat.estado = r.estado || {};
+    S.chat.auto = Boolean(r.auto);
     return before !== `${S.chat.list.length}|${lastChatId()}|${JSON.stringify(S.chat.estado)}`;
   }
   // Repinta sin borrar lo que ya está (así no se corta un audio que alguien está escuchando)
@@ -1174,6 +1322,16 @@
         <tbody>${rows}</tbody></table></div>
       <div class="row"><button class="btn small" type="button" data-act="test-pay"${S.payTesting ? ' disabled' : ''}>${S.payTesting ? 'Probando…' : 'Probar conexión'}</button></div>
       <p class="muted">Las claves se cargan en el servidor y nunca pasan por el panel. En una terminal de la computadora: <code>ssh -t xoxo-vps xoxo-claves</code></p>
+      ${G.mercadopago && ['real', 'prueba', 'sin-probar'].includes(G.mercadopago.modo) ? `
+      <div class="pay-link">
+        <h3>Probar Mercado Pago de punta a punta</h3>
+        <p class="muted">Crea un pedido de prueba con un link de pago. Al pagarlo se prueba todo: la página de Mercado Pago, el aviso del pago,
+          el pedido aprobado y el mail. ${G.mercadopago.modo === 'prueba' ? 'Con la cuenta de prueba no se cobra nada.' : '<b>Con la cuenta real se cobra de verdad</b>: después lo devolvés desde tu Mercado Pago (Actividad → el pago → Devolver).'}</p>
+        <div class="row"><label class="field">Monto <input id="pl-monto" type="number" min="10" value="100" inputmode="numeric"></label>
+          <label class="field">Tu email <input id="pl-email" type="email" placeholder="tu@email.com"></label>
+          <button class="btn small" type="button" data-act="pay-link">Crear link de pago</button></div>
+        <p id="pl-out" class="muted"></p>
+      </div>` : ''}
     </section>`;
   }
   function viewOrders() {
@@ -1185,10 +1343,13 @@
     const rows = list.map(o => {
       const phone = String(o.buyer.phone || '');
       const wa = phone.startsWith('54') ? phone : `549${phone}`;
-      const where = o.delivery.type === 'envio' ? `Envío: ${o.delivery.address}, ${o.delivery.city}` : 'Retira en el local';
+      const d = o.delivery || {};
+      const where = o.envio
+        ? (o.envio.tipo === 'retiro' ? o.envio.nombre : `${o.envio.nombre} (${money(o.envio.costo)}): ${[d.address, d.city, o.envio.provincia, d.cp && `CP ${d.cp}`].filter(Boolean).join(', ')}`)
+        : d.type === 'envio' ? `Envío: ${d.address}, ${d.city}` : 'Retira en el local';
       return `<tr>
         <td><b>#${esc(o.ref)}</b><span class="sub">${when(o.createdAt)}</span></td>
-        <td>${esc(o.product.name)}<span class="sub">${money(o.amount)} · ${esc(METHOD_NAMES[o.method] || o.method)} · ${n(o.plan)} ${o.plan === 1 ? 'pago' : 'cuotas'}${o.gateway && o.gateway.demo ? ' · DEMO' : ''}</span></td>
+        <td>${esc(o.product.name)}<span class="sub">${money(o.amount)} · ${esc(METHOD_NAMES[o.method] || o.method)} · ${n(o.plan)} ${o.plan === 1 ? 'pago' : 'cuotas'}${o.coupon ? ` · cupón ${esc(o.coupon)}` : ''}${o.gateway && o.gateway.demo ? ' · DEMO' : ''}</span></td>
         <td><span class="chip${o.status === 'approved' ? '' : ' off'}">${esc(ORDER_STATUS[o.status] || o.status)}</span></td>
         <td>${esc(o.buyer.name)}<span class="sub">${esc(o.buyer.email)}${o.buyer.dni ? ` · DNI ${esc(o.buyer.dni)}` : ''}</span></td>
         <td><a href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener">${esc(phone)}</a><span class="sub">${esc(where)}</span></td>
@@ -1196,6 +1357,7 @@
     }).join('');
     return `${head}
       ${P.pasarelas ? gatewaysCard(P.pasarelas) : ''}
+      ${P.correo ? correoCard(P.correo) : ''}
       <section class="card">
         <div class="card-head"><h2>${n(list.length)} pedidos · ${n(paid.length)} pagados</h2><p>Los pagos se confirman consultando a la financiera, nunca solo por la vuelta del comprador.</p></div>
         ${list.length ? `<div class="table-wrap"><table>
@@ -1379,9 +1541,9 @@
       $('.meta', row).textContent = list === 'extras' ? extraMeta(p) : rowMeta(p);
     }
     if (kind === 'split') {
-      const p = S.draft.ab.redSocialPercent;
-      $('#split-text').textContent = splitText(p);
-      $('#split-bar').innerHTML = splitBar(p);
+      const w = S.draft.ab.weights;
+      $('#split-text').textContent = splitText(w);
+      $('#split-bar').innerHTML = splitBar(w);
     }
   }
 
@@ -1434,6 +1596,15 @@
     'chat-retry': el => { const p = S.chat.pending.find(x => x.k === el.dataset.k); if (p) deliver(p); },
     'chat-drop': el => { S.chat.pending = S.chat.pending.filter(x => x.k !== el.dataset.k); paintChat(false); },
     'chat-unfile': el => { S.chat.files.splice(Number(el.dataset.i), 1); paintFiles(); },
+    async 'pay-link'() {
+      const out = $('#pl-out');
+      out.textContent = 'Creando el link…';
+      try {
+        const r = await api('/pagos/link-prueba', { method: 'POST', body: { monto: $('#pl-monto').value, email: $('#pl-email').value } });
+        if (r.error) { out.textContent = r.error; return; }
+        out.innerHTML = `Pedido #${esc(r.pedido)}: <a href="${esc(r.url)}" target="_blank" rel="noopener">abrir el pago en Mercado Pago</a>. Después tocá Actualizar para ver el pedido.`;
+      } catch (err) { out.textContent = err.message; }
+    },
     async 'test-pay'() {
       S.payTesting = true;
       render();
@@ -1480,6 +1651,16 @@
       S.open = S.draft.extras.length - 1;
       render();
       $$('.prow')[S.open].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    async 'mail-test'() {
+      const para = ($('#mail-test') || {}).value || '';
+      const msg = $('#mail-test-msg');
+      msg.textContent = 'Mandando…';
+      try {
+        const r = await api('/correo/probar', { method: 'POST', body: { para } });
+        msg.textContent = r.ok ? (r.modo === 'smtp' ? '¡Listo! Fijate en tu bandeja (y en spam).' : 'Guardado: no hay SMTP, mirálo en la lista.') : `No salió: ${r.error}`;
+        if (r.ok) setTimeout(() => ACTIONS['reload-orders'](), 900);
+      } catch (err) { msg.textContent = err.message; }
     },
     'add-branch'() {
       S.draft.store.branches.push({ id: '', name: '', whatsapp: '', address: '', on: true });

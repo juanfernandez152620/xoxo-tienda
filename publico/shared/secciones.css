@@ -1,0 +1,152 @@
+/* Secciones compartidas (shared/secciones.js): el menú de las 4 vistas y la home de cada categoría.
+   Cada diseño las adapta cambiando estas variables; los valores de acá son neutros y van con :where() (sin peso),
+   así los del diseño ganan aunque su hoja se cargue antes. */
+:where(:root) {
+  --sx-ink: var(--ink, #111);
+  --sx-muted: var(--muted, #666);
+  --sx-line: var(--line, #e3e3e3);
+  --sx-surface: var(--surface, var(--bg, #fff));
+  --sx-bg2: var(--surface-2, var(--soft, #f5f5f5));
+  --sx-btn: var(--btn, var(--boton, #111));
+  --sx-btn-ink: var(--btn-ink, var(--sobre-boton, #fff));
+  --sx-accent: #294562;
+  --sx-radius: 16px;
+  --sx-title-font: inherit;
+  --sx-title-weight: 800;
+  --sx-title-transform: none;
+  --sx-title-size: clamp(28px, 4vw, 44px);
+  --sx-hero-size: clamp(44px, 8vw, 92px);
+  --sx-max: 1180px;
+  --sx-gutter: clamp(16px, 4.5vw, 48px);
+}
+
+.sx-page { color: var(--sx-ink); }
+.sx-page > section { width: min(var(--sx-max), 100% - 2 * var(--sx-gutter)); margin: 0 auto; padding-block: clamp(36px, 6vw, 72px); }
+.sx-page > section + section { border-top: 1px solid var(--sx-line); }
+.sx-page > .sx-benefits { border-top: 0; padding-top: 0; }
+
+/* ---------- Menú de las 4 vistas ---------- */
+.sx-nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.sx-nav::-webkit-scrollbar { display: none; }
+.sx-nav a {
+  flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 999px;
+  color: var(--sx-muted); font-size: 14.5px; font-weight: 600; text-decoration: none; white-space: nowrap;
+}
+.sx-nav a i { width: 8px; height: 8px; border-radius: 50%; background: var(--sx-dot); }
+.sx-nav a:hover { color: var(--sx-ink); background: var(--sx-bg2); }
+.sx-nav a[aria-current="page"] { color: var(--sx-btn-ink); background: var(--sx-btn); }
+
+/* ---------- Títulos ---------- */
+.sx-head { max-width: 720px; margin-bottom: clamp(22px, 3.5vw, 36px); }
+.sx-kicker { margin: 0 0 10px; color: var(--sx-accent); font-size: 12.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.sx-title { margin: 0; font-family: var(--sx-title-font); font-size: var(--sx-title-size); font-weight: var(--sx-title-weight); line-height: 1.08; letter-spacing: -.01em; text-transform: var(--sx-title-transform); text-wrap: balance; }
+.sx-text { margin: 12px 0 0; max-width: 62ch; color: var(--sx-muted); font-size: 16.5px; line-height: 1.6; text-wrap: pretty; }
+
+/* ---------- Botones ---------- */
+.sx-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 50px; padding: 0 22px;
+  border: 0; border-radius: var(--sx-btn-radius, 999px); background: var(--sx-btn); color: var(--sx-btn-ink);
+  font: inherit; font-size: 15.5px; font-weight: 700; text-decoration: none; cursor: pointer; transition: transform .2s, opacity .2s;
+}
+.sx-btn svg { width: 18px; height: 18px; }
+.sx-btn:hover { transform: translateY(-1px); opacity: .92; }
+.sx-btn.ghost { background: transparent; color: var(--sx-ink); box-shadow: inset 0 0 0 1.5px var(--sx-line); }
+.sx-ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+
+/* ---------- Portada de la categoría ---------- */
+.sx-hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); align-items: center; gap: clamp(24px, 5vw, 64px); }
+.sx-hero-title { margin: 0; font-family: var(--sx-title-font); font-size: var(--sx-hero-size); font-weight: var(--sx-title-weight); line-height: .98; letter-spacing: -.02em; text-transform: var(--sx-title-transform); }
+.sx-hero-sub { margin: 14px 0 0; color: var(--sx-accent); font-size: clamp(19px, 2.4vw, 25px); font-weight: 700; }
+.sx-hero-art { position: relative; display: grid; place-items: center; aspect-ratio: 1; max-width: 380px; width: 100%; justify-self: center; }
+.sx-ring { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--sx-accent) 30%, transparent), color-mix(in srgb, var(--sx-accent) 8%, transparent) 70%); }
+.sx-ico { position: relative; width: 46%; aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; background: var(--sx-accent); color: #fff; box-shadow: 0 24px 50px -18px var(--sx-accent); }
+.sx-ico svg { width: 52%; height: 52%; stroke-width: 1.5; }
+@media (max-width: 760px) {
+  .sx-hero { grid-template-columns: 1fr; text-align: left; }
+  .sx-hero-art { max-width: 200px; order: -1; justify-self: start; }
+}
+
+/* ---------- Beneficios ---------- */
+.sx-benefits { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
+.sx-benefit { display: grid; gap: 4px; padding: 20px; border-radius: var(--sx-radius); background: var(--sx-bg2); }
+.sx-benefit b { font-size: 16px; }
+.sx-benefit span:last-child { color: var(--sx-muted); font-size: 14.5px; line-height: 1.5; }
+.sx-bico { width: 38px; height: 38px; display: grid; place-items: center; margin-bottom: 6px; border-radius: 50%; background: color-mix(in srgb, var(--sx-accent) 16%, transparent); color: var(--sx-accent); }
+.sx-bico svg { width: 20px; height: 20px; }
+
+/* ---------- Productos ---------- */
+.sx-products-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin-bottom: 22px; }
+.sx-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.sx-chip { min-height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--sx-bg2); color: var(--sx-ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.sx-chip[aria-pressed="true"] { background: var(--sx-btn); color: var(--sx-btn-ink); }
+.sx-empty { padding: 32px; border-radius: var(--sx-radius); background: var(--sx-bg2); color: var(--sx-muted); text-align: center; }
+.sx-grid .x-price b, .sx-grid .x-price-flash b { font-size: clamp(22px, 2.4vw, 27px); letter-spacing: -.02em; }
+
+/* ---------- Guía ---------- */
+.sx-guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 14px; }
+.sx-gcard { display: flex; flex-direction: column; gap: 6px; padding: 22px; border-radius: var(--sx-radius); box-shadow: inset 0 0 0 1px var(--sx-line); background: var(--sx-surface); }
+.sx-gcard h3 { margin: 0; font-family: var(--sx-title-font); font-size: 19px; font-weight: var(--sx-title-weight); text-transform: var(--sx-title-transform); }
+.sx-gcard p { margin: 0; color: var(--sx-muted); font-size: 14.5px; line-height: 1.55; }
+.sx-gprod { display: flex; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--sx-line); color: var(--sx-accent); font-size: 14px; font-weight: 700; text-decoration: none; }
+.sx-gprod b { color: var(--sx-ink); font-variant-numeric: tabular-nums; }
+
+/* ---------- Cómo comprar ---------- */
+.sx-steps-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 3vw, 32px); margin: 0; padding: 0; list-style: none; }
+.sx-steps-list li { display: grid; gap: 6px; align-content: start; }
+.sx-steps-list h3 { margin: 6px 0 0; font-size: 18px; }
+.sx-steps-list p { margin: 0; color: var(--sx-muted); font-size: 15px; line-height: 1.55; }
+.sx-sico { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: var(--sx-btn); color: var(--sx-btn-ink); }
+.sx-sico svg { width: 24px; height: 24px; }
+@media (max-width: 760px) { .sx-steps-list { grid-template-columns: 1fr; } .sx-steps-list li { grid-template-columns: 52px 1fr; column-gap: 14px; } .sx-sico { grid-row: span 2; } .sx-steps-list h3 { margin: 4px 0 0; } }
+
+/* ---------- Calculadora de envíos ---------- */
+.sx-calc { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(20px, 5vw, 56px); align-items: start; }
+.sx-calc .sx-head { margin-bottom: 0; }
+.sx-calc-form { display: grid; gap: 14px; padding: clamp(18px, 3vw, 28px); border-radius: var(--sx-radius); background: var(--sx-bg2); }
+.sx-fld { display: grid; gap: 6px; font-size: 13.5px; font-weight: 700; }
+.sx-fld select, .sx-fld input { width: 100%; min-height: 48px; padding: 0 12px; border: 1.5px solid var(--sx-line); border-radius: calc(var(--sx-radius) * .6); background: var(--sx-surface); color: var(--sx-ink); font: inherit; font-size: 16px; font-weight: 500; }
+.sx-fld select:focus, .sx-fld input:focus { outline: none; border-color: var(--sx-accent); }
+.sx-fld-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
+.sx-calc-out { display: grid; gap: 12px; }
+.sx-hint { margin: 0; padding: 14px; border: 1.5px dashed var(--sx-line); border-radius: calc(var(--sx-radius) * .6); color: var(--sx-muted); text-align: center; }
+.sx-quotes { width: 100%; border-collapse: collapse; background: var(--sx-surface); border-radius: calc(var(--sx-radius) * .6); overflow: hidden; }
+.sx-quotes td { padding: 12px 14px; border-top: 1px solid var(--sx-line); vertical-align: middle; }
+.sx-quotes tr:first-child td { border-top: 0; }
+.sx-quotes td:first-child { display: grid; gap: 1px; }
+.sx-quotes small { color: var(--sx-muted); font-size: 12.5px; }
+.sx-quotes td:last-child { text-align: right; font-weight: 800; font-size: 17px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sx-q-andreani b::before, .sx-q-correo b::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: #d71920; vertical-align: 1px; }
+.sx-q-correo b::before { background: #ffcc00; box-shadow: 0 0 0 1.5px #0b2c7a; }
+.sx-note { margin: 0; color: var(--sx-muted); font-size: 13px; }
+.sx-calc-out .sx-btn { justify-self: start; }
+@media (max-width: 860px) { .sx-calc { grid-template-columns: 1fr; } }
+
+/* ---------- Garantía ---------- */
+.sx-warranty { display: flex; align-items: center; gap: clamp(16px, 3vw, 28px); }
+.sx-page > .sx-warranty { padding: clamp(24px, 4vw, 40px); border: 0; border-radius: var(--sx-radius); background: var(--sx-bg2); margin-block: 12px; }
+.sx-wico { flex: none; width: 72px; height: 72px; display: grid; place-items: center; border-radius: 50%; background: var(--sx-btn); color: var(--sx-btn-ink); }
+.sx-wico svg { width: 38px; height: 38px; }
+.sx-warranty .sx-text { margin-top: 6px; }
+
+/* ---------- Preguntas ---------- */
+.sx-faq-list { display: grid; border-top: 1px solid var(--sx-line); max-width: 860px; }
+.sx-faq details { border-bottom: 1px solid var(--sx-line); }
+.sx-faq summary { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; cursor: pointer; font-size: 16.5px; font-weight: 700; list-style: none; }
+.sx-faq summary::-webkit-details-marker { display: none; }
+.sx-faq summary span { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--sx-bg2); transition: transform .25s; }
+.sx-faq summary svg { width: 16px; height: 16px; }
+.sx-faq details[open] summary span { transform: rotate(45deg); }
+.sx-faq details p { margin: 0 0 18px; color: var(--sx-muted); line-height: 1.6; }
+
+/* ---------- Otras categorías ---------- */
+.sx-others-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 14px; }
+.sx-ocard { display: grid; gap: 4px; padding: 22px; border-radius: var(--sx-radius); background: var(--sx-bg2); color: inherit; text-decoration: none; transition: transform .25s; }
+.sx-ocard:hover { transform: translateY(-3px); }
+.sx-oico { width: 46px; height: 46px; display: grid; place-items: center; margin-bottom: 8px; border-radius: 14px; background: var(--sx-accent); color: #fff; }
+.sx-oico svg { width: 24px; height: 24px; stroke-width: 1.6; }
+.sx-ocard b { font-size: 17px; }
+.sx-ocard span:not(.sx-oico) { color: var(--sx-muted); font-size: 14px; }
+.sx-ocard em { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--sx-accent); font-style: normal; font-weight: 700; font-size: 14px; }
+.sx-ocard em svg { width: 15px; height: 15px; }
+
+@media (prefers-reduced-motion: reduce) { .sx-btn, .sx-ocard, .sx-faq summary span { transition: none; } }

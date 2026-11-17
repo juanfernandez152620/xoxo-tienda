@@ -21,6 +21,8 @@ El resultado de cada publicación se ve en la pestaña **Actions** del repositor
 | Servicio | `xoxo-tienda` (systemd): `systemctl status xoxo-tienda`, logs con `journalctl -u xoxo-tienda` |
 | Script de publicación | `/usr/local/bin/xoxo-desplegar` (copia en `deploy/desplegar.sh`) |
 | Carga de claves | `/usr/local/bin/xoxo-claves` (copia en `deploy/claves.js`) |
+| Paso al dominio propio | `/usr/local/bin/xoxo-dominio` (copia en `deploy/dominio.sh`; todavía sin instalar) |
+| Correo | Postfix de DonWeb, obligado a salir por su relay `200.58.104.74`: la tienda no lo usa, manda por SMTP a Brevo (ver [CORREO.md](CORREO.md)) |
 | nginx (https, Let's Encrypt) | `/etc/nginx/sites-available/vps-4728832-x` (bloque de referencia en `deploy/nginx-tienda.conf`) |
 | Firewall | ufw: solo 80, 443 y SSH (5576 y 22) |
 
@@ -30,7 +32,7 @@ El resultado de cada publicación se ve en la pestaña **Actions** del repositor
 - `xoxo` no es administrador: solo puede reiniciar su propio servicio.
 - La contraseña inicial del panel se ve con `xoxo-clave-inicial` (como root). Después del primer ingreso queda cifrada.
 
-## Cargar las claves (Mercado Pago, GO cuotas y WhatsApp del socio)
+## Cargar las claves (Mercado Pago, GO cuotas, WhatsApp del socio, Claude y correo)
 
 Desde una terminal de la computadora:
 
@@ -41,6 +43,9 @@ ssh -t xoxo-vps xoxo-claves
 Es un menú. Lo que pegás como clave no se ve en pantalla. Antes de guardar, cada clave se prueba contra su
 servicio: si no anda, no se guarda. Además dice si la cuenta es **de prueba** o **real**. Al guardar, reinicia la
 tienda y deja una copia del archivo anterior en `/etc/xoxo-tienda.env.anterior`.
+
+La opción **6) Correo** carga el servidor SMTP con el que la tienda manda los mails (ver [CORREO.md](CORREO.md)):
+se conecta e inicia sesión sin mandar nada, y si anda lo guarda.
 
 Las claves nunca van al chat, a GitHub ni al panel. En el panel, **Pedidos → Pasarelas de pago** muestra en qué
 modo está cada medio y tiene el botón **Probar conexión**.
@@ -68,8 +73,13 @@ a GitHub nunca puede cambiar algo que corre como root.
 
 **GO cuotas**
 
-Pedir a integraciones@gocuotas.com un usuario de sucursal del **sandbox** con la API Redirect V1 habilitada. Se
-carga con `xoxo-claves`, opción 2, respondiendo que sí es de prueba.
+Cada sucursal tiene dos API keys: una de **sandbox** (prueba) y otra de **producción**. Están en el panel de GO
+cuotas → Sucursales → Editar → "Ver ApiKeys de la sucursal". Se cargan con `xoxo-claves`, opción 2: el **email de
+la sucursal** y, en lugar de la contraseña, la API key. La tienda inicia sesión con los dos datos y GO cuotas le
+devuelve un token. El sandbox no acepta la API key sola, sin el email.
+
+Para la prueba, en la página de GO cuotas se paga con el usuario de prueba del sandbox. Si el login no anda, hay
+que pedir a integraciones@gocuotas.com que habiliten la API Redirect V1 en esa sucursal.
 
 **Para cobrar de verdad:** cargar las credenciales de producción de los dos medios y apagar el pago simulado
 (opción 3).
@@ -102,6 +112,33 @@ En el panel, cada mensaje pasa por estos estados:
 Hay que correrlo como `xoxo`, nunca como root: si root crea la carpeta del chat, la tienda después no puede
 escribir en ella.
 
+### Claude contesta solo
+
+Con una API key de Anthropic cargada, Claude (Opus 5.5) contesta el chat en unos segundos. Así funciona:
+
+- Lee los últimos mensajes, incluidas las fotos y las transcripciones de los audios.
+- Busca en el catálogo antes de hablar de precios.
+- Anota los pedidos de cambio para que Juan los aplique. Todavía no cambia la tienda por su cuenta.
+
+Para prenderlo:
+
+1. En [console.anthropic.com](https://console.anthropic.com), cargá crédito en **Billing** y poné un límite de gasto por mes.
+2. En **API Keys → Create Key**, creá una clave.
+3. Cargala con `ssh -t xoxo-vps xoxo-claves`, opción 5. Al guardar, la tienda dice si Claude quedó conectado.
+
+Si un pedido toca un tema delicado y Opus no lo quiere responder, la API lo reintenta sola con otro modelo
+("fallbacks"). Como freno, Claude contesta hasta 40 veces por hora. Si la clave falla o se termina el crédito, lo
+avisa una vez en el chat.
+
+Los pedidos anotados se ven con:
+
+```
+ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js pedidos'
+```
+
+La tienda usa una sola dependencia, el SDK de Anthropic. El script de publicación corre `npm ci` cuando cambia
+`package-lock.json`.
+
 ## WhatsApp del socio (en pausa)
 
 Quedó armado, pero por ahora se usa el chat del panel porque no hay otro número de teléfono para la tienda.
@@ -130,7 +167,6 @@ El próximo paso es que Claude haga el cambio y lo publique cuando el socio conf
 
 ## Cambiar de dominio
 
-1. Apuntar el dominio (registro A) a `149.50.148.61`.
-2. En `/etc/nginx/sites-available/vps-4728832-x`, agregar el dominio en `server_name` y sacar el certificado con
-   `certbot --nginx -d tudominio.com -d www.tudominio.com`.
-3. Cambiar `BASE_URL` en `/etc/xoxo-tienda.env` y reiniciar la tienda.
+Paso a paso en [DOMINIO.md](DOMINIO.md): delegar el dominio, cargar los registros A y correr
+`ssh -t xoxo-vps xoxo-dominio xoxotecno.com.ar tu@email.com`, que arma nginx, saca el certificado https, cambia
+`BASE_URL` y deja la dirección vieja redirigiendo al dominio nuevo.

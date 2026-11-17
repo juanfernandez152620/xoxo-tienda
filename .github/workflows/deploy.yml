@@ -24,6 +24,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci --omit=dev --no-audit --no-fund
 
       - name: Revisar que el código arranque
         run: |
@@ -32,6 +36,12 @@ jobs:
           for i in $(seq 1 15); do sleep 1; curl -fsS -o /dev/null http://127.0.0.1:3999/red-social/ && break; done
           curl -fsS -o /dev/null http://127.0.0.1:3999/red-social/
           curl -fsS -o /dev/null http://127.0.0.1:3999/minimalista/
+          curl -fsS -o /dev/null http://127.0.0.1:3999/historia/
+          curl -fsS -o /dev/null http://127.0.0.1:3999/historia/audio/
+          curl -fsS -o /dev/null http://127.0.0.1:3999/profesional/
+          curl -fsS -o /dev/null http://127.0.0.1:3999/profesional/contenido/
+          curl -fsS -o /dev/null http://127.0.0.1:3999/red-social/ventilacion/
+          bash -n deploy/desplegar.sh && bash -n deploy/dominio.sh
           kill %1
 
       - name: Publicar en el servidor

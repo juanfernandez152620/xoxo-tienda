@@ -3,8 +3,8 @@
  *
  *   node servidor.js
  *
- * Los ajustes y las claves van en .env (copiá .env.example). No usa dependencias: alcanza con Node 18 o más
- * nuevo. Ver LEEME.md.
+ * Los ajustes y las claves van en .env (copiá .env.example). Necesita Node 20 o más nuevo y una sola dependencia,
+ * el SDK de Anthropic para que Claude conteste el chat del panel (npm ci). Ver LEEME.md.
  */
 'use strict';
 
@@ -22,6 +22,9 @@ const pagos = require('./nucleo/pagos');
 const paginas = require('./nucleo/paginas');
 const admin = require('./nucleo/admin');
 const socio = require('./nucleo/socio');
+const ia = require('./nucleo/ia');
+const envios = require('./nucleo/envios');
+const correo = require('./nucleo/correo');
 
 const TIPOS = {
   '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json',
@@ -182,7 +185,9 @@ function whatsapp(req, res, url) {
 }
 
 /* ---------- Rutas ---------- */
-const DISENOS = { '/red-social/': 'red-social', '/minimalista/': 'minimalista' };
+const DISENOS = Object.fromEntries(sitio.VARIANTS.map(v => [`/${v}/`, v]));
+// Páginas de categoría de cada diseño (/historia/audio/) y links de anuncio por categoría (/anuncio/audio/)
+const CATEGORIA = new RegExp(`^/(${sitio.VARIANTS.join('|')}|anuncio)/(${sitio.CATS.join('|')})(/?)$`);
 
 const server = http.createServer(async (req, res) => {
   let url;
@@ -194,9 +199,16 @@ const server = http.createServer(async (req, res) => {
     // Entrada y link de anuncio: reparten a cada visitante en un diseño
     if (get && p === '/') return html(res, 200, paginas.entrada(url, 'directo'), { 'Cache-Control': 'no-store' });
     if (get && p === '/anuncio/') return html(res, 200, paginas.entrada(url, 'anuncio'), { 'Cache-Control': 'no-store' });
-    if (get && ['/anuncio', '/red-social', '/minimalista', '/admin'].includes(p)) return redirigir(res, `${p}/${url.search}`, 301);
+    if (get && ['/anuncio', '/admin', ...sitio.VARIANTS.map(v => `/${v}`)].includes(p)) return redirigir(res, `${p}/${url.search}`, 301);
     if (get && DISENOS[p]) {
       const out = paginas.diseno(DISENOS[p], url, sesion.esAdmin(req));
+      return out.redirect ? redirigir(res, out.redirect) : html(res, 200, out.html);
+    }
+    const cat = get && p.match(CATEGORIA);
+    if (cat) {
+      if (!cat[3]) return redirigir(res, `${p}/${url.search}`, 301);
+      if (cat[1] === 'anuncio') return html(res, 200, paginas.entrada(url, 'anuncio', cat[2]), { 'Cache-Control': 'no-store' });
+      const out = paginas.diseno(cat[1], url, sesion.esAdmin(req), cat[2]);
       return out.redirect ? redirigir(res, out.redirect) : html(res, 200, out.html);
     }
     if (get && p === '/admin/') {
@@ -214,6 +226,15 @@ const server = http.createServer(async (req, res) => {
     if (route === 'POST /api/evento') return await evento(req, res);
     if (route === 'GET /api/whatsapp') return whatsapp(req, res, url);
 
+    // Calculadora de envíos (Andreani y Correo Argentino)
+    if (route === 'GET /api/envios') {
+      if (!limite('envios', ipDe(req), 120, 600)) return json(res, 429, { error: 'Esperá un momento y probá de nuevo.' });
+      return json(res, 200, envios.cotizar({
+        provincia: url.searchParams.get('provincia'), cp: url.searchParams.get('cp'),
+        productId: url.searchParams.get('producto'), cat: url.searchParams.get('cat'),
+      }));
+    }
+
     // Pago online
     if (route === 'GET /api/checkout/config') return json(res, 200, pagos.configPublica());
     if (route === 'POST /api/checkout') {
@@ -228,7 +249,7 @@ const server = http.createServer(async (req, res) => {
     if (route === 'POST /api/webhooks/mercadopago' || route === 'POST /api/webhooks/gocuotas') {
       const body = await leerJson(req, 20000).catch(() => ({}));
       json(res, 200, { ok: true }); // la pasarela necesita la respuesta rápido; el chequeo sigue después
-      return p.endsWith('mercadopago') ? pagos.avisoMercadoPago(body, url) : pagos.avisoGoCuotas(body);
+      return p.endsWith('mercadopago') ? pagos.avisoMercadoPago(body, url, req.headers) : pagos.avisoGoCuotas(body);
     }
     // WhatsApp del socio: Meta verifica la dirección (GET) y después avisa cada mensaje (POST, firmado)
     if (route === 'GET /api/socio/whatsapp') {
@@ -266,5 +287,6 @@ server.listen(PORT, HOST, () => {
   console.log(`  ${pagos.lineaArranque('mercadopago')}`);
   console.log(`  WhatsApp del socio: ${socio.configurado() ? 'conectado' : 'sin configurar'}`);
   console.log(`  Panel: ${BASE_URL}/admin/`);
+  ia.iniciar().catch(err => console.error('[ia]', err.message));
   if (!HTTPS) console.log('  Aviso: con BASE_URL sin https los avisos de pago (webhooks) no pueden llegar desde internet.\n');
 });

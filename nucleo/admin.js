@@ -13,6 +13,8 @@ const sesion = require('./sesion');
 const pagos = require('./pagos');
 const socio = require('./socio');
 const chat = require('./chat');
+const ia = require('./ia');
+const correo = require('./correo');
 
 const SUBIDAS = path.join(DATOS, 'subidas');
 const MAX_FOTO = 8 * 1048576;
@@ -173,19 +175,40 @@ async function api(req, res, url, h) {
     }
 
     case 'GET /pedidos':
-      return h.json(200, { pedidos: pagos.leerPedidos().slice().reverse(), config: pagos.configPublica(), pasarelas: pagos.estadoAdmin() });
+      return h.json(200, { pedidos: pagos.leerPedidos().slice().reverse(), config: pagos.configPublica(), pasarelas: pagos.estadoAdmin(), correo: correo.estado() });
+
+    // Correos: un mail guardado (modo vista previa) o un ejemplo de cada uno, para verlo en otra pestaña
+    case 'GET /correo/ver':
+    case 'GET /correo/ejemplo': {
+      const html = ruta.endsWith('ver') ? correo.vista(url.searchParams.get('archivo')) : correo.ejemplo(url.searchParams.get('tipo'));
+      if (!html) return h.json(404, { error: 'No encontré ese correo' });
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+        // El mail se muestra como en un programa de correo: sin scripts ni pedidos a otros sitios
+        'Content-Security-Policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src https: data:",
+      });
+      return res.end(html);
+    }
+
+    case 'POST /correo/probar': {
+      if (!limite('probar-correo', h.ip, 10, 600)) throw new Problema('Demasiadas pruebas seguidas. Esperá unos minutos.', 429);
+      const para = String((await h.leerJson(1000)).para || '').trim();
+      return h.json(200, await correo.probar(para));
+    }
 
     // Chat "Cambios por IA": el panel trae los mensajes nuevos cada pocos segundos
     case 'GET /chat':
-      return h.json(200, chat.leer(url.searchParams.get('despues') || ''));
+      return h.json(200, { ...chat.leer(url.searchParams.get('despues') || ''), auto: ia.activo() });
 
     case 'POST /chat': {
       if (!limite('chat', h.ip, 40, 600)) throw new Problema('Mandaste muchos mensajes seguidos. Esperá unos minutos.', 429);
       const body = await h.leerJson(20000);
-      return h.json(200, { mensaje: chat.agregar({
+      const mensaje = chat.agregar({
         rol: 'equipo', de: body.de, texto: body.texto, adjuntos: body.adjuntos,
         audio: body.audio, duracion: body.duracion, transcripcion: body.transcripcion,
-      }) });
+      });
+      ia.avisar(); // si hay clave de Claude, contesta solo en unos segundos
+      return h.json(200, { mensaje });
     }
 
     case 'POST /chat/audio': {
@@ -197,6 +220,12 @@ async function api(req, res, url, h) {
       const name = `audio-${diaLocal()}-${crypto.randomBytes(5).toString('hex')}.${ext}`;
       fs.writeFileSync(path.join(SUBIDAS, name), data);
       return h.json(200, { url: `/media/subidas/${name}`, size: data.length });
+    }
+
+    case 'POST /pagos/link-prueba': {
+      if (!limite('link-prueba', h.ip, 10, 600)) throw new Problema('Demasiados links seguidos. Esperá unos minutos.', 429);
+      const [status, data] = await pagos.linkPrueba(await h.leerJson(1000));
+      return h.json(status, data);
     }
 
     case 'POST /pagos/probar':

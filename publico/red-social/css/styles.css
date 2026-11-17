@@ -1268,3 +1268,129 @@ html:root {
   text-underline-offset: 3px;
 }
 .ask-wa svg { width: 16px; height: 16px; color: var(--boton); }
+
+/* ============ 17/11/2026: colores de Soul (soul.com.ar) que combinan con GO cuotas ============ */
+/* Soul usa negro, violeta #722e7e y magenta #e8168b en degradé; el rosa de GO cuotas es #ee2a7b.
+   Se redefinen los colores de la marca, así todo el diseño los toma. Para volver atrás, borrar este bloque. */
+:root {
+  --soul-negro: #140818;
+  --soul-violeta: #722e7e;
+  --soul-morado: #613681;
+  --soul-magenta: #e8168b;
+  --go-rosa: #ee2a7b;
+  --soul-grad: linear-gradient(100deg, #1a0a21 0%, #722e7e 62%, #e8168b 100%);
+  --soul-grad-2: linear-gradient(100deg, #e8168b 0%, #a3249a 45%, #722e7e 100%);
+
+  --azul-xoxo: #722e7e;
+  --marino: #2a0f35;
+  --profundo: #613681;
+  --acero: #85658f;
+  --cielo: #ff5fb0;
+  --menta: #ffb3da;
+  --plata: #d9c7e0;
+
+  --bg: #f7f0f9;
+  --grid: rgba(114, 46, 126, .06);
+  --glow-1: rgba(232, 22, 139, .16);
+  --glow-2: rgba(114, 46, 126, .16);
+  --surface: #ffffff;
+  --surface-2: #f8f1fa;
+  --ink: #22102b;
+  --muted: #6c5679;
+  --line: #e7d7ee;
+  --acento: #e8168b;
+  --sobre-acento: #ffffff;
+  --acento-texto: #c4107a;
+  --deal: #c4107a;
+  --on-bg: #2a0f35;
+  --on-fg: #ffb3da;
+  --boton: #ee2a7b;
+  --sobre-boton: #ffffff;
+  --logo: #722e7e;
+  --ring: conic-gradient(from 200deg, #e8168b, #722e7e, #ee2a7b, #ffb3da, #e8168b);
+  --shadow: 0 1px 2px rgba(42, 15, 53, .06), 0 12px 30px rgba(114, 46, 126, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12061a;
+    --grid: rgba(255, 255, 255, .035);
+    --glow-1: rgba(232, 22, 139, .14);
+    --glow-2: rgba(114, 46, 126, .2);
+    --surface: #1f0c2a;
+    --surface-2: #2b1238;
+    --ink: #ffffff;
+    --muted: #cdb6d9;
+    --line: #3b1d4b;
+    --acento: #ff4fa8;
+    --sobre-acento: #12061a;
+    --acento-texto: #ff8cc6;
+    --deal: #ff8cc6;
+    --on-bg: #ff4fa8;
+    --on-fg: #12061a;
+    --boton: #ee2a7b;
+    --sobre-boton: #ffffff;
+    --logo: #ffffff;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 30px rgba(0, 0, 0, .35);
+  }
+}
+/* Barra de avisos y botón de compra con el degradé de Soul */
+.topbar { background: var(--soul-grad); }
+.buy-btn { background: var(--soul-grad-2); color: #fff; box-shadow: 4px 4px 0 var(--marino); }
+/* Fondo detrás de los celulares y de los productos */
+.media { background: radial-gradient(75% 60% at 50% 42%, #b13b97 0%, #722e7e 50%, #2a0f35 100%); }
+html:root { --x-stage: radial-gradient(75% 60% at 50% 42%, #b13b97 0%, #722e7e 50%, #2a0f35 100%); }
+/* Tarjeta activa (escritorio) y videos: textos rosados en vez de verde menta */
+@media (hover: hover) and (pointer: fine) {
+  .card.is-active { --c-2: #4a1d5c; --c-line: #5b2a6e; --c-pink: #ff8cc6; --c-deal: #ff8cc6; --c-muted: #d9c7e0; }
+}
+.slide-info { --c-pink: #ff8cc6; --c-deal: #ff8cc6; }
+
+/* Precios todavía más grandes (la página que más vende) y el precio de lista tachado del descuento flash */
+.pp-amt { flex-direction: column; align-items: flex-end; gap: 0; }
+.pp-amt .fl-was { font-size: 13px; font-weight: 700; font-style: normal; }
+.pp-amt strong { font-size: 30px; }
+.pp-amt small { display: none; }
+
+/* Portada de una categoría (/red-social/audio/) */
+.cat-page .hero, .cat-page .filters-label span { display: none; }
+.cat-hero { padding: 28px 16px 8px; text-align: center; }
+.cat-hero .cat-kicker { margin: 0; font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--acento-texto); }
+.cat-hero h1 {
+  display: inline-block; margin: 10px 0 4px; padding: .06em .16em 0; font: 400 clamp(46px, 11vw, 96px)/1 var(--display); text-transform: uppercase;
+  background: var(--soul-grad); color: #fff; -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.cat-hero p { max-width: 56ch; margin: 14px auto 0; color: var(--muted); font-weight: 600; }
+.cat-hero .cat-sub { color: var(--ink); font-size: 18px; font-style: italic; font-weight: 900; }
+/* Las 3 categorías en la fila de historias */
+.ring > .ring-icon.cat { background: var(--c); color: #fff; }
+a.story-btn { text-decoration: none; color: inherit; }
+/* Descuento flash con los colores de Soul */
+:root { --fl-bg: var(--soul-grad-2); --fl-pill-bg: #2a0f35; --fl-tag-bg: #e8168b; }
+
+/* ============ 17/11/2026: 4 vistas (Inicio + una home por categoría) con shared/secciones.js ============ */
+:root {
+  --sx-title-font: var(--display);
+  --sx-title-weight: 400;
+  --sx-title-transform: uppercase;
+  --sx-title-size: clamp(34px, 6vw, 58px);
+  --sx-hero-size: clamp(56px, 12vw, 120px);
+  --sx-radius: 22px;
+  --sx-btn: var(--boton);
+  --sx-btn-ink: var(--sobre-boton);
+  --sx-surface: var(--surface);
+  --sx-bg2: var(--surface-2);
+  --sx-max: 1180px;
+}
+.rs-nav { position: sticky; top: 0; z-index: 30; padding: 8px 12px; background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.rs-nav .sx-nav { justify-content: center; }
+.rs-nav .sx-nav a { font-weight: 800; color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line); }
+.rs-nav .sx-nav a[aria-current="page"] { background: var(--soul-grad); color: #fff; box-shadow: none; }
+@media (max-width: 640px) { .rs-nav .sx-nav { justify-content: flex-start; } }
+.cat-page main > :not(#cat-home) { display: none; }
+#cat-home .sx-hero-title { display: inline; padding: 0 .12em; background: var(--soul-grad); color: #fff; line-height: 1.12; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+#cat-home .sx-hero-sub { color: var(--acento-texto); font-style: italic; font-weight: 900; }
+.sx-page .sx-benefit, .sx-page .sx-gcard, .sx-page .sx-calc-form, .sx-page .sx-ocard { box-shadow: var(--shadow); background: var(--surface); }
+.promo-sx { grid-column: 1 / -1; padding: clamp(18px, 3vw, 28px); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.promo-sx > section { width: auto; padding-block: 0; }
+.promo-sx > section + section { margin-top: 24px; padding-top: 24px; }
+.promo-sx .sx-calc-form { background: var(--surface-2); box-shadow: none; }

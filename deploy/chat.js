@@ -5,6 +5,7 @@
  *   ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js'              lo que espera respuesta
  *   ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js todo 30'      los últimos 30 mensajes
  *   ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js escribiendo'  "Claude está escribiendo…" (5 min)
+ *   ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js pedidos'      cambios que anotó Claude en el chat
  *   ssh xoxo-vps 'sudo -u xoxo node /srv/xoxo-tienda/deploy/chat.js responder' < texto.txt
  *
  * Leer los mensajes los marca como "Visto por Claude" en el panel.
@@ -59,6 +60,14 @@ if (cmd === 'pendientes') {
 } else if (cmd === 'escribiendo') {
   chat.escribiendo(Math.max(10, Math.min(1800, Number(arg) || 300)));
   console.log('En el panel se ve "Claude está escribiendo…".');
+} else if (cmd === 'pedidos') {
+  // Lo que Claude anotó en el chat para que Juan lo aplique (datos/chat/pedidos-de-cambio.jsonl)
+  const lista = require('../nucleo/ia').leerPedidos();
+  if (!lista.length) console.log('No hay pedidos de cambio anotados.');
+  for (const p of lista.slice(-Math.max(1, Number(arg) || 20))) {
+    console.log(`\n[${fecha(p.at)}] #${p.id} · ${p.de} · ${p.estado}\n  ${p.resumen}`);
+    if (p.detalle) console.log(p.detalle.replace(/^/gm, '    '));
+  }
 } else if (cmd === 'todo') {
   const n = Math.max(1, Math.min(500, Number(arg) || 20));
   const { mensajes } = chat.leer('', n);
@@ -79,6 +88,6 @@ if (cmd === 'pendientes') {
     }
   });
 } else {
-  console.error('Uso: node deploy/chat.js [pendientes | todo N | escribiendo [segundos] | responder < texto]');
+  console.error('Uso: node deploy/chat.js [pendientes | todo N | pedidos | escribiendo [segundos] | responder < texto]');
   process.exitCode = 1;
 }

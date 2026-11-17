@@ -1,12 +1,17 @@
-/* Checkout del pago online, en los dos diseños.
- * Muestra el formulario, elige GO cuotas o Mercado Pago y le pide al servidor (nucleo/pagos.js)
- * la dirección de pago. Las claves de las pasarelas nunca están en la página: viven en el .env del servidor.
+/* Checkout del pago online, en los tres diseños.
+ * Muestra el formulario, elige Mercado Pago (el medio principal) o GO cuotas, calcula el envío con Andreani o
+ * Correo Argentino (shared/envios.js) y le pide al servidor (nucleo/pagos.js) la dirección de pago. El servidor
+ * vuelve a calcular el precio y el envío: lo que muestra la página es solo para que la persona sepa el total.
+ * Las claves de las pasarelas nunca están en la página: viven en el .env del servidor.
  * Uso desde la página: Checkout.open('moto-g06-128', 12)
  */
 (() => {
   'use strict';
 
-  const { STORE, PRODUCTS, EXTRAS = [] } = window;
+  const { STORE, PRODUCTS, EXTRAS = [], SITE = {} } = window;
+  const SHIP = SITE.shipping || null;
+  const Envios = window.Envios || null;
+  const Flash = window.Flash || null;
   const CATALOG = [...PRODUCTS, ...EXTRAS]; // EXTRAS: productos que no son celulares, con un solo precio
   const byId = Object.fromEntries(CATALOG.map(p => [p.id, p]));
   const VERSION = location.pathname.split('/').filter(Boolean)[0] || '';
@@ -23,7 +28,17 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
 
+  // Mercado Pago va primero: es el medio principal
   const METHODS = {
+    mercadopago: {
+      name: 'Mercado Pago',
+      logo: '/media/marcas/mercadopago-icono.svg',
+      // Celulares: 12 cuotas sin interés con tarjeta de crédito. El resto: las cuotas se eligen en Mercado Pago
+      plan: p => (p.cuotas ? 12 : 1),
+      text: p => (p.cuotas
+        ? `12 cuotas${sinInteres} de ${money(p.cuotas[12])} con tarjeta de crédito. También débito, dinero en cuenta o efectivo.`
+        : 'Hasta 12 cuotas con tarjeta de crédito. También débito, dinero en cuenta o efectivo.'),
+    },
     gocuotas: {
       name: 'GO cuotas',
       logo: STORE.financingLogo && STORE.financingLogo.color,
@@ -33,16 +48,8 @@
         ? `9 cuotas${sinInteres} de ${money(p.cuotas[9])} con tu tarjeta de débito. La primera se paga hoy.`
         : `${STORE.extras.cuotas} cuotas con tu tarjeta de débito. La primera se paga hoy.`),
     },
-    mercadopago: {
-      name: 'Mercado Pago',
-      logo: '/media/marcas/mercadopago-icono.svg',
-      // Celulares: 12 cuotas sin interés con tarjeta de crédito. El resto de los productos, en un pago
-      plan: p => (p.cuotas ? 12 : 1),
-      text: p => (p.cuotas
-        ? `12 cuotas${sinInteres} de ${money(p.cuotas[12])} con tarjeta de crédito. También débito, dinero en cuenta o efectivo.`
-        : 'Tarjeta de crédito o débito, dinero en cuenta o efectivo.'),
-    },
   };
+  const branches = (STORE.branches || []).map((b, i) => ({ ...b, i }));
 
   let root = null;
   let product = null;
@@ -107,19 +114,41 @@
               </div>
             </fieldset>
 
-            <fieldset class="co-fields">
+            <fieldset class="co-fields co-ship">
               <legend>Entrega</legend>
-              <div class="co-choice">
-                <label><input type="radio" name="delivery" value="retiro" checked><span>Retiro en el local</span></label>
-                <label><input type="radio" name="delivery" value="envio"><span>Envío a domicilio</span></label>
+              <div class="co-row">
+                <label class="co-field"><span>Provincia</span>
+                  <select name="province" autocomplete="address-level1">
+                    <option value="">Elegí…</option>
+                    ${Envios ? Envios.PROVINCIAS.map(p => `<option>${esc(p.nombre)}</option>`).join('') : ''}
+                  </select></label>
+                <label class="co-field"><span>Código postal</span>
+                  <input name="cp" autocomplete="postal-code" maxlength="8" placeholder="4000" inputmode="text"></label>
               </div>
+              <div class="co-options" role="radiogroup" aria-label="Forma de entrega"></div>
+              <label class="co-field co-branch" hidden><span>Sucursal</span>
+                <select name="branch">${branches.map(b => `<option value="${esc(b.id)}">${esc(b.name)}${b.province ? ` (${esc(b.province)})` : ''}</option>`).join('')}</select></label>
               <div class="co-address" hidden>
-                <label class="co-field"><span>Dirección</span>
+                <label class="co-field co-street"><span>Dirección</span>
                   <input name="address" autocomplete="street-address" maxlength="160" placeholder="Calle, número, piso"></label>
                 <label class="co-field"><span>Localidad</span>
-                  <input name="city" autocomplete="address-level2" maxlength="80" value="${esc(STORE.city)}"></label>
-                <p class="co-note">Te confirmamos el costo y el día del envío por WhatsApp.</p>
+                  <input name="city" autocomplete="address-level2" maxlength="80"></label>
+                <p class="co-note"></p>
               </div>
+            </fieldset>
+
+            <fieldset class="co-fields co-coupon">
+              <legend>Cupón de descuento</legend>
+              <div class="co-coupon-row">
+                <input name="coupon" maxlength="30" placeholder="xoxo-mes" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Cupón">
+                <button class="co-apply" type="button">Aplicar</button>
+              </div>
+              <p class="co-coupon-msg" aria-live="polite"></p>
+            </fieldset>
+
+            <fieldset class="co-fields">
+              <legend>Resumen</legend>
+              <dl class="co-sum"></dl>
             </fieldset>
 
             <div class="co-error" role="alert" hidden></div>
@@ -141,18 +170,104 @@
     root.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
     form.addEventListener('change', e => {
       if (e.target.name === 'method') paintMethod();
-      if (e.target.name === 'delivery') {
-        const envio = e.target.value === 'envio';
-        $('.co-address').hidden = !envio;
-        $$('.co-address input').forEach(i => { i.required = envio; });
+      if (e.target.name === 'delivery') paintDelivery();
+      if (e.target.name === 'province') paintShipping();
+    });
+    // El código postal completa la provincia (se puede corregir)
+    form.elements.cp.addEventListener('input', () => {
+      const p = Envios && Envios.provinciaDeCp(form.elements.cp.value);
+      if (p && form.elements.province.value !== p.nombre) {
+        form.elements.province.value = p.nombre;
+        paintShipping();
       }
     });
+    $('.co-apply').addEventListener('click', applyCoupon);
+    form.elements.coupon.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } });
     form.addEventListener('submit', submit);
   }
 
   const $ = sel => root.querySelector(sel);
   const $$ = sel => [...root.querySelectorAll(sel)];
   const selectedMethod = () => ($('input[name="method"]:checked') || {}).value;
+
+  /* ---------- Envío: retiro gratis o Andreani / Correo Argentino según la provincia ---------- */
+  let shipOptions = [];
+  const selectedShip = () => {
+    const v = ($('input[name="delivery"]:checked') || {}).value || 'retiro';
+    return v === 'retiro' ? { id: 'retiro', nombre: 'Retiro en sucursal', costo: 0 } : shipOptions.find(o => o.id === v) || null;
+  };
+
+  function paintShipping() {
+    const form = $('.co-form');
+    const prov = Envios && Envios.provincia(form.elements.province.value);
+    const before = ($('input[name="delivery"]:checked') || {}).value || 'retiro';
+    shipOptions = prov && SHIP ? Envios.opciones(SHIP, prov.zona, Envios.peso(product), priceOf(product)) : [];
+    const pickup = !SHIP || SHIP.pickup;
+    const opt = (value, title, price, note) => `
+      <label class="co-opt">
+        <input type="radio" name="delivery" value="${esc(value)}">
+        <span class="co-opt-main"><b>${esc(title)}</b><small>${esc(note)}</small></span>
+        <span class="co-opt-price">${price}</span>
+      </label>`;
+    $('.co-options').innerHTML = [
+      pickup ? opt('retiro', 'Retiro en sucursal', 'Gratis', branches.length > 1 ? `${branches.length} sucursales` : (branches[0] && branches[0].name) || '') : '',
+      ...shipOptions.map(o => opt(o.id, o.nombre, o.costo ? money(o.costo) : 'Gratis', `Llega en ${Envios.diasTexto(o.dias)}`)),
+      !prov ? '<p class="co-ship-hint">Elegí tu provincia o escribí tu código postal para ver el envío con Andreani y Correo Argentino.</p>' : '',
+    ].join('');
+    const keep = $(`input[name="delivery"][value="${CSS.escape(before)}"]`) || $('input[name="delivery"]');
+    if (keep) keep.checked = true;
+    paintDelivery();
+  }
+
+  function paintDelivery() {
+    const ship = selectedShip();
+    const envio = Boolean(ship && ship.id !== 'retiro');
+    const domicilio = envio && ship.id.endsWith('domicilio');
+    $('.co-branch').hidden = Boolean(envio) || branches.length < 2;
+    $('.co-address').hidden = !envio;
+    $('.co-street').hidden = !domicilio;
+    const form = $('.co-form');
+    form.elements.address.required = domicilio;
+    form.elements.city.required = envio;
+    form.elements.cp.required = envio;
+    $('.co-note').textContent = envio
+      ? (domicilio ? 'Te mandamos el número de seguimiento por email y WhatsApp.' : `Retirás en la sucursal de ${ship.nombre.split(' a ')[0]} más cercana a esa dirección.`)
+      : '';
+    paintTotals();
+  }
+
+  /* ---------- Cupón del descuento flash ---------- */
+  let couponOk = false;
+  function applyCoupon() {
+    const input = $('.co-form').elements.coupon;
+    const msg = $('.co-coupon-msg');
+    const value = input.value.trim();
+    couponOk = Boolean(Flash && value && Flash.cuponValido(value, Flash.cfg) && Flash.activo());
+    msg.className = `co-coupon-msg${value ? (couponOk ? ' ok' : ' bad') : ''}`;
+    if (!value) msg.textContent = '';
+    else if (couponOk) msg.textContent = `¡Listo! Descuento flash del ${Flash.cfg.percent}% aplicado.`;
+    else if (Flash && Flash.cuponValido(value, Flash.cfg)) msg.textContent = 'Tu hora del descuento flash ya terminó.';
+    else msg.textContent = 'Ese cupón no es válido.';
+    paintTotals();
+  }
+
+  // Resumen: producto, envío, descuento flash y total
+  function paintTotals() {
+    if (!product) return;
+    const ship = selectedShip();
+    const price = priceOf(product);
+    const shipCost = ship ? ship.costo : 0;
+    const flashOn = Flash && Flash.activo() && Flash.cfg.percent > 0;
+    const list = flashOn ? Flash.lista(price, Flash.cfg.percent) : 0;
+    const row = (a, b, cls = '') => `<div class="${cls}"><dt>${a}</dt><dd>${b}</dd></div>`;
+    $('.co-sum').innerHTML = [
+      flashOn && couponOk ? row('Precio de lista', `<s>${money(list)}</s>`) : '',
+      flashOn && couponOk ? row(`Descuento flash (${esc(Flash.cupon())})`, `−${money(list - price)}`, 'co-save') : '',
+      row('Producto', money(price)),
+      row(ship ? esc(ship.nombre) : 'Envío', ship ? (shipCost ? money(shipCost) : 'Gratis') : 'Elegí la entrega'),
+    ].join('');
+    $('.co-total strong').textContent = money(price + shipCost);
+  }
 
   function paintMethod() {
     const key = selectedMethod();
@@ -175,8 +290,8 @@
   async function open(id, chosenPlan) {
     product = byId[id];
     if (!product) return;
-    // Cada cantidad de cuotas va con un medio: 12 con tarjeta de crédito (Mercado Pago), 9 con GO cuotas
-    const wanted = product.cuotas && chosenPlan === 12 ? 'mercadopago' : 'gocuotas';
+    // Mercado Pago es el principal. Solo las 9 cuotas con débito van por GO cuotas.
+    const wanted = product.cuotas && chosenPlan === 9 ? 'gocuotas' : 'mercadopago';
     if (!root) build();
     lastFocus = document.activeElement;
 
@@ -184,13 +299,18 @@
     $('.co-product').innerHTML = `
       ${photo ? `<img src="${esc(photo)}" alt="">` : ''}
       <div><b>${esc(fullName(product))}</b><small></small></div>`;
-    $('.co-total strong').textContent = money(priceOf(product));
     $$('.co-method').forEach(el => { el.querySelector('.co-mdesc').textContent = METHODS[el.dataset.method].text(product); });
     const pick = $(`.co-method[data-method="${wanted}"] input`);
     pick.checked = true;
     paintMethod();
     showError('');
     fillBuyer();
+    // Cupón: el que la persona tocó en la barra del descuento flash
+    const form = $('.co-form');
+    $('.co-coupon').hidden = !(Flash && Flash.cfg.on);
+    if (Flash && !form.elements.coupon.value && Flash.elegido()) form.elements.coupon.value = Flash.elegido();
+    if (form.elements.coupon.value) applyCoupon();
+    paintShipping();
 
     root.hidden = false;
     document.documentElement.classList.add('co-lock');
@@ -228,8 +348,8 @@
     const saved = store.get('cc:buyer');
     if (!saved) return;
     const form = $('.co-form');
-    for (const key of ['name', 'email', 'phone', 'dni', 'address', 'city']) {
-      if (saved[key] && !form.elements[key].value) form.elements[key].value = saved[key];
+    for (const key of ['name', 'email', 'phone', 'dni', 'address', 'city', 'province', 'cp', 'branch']) {
+      if (saved[key] && form.elements[key] && !form.elements[key].value) form.elements[key].value = saved[key];
     }
   }
 
@@ -252,15 +372,21 @@
     const method = selectedMethod();
     if (!method) return showError('Elegí cómo querés pagar.');
     const f = form.elements;
+    const ship = selectedShip();
+    if (!ship) return showError('Elegí cómo querés recibir tu compra.');
     const payload = {
       version: VERSION,
       productId: product.id,
       plan,
       method,
       buyer: { name: f.name.value, email: f.email.value, phone: f.phone.value, dni: f.dni.value },
-      delivery: { type: f.delivery.value, address: f.address.value, city: f.city.value },
+      delivery: { type: ship.id, address: f.address.value, city: f.city.value, province: f.province.value, cp: f.cp.value, branch: f.branch.value },
+      coupon: couponOk ? f.coupon.value.trim() : '',
     };
-    store.set('cc:buyer', { name: f.name.value, email: f.email.value, phone: f.phone.value, dni: f.dni.value, address: f.address.value, city: f.city.value });
+    store.set('cc:buyer', {
+      name: f.name.value, email: f.email.value, phone: f.phone.value, dni: f.dni.value,
+      address: f.address.value, city: f.city.value, province: f.province.value, cp: f.cp.value, branch: f.branch.value,
+    });
 
     const btn = $('.co-pay');
     btn.disabled = true;
@@ -299,7 +425,7 @@
     const ref = info ? `#${info.ref}` : '';
     const name = info ? info.product : 'tu compra';
     const view = {
-      approved: { title: '¡Pago aprobado!', text: `Tu pedido ${ref} del ${name} ya está pago. Te vamos a escribir por WhatsApp para coordinar la entrega.` },
+      approved: { title: '¡Pago aprobado!', text: `Tu pedido ${ref} del ${name} ya está pago. Te mandamos el detalle a tu email y te escribimos por WhatsApp para coordinar la entrega.` },
       pending: { title: 'Estamos confirmando tu pago', text: `Tu pedido ${ref} del ${name} quedó registrado. Apenas se acredite el pago te escribimos por WhatsApp.` },
       review: { title: 'Estamos confirmando tu pago', text: `Tu pedido ${ref} del ${name} quedó registrado. Lo revisamos y te escribimos por WhatsApp.` },
       rejected: { title: 'El pago no se completó', text: 'No se cobró nada. Podés intentar de nuevo con otro medio de pago o escribirnos y te ayudamos.' },

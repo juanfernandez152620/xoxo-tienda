@@ -1,34 +1,37 @@
 <!doctype html>
-<html lang="es-AR">
+<html lang="es-AR" data-cat="{{cat}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>{{texto:seoTitle}}</title>
-  <meta name="description" content="{{texto:seoDescription}}">
-  <meta name="theme-color" content="#ededed" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#08274d" media="(prefers-color-scheme: dark)">
+  <title>{{titulo}}</title>
+  <meta name="description" content="{{descripcion}}">
+  <meta name="theme-color" content="#f7f0f9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12061a" media="(prefers-color-scheme: dark)">
   <meta property="og:title" content="{{texto:seoTitle}}">
   <meta property="og:description" content="{{texto:seoDescription}}">
   <meta property="og:image" content="{{og_image}}">
-  <link rel="icon" href="../media/marca/xoxo-avatar.svg">
+  <link rel="icon" href="/media/marca/xoxo-avatar.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:ital,wght@0,500..900;1,700..900&display=swap">
   <link rel="stylesheet" href="{{asset:/red-social/css/styles.css}}">
   <link rel="stylesheet" href="{{asset:/shared/vidriera.css}}">
   <link rel="stylesheet" href="{{asset:/shared/checkout.css}}">
+  <link rel="stylesheet" href="{{asset:/shared/flash.css}}">
+  <link rel="stylesheet" href="{{asset:/shared/secciones.css}}">
 </head>
 <body>
   <!-- Avisos: se arman con los textos de /admin -->
   <div class="topbar"></div>
 
   <header class="site-head">
-    <a class="brand" href="./" aria-label="XOXO Tecno, inicio">
+    <a class="brand" href="/red-social/" aria-label="XOXO Tecno, inicio">
       <span class="logo-xoxo"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 667 270"><g transform="translate(6 6)" fill="none" stroke="currentColor" stroke-width="6.4" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0 0)"><path d="M3 5L52 75"/><path d="M28 5L75 72L2 177"/><path d="M140 5L70 110L108 165"/><path d="M83 50L106 16"/><path d="M35 165L59 133"/><path d="M93 108L140 177"/><circle cx="112" cy="5" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(157 0)"><path d="M51 9.5A80 87 0 1 0 79.5 2.0999999999999943L76.5 24A58 65 0 1 0 99.9 27"/><circle cx="60.5" cy="5.700000000000003" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(335 0)"><path d="M3 5L52 75"/><path d="M28 5L75 72L2 177"/><path d="M140 5L70 110L108 165"/><path d="M83 50L106 16"/><path d="M35 165L59 133"/><path d="M93 108L140 177"/><circle cx="112" cy="5" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(492 0)"><path d="M51 9.5A80 87 0 1 0 79.5 2.0999999999999943L76.5 24A58 65 0 1 0 99.9 27"/><circle cx="60.5" cy="5.700000000000003" r="4.1" fill="currentColor" stroke="none"/></g><g transform="translate(257.28499999999997 252) scale(0.93)" stroke-width="2.6" fill="none"><path transform="translate(0 0)" d="M6 -36V-7Q6 0 13 0M0 -27H13"/><path transform="translate(22 0)" d="M1 -14H27.5A13.5 13.5 0 1 0 23.5 -4.5"/><path transform="translate(57 0)" d="M24 -23A14 14 0 1 0 24 -5"/><path transform="translate(89 0)" d="M1.5 -28V0M1.5 -15C1.5 -24 8 -28 14 -28C21 -28 25 -23 25 -15V0"/><circle cx="137" cy="-14" r="13.5"/><circle cx="137" cy="-38" r="2.6" fill="currentColor" stroke="none"/></g></g></svg></span>
       <small class="brand-city">📍 <span data-store="city"></span></small>
     </a>
     <a class="head-wa js-wa js-wa-general" data-icon="wa" target="_blank" rel="noopener"><span>Escribinos</span></a>
   </header>
+  <div class="rs-nav" id="rs-nav"></div>
 
   <main>
     <section class="hero">
@@ -86,8 +89,11 @@
 
   {{datos}}
   <script src="{{asset:/shared/seguimiento.js}}" data-variante="red-social"></script>
+  <script src="{{asset:/shared/envios.js}}"></script>
+  <script src="{{asset:/shared/flash.js}}"></script>
   {{pago}}
   <script src="{{asset:/shared/vidriera.js}}"></script>
+  <script src="{{asset:/shared/secciones.js}}"></script>
   <script src="{{asset:/red-social/js/app.js}}"></script>
 </body>
 </html>

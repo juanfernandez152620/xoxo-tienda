@@ -19,12 +19,23 @@ git reset --hard --quiet origin/main
 ahora=$(git rev-parse HEAD)
 echo "Versión: ${antes:0:7} -> ${ahora:0:7}"
 
+# Dependencias (el SDK de Anthropic del chat): se instalan solo si cambió package-lock.json o todavía no están
+dependencias() {
+  if [ -f package-lock.json ] && { [ ! -d node_modules ] || ! git diff --quiet "$1" "$2" -- package-lock.json; }; then
+    echo "Instalando dependencias…"
+    npm ci --omit=dev --no-audit --no-fund --loglevel=error
+  fi
+}
+
 volver() {
   echo "ERROR: $1. Vuelvo a la versión ${antes:0:7}."
   git reset --hard --quiet "$antes"
+  dependencias "$ahora" "$antes" || true
   sudo /usr/bin/systemctl restart xoxo-tienda
   exit 1
 }
+
+dependencias "$antes" "$ahora" || volver "no se pudieron instalar las dependencias"
 
 for f in servidor.js nucleo/*.js; do
   node --check "$f" 2>/dev/null || volver "$f tiene un error"

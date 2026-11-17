@@ -7,15 +7,19 @@
  */
 
 const crypto = require('crypto');
-const { BASE_URL, HTTPS, PAGOS_DEMO, MP_TOKEN, GC } = require('./entorno');
+const { BASE_URL, HTTPS, PAGOS_DEMO, MP_TOKEN, MP_WEBHOOK_SECRET, GC } = require('./entorno');
 const { ruta, escribir, leerJson, aJson } = require('./archivos');
 const sitio = require('./sitio');
+const envios = require('./envios');
+const correo = require('./correo');
+const flash = require('../publico/shared/flash');
 
 const PEDIDOS = ruta('pedidos.json');
 
+// Mercado Pago es el medio principal (va primero y elegido); GO cuotas queda como segunda opción
 const METHODS = {
-  gocuotas: { name: 'GO cuotas', live: () => Boolean(GC.email && GC.password) },
   mercadopago: { name: 'Mercado Pago', live: () => Boolean(MP_TOKEN) },
+  gocuotas: { name: 'GO cuotas', live: () => Boolean(GC.email && GC.password) },
 };
 function estadoMedio(key) {
   const live = METHODS[key].live();
@@ -49,9 +53,14 @@ function actualizar(id, patch) {
   const list = leerPedidos();
   const order = list.find(o => o.id === id);
   if (!order) return null;
+  const antes = order.status;
   Object.assign(order, patch, { updatedAt: new Date().toISOString() });
+  // Pago aprobado por primera vez: se manda el correo de la compra (y el aviso de venta a la tienda)
+  const avisar = patch.status === 'approved' && antes !== 'approved' && !(order.emails && order.emails.compra);
+  if (avisar) order.emails = { ...(order.emails || {}), compra: new Date().toISOString() };
   guardarPedidos(list);
   if (patch.status) console.log(`[pedido ${order.ref}] ${order.method}: ${patch.status}`);
+  if (avisar) correo.compraAprobada(order);
   return order;
 }
 const tienda = () => sitio.cargar().store.name;
@@ -59,6 +68,7 @@ const volver = (order, result) => `${BASE_URL}/${order.version}/?pago=${result}&
 const pedidoPublico = o => ({
   id: o.id, ref: o.ref, status: o.status, method: o.method, product: o.product.name,
   amount: o.amount, plan: o.plan, demo: Boolean(o.gateway && o.gateway.demo),
+  envio: o.envio ? o.envio.nombre : '', email: Boolean(o.emails && o.emails.compra),
 });
 
 /* ---------- Datos del comprador ---------- */
@@ -72,16 +82,25 @@ function validar(body) {
     phone: String(b.phone || '').replace(/[^\d]/g, '').slice(0, 15),
     dni: String(b.dni || '').replace(/[^\d]/g, '').slice(0, 9),
   };
+  // type: 'retiro' o la forma de envío elegida en la calculadora (andreani-domicilio, correo-sucursal…)
+  const type = /^(retiro|(andreani|correo)-(domicilio|sucursal))$/.test(d.type) ? d.type : d.type === 'envio' ? 'andreani-domicilio' : 'retiro';
   const delivery = {
-    type: d.type === 'envio' ? 'envio' : 'retiro',
+    type,
     address: clean(d.address).slice(0, 160),
     city: clean(d.city).slice(0, 80),
+    province: clean(d.province).slice(0, 40),
+    cp: clean(d.cp).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8),
+    branch: clean(d.branch).slice(0, 40),
   };
   if (buyer.name.length < 3) return { error: 'Escribí tu nombre y apellido.' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(buyer.email)) return { error: 'Revisá tu email.' };
   if (buyer.phone.length < 8) return { error: 'Escribí tu celular con característica (ej: 381 5123456).' };
   if (buyer.dni && (buyer.dni.length < 7 || buyer.dni.length > 9)) return { error: 'Revisá tu DNI.' };
-  if (delivery.type === 'envio' && (delivery.address.length < 5 || delivery.city.length < 2)) return { error: 'Escribí la dirección y la localidad para el envío.' };
+  if (type !== 'retiro') {
+    if (delivery.cp.length < 4) return { error: 'Escribí el código postal para el envío.' };
+    if (delivery.city.length < 2) return { error: 'Escribí la localidad para el envío.' };
+    if (type.endsWith('domicilio') && delivery.address.length < 5) return { error: 'Escribí la dirección para el envío.' };
+  }
   return { buyer, delivery };
 }
 
@@ -97,9 +116,14 @@ async function mpCrear(order, product) {
       category_id: product.cuotas ? 'phones' : 'electronics',
       quantity: 1,
       currency_id: 'ARS',
-      unit_price: order.amount,
+      unit_price: order.productAmount ?? order.amount,
       ...(photo && HTTPS ? { picture_url: sitio.absoluta(photo) } : {}),
-    }],
+    },
+    // El envío va como un ítem aparte, así se ve claro en el resumen de Mercado Pago
+    ...(order.envio && order.envio.costo ? [{
+      id: `envio-${order.envio.tipo}`, title: order.envio.nombre, description: `Envío del pedido ${order.ref}`,
+      category_id: 'services', quantity: 1, currency_id: 'ARS', unit_price: order.envio.costo,
+    }] : [])],
     payer: {
       name: first,
       surname: rest.join(' '),
@@ -109,8 +133,8 @@ async function mpCrear(order, product) {
     },
     external_reference: order.id,
     back_urls: { success: volver(order, 'ok'), failure: volver(order, 'error'), pending: volver(order, 'pendiente') },
-    // Celulares: hasta 12 cuotas. El resto de los productos financia con GO cuotas: acá va en un pago
-    payment_methods: { installments: product.cuotas ? 12 : 1 },
+    // Mercado Pago es el medio principal: hasta 12 cuotas para todo (el interés depende de la cuenta de MP)
+    payment_methods: { installments: 12 },
     statement_descriptor: tienda().toUpperCase().slice(0, 22),
     metadata: { pedido: order.ref },
   };
@@ -257,8 +281,15 @@ async function crear(body) {
   if (!product) return [404, { error: 'Ese producto ya no está en el catálogo.' }];
   const check = validar(body);
   if (check.error) return [400, { error: check.error }];
+  // El envío lo cotiza el servidor con la tabla de /admin → Envíos
+  const d = check.delivery;
+  const env = envios.precio(product, { tipo: d.type, provincia: d.province, cp: d.cp, sucursal: d.branch });
+  if (env.error) return [400, { error: env.error }];
+  // Cupón del descuento flash: se anota en el pedido. El precio cobrado es el de la página.
+  const coupon = flash.cuponValido(body.coupon, site.flash) ? flash.cupon() : '';
 
   const id = crypto.randomBytes(5).toString('hex');
+  const productAmount = priceOf(product);
   const order = {
     id,
     ref: id.slice(0, 6).toUpperCase(),
@@ -266,10 +297,13 @@ async function crear(body) {
     version: body.version,
     method,
     product: { id: product.id, name: fullName(product) },
-    plan: [1, 6, 9, 12].includes(Number(body.plan)) ? Number(body.plan) : 12,
-    amount: priceOf(product),
+    plan: [1, 3, 6, 9, 12].includes(Number(body.plan)) ? Number(body.plan) : 12,
+    productAmount,
+    amount: productAmount + env.envio.costo,
+    envio: env.envio,
+    ...(coupon ? { coupon } : {}),
     buyer: check.buyer,
-    delivery: check.delivery,
+    delivery: d,
     status: 'created',
     gateway: {},
   };
@@ -299,8 +333,22 @@ async function estado(id, paymentId) {
 // Último aviso (webhook) de cada pasarela desde que arrancó la tienda: sirve para ver que llegan
 const ultimoAviso = {};
 
-async function avisoMercadoPago(body, url) {
+// x-signature: "ts=…,v1=…". Se firma "id:<data.id>;request-id:<x-request-id>;ts:<ts>;" con la clave secreta del webhook.
+function firmaMercadoPago(headers, url, body) {
+  // Sin clave secreta, o un aviso que no trae firma (los de notification_url pueden no traerla): se acepta igual,
+  // porque el pago siempre se confirma consultándolo en la API de Mercado Pago
+  if (!MP_WEBHOOK_SECRET || !headers['x-signature']) return true;
+  const partes = Object.fromEntries(String(headers['x-signature'] || '').split(',').map(p => p.trim().split('=')));
+  const id = String(url.searchParams.get('data.id') || (body.data && body.data.id) || '');
+  if (!partes.ts || !partes.v1) return false;
+  const manifiesto = `${id ? `id:${/^[a-z0-9]+$/i.test(id) ? id.toLowerCase() : id};` : ''}${headers['x-request-id'] ? `request-id:${headers['x-request-id']};` : ''}ts:${partes.ts};`;
+  const esperado = crypto.createHmac('sha256', MP_WEBHOOK_SECRET).update(manifiesto).digest('hex');
+  return esperado.length === partes.v1.length && crypto.timingSafeEqual(Buffer.from(esperado), Buffer.from(partes.v1));
+}
+
+async function avisoMercadoPago(body, url, headers = {}) {
   ultimoAviso.mercadopago = new Date().toISOString();
+  if (!firmaMercadoPago(headers, url, body)) return console.error('[webhook Mercado Pago] aviso con firma inválida: se ignora');
   const type = body.type || body.topic || url.searchParams.get('type') || url.searchParams.get('topic');
   const paymentId = (body.data && body.data.id) || url.searchParams.get('data.id') || (type === 'payment' && url.searchParams.get('id'));
   if (type !== 'payment' || !paymentId || !MP_TOKEN) return;
@@ -361,6 +409,34 @@ const estadoAdmin = () => Object.fromEntries(Object.keys(METHODS).map(k => [k, {
   webhook: `${BASE_URL}/api/webhooks/${k}`,
 }]));
 
+// Link de pago de prueba (panel → Pedidos): crea un pedido real por un monto chico con Mercado Pago.
+// Al pagarlo se prueba todo: la página de pago, el aviso (webhook), el pedido aprobado y los correos.
+async function linkPrueba({ monto, email }) {
+  if (!MP_TOKEN) return [400, { error: 'Primero cargá el Access Token de Mercado Pago con xoxo-claves (opción 1).' }];
+  const amount = Math.round(Number(monto));
+  if (!(amount >= 10 && amount <= 100000)) return [400, { error: 'Poné un monto entre $10 y $100.000.' }];
+  const mail = String(email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)) return [400, { error: 'Escribí tu email: ahí llega el mail de la compra.' }];
+  const id = crypto.randomBytes(5).toString('hex');
+  const product = { id: 'prueba-de-pago', name: 'Prueba de pago', gallery: [] };
+  const order = {
+    id, ref: id.slice(0, 6).toUpperCase(), createdAt: new Date().toISOString(), version: 'profesional', method: 'mercadopago',
+    product: { id: product.id, name: product.name }, plan: 1, productAmount: amount, amount, prueba: true,
+    envio: { tipo: 'retiro', nombre: 'Retiro en sucursal (prueba)', costo: 0 },
+    buyer: { name: 'Prueba del panel', email: mail, phone: '00000000', dni: '' }, delivery: { type: 'retiro' },
+    status: 'created', gateway: {},
+  };
+  guardarPedidos([...leerPedidos(), order]);
+  try {
+    const r = await mpCrear(order, product);
+    actualizar(id, { status: 'pending', gateway: r.gateway });
+    return [200, { url: r.url, pedido: order.ref }];
+  } catch (err) {
+    actualizar(id, { status: 'error', error: err.message });
+    return [502, { error: err.message }];
+  }
+}
+
 // "Probar conexión" del panel: inicia sesión en cada pasarela con su clave, sin crear ningún pago
 async function probar() {
   const out = {};
@@ -386,6 +462,6 @@ async function probar() {
 }
 
 module.exports = {
-  estadoAdmin, probar,
+  estadoAdmin, probar, linkPrueba,
   METHODS, activo, configPublica, leerPedidos, crear, estado, avisoMercadoPago, avisoGoCuotas, demo, lineaArranque,
 };

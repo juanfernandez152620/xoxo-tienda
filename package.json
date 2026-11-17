@@ -8,6 +8,9 @@
     "start": "node servidor.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.9.0"
   }
 }

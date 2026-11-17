@@ -45,10 +45,31 @@ module.exports = {
   BACKUP_HORAS: Math.max(1, Math.floor(Number(env('BACKUP_HORAS', '1')) || 1)),
   PAGOS_DEMO: env('PAGOS_DEMO', 'false') === 'true',
   MP_TOKEN: env('MP_ACCESS_TOKEN'),
+  // Clave secreta de los avisos de Mercado Pago (Tus integraciones → Webhooks): si está, se revisa la firma de cada aviso
+  MP_WEBHOOK_SECRET: env('MP_WEBHOOK_SECRET'),
   GC: {
     email: env('GOCUOTAS_EMAIL'),
     password: env('GOCUOTAS_PASSWORD'),
     base: env('GOCUOTAS_SANDBOX', 'false') === 'true' ? 'https://sandbox.gocuotas.com' : 'https://www.gocuotas.com',
+  },
+  // Correos de la tienda (aviso de compra al cliente y de venta a la tienda) por SMTP. Ver deploy/CORREO.md.
+  CORREO: {
+    host: env('SMTP_HOST'),
+    port: Number(env('SMTP_PUERTO', env('SMTP_SEGURO') === 'tls' ? '465' : '587')),
+    // starttls (puerto 587, lo normal), tls (puerto 465) o no (solo para un servidor de correo en la misma máquina)
+    seguro: ['tls', 'starttls', 'no'].includes(env('SMTP_SEGURO')) ? env('SMTP_SEGURO') : 'starttls',
+    usuario: env('SMTP_USUARIO'),
+    clave: env('SMTP_CLAVE'),
+    // Quién manda: "XOXO Tecno <ventas@xoxotecno.com.ar>"
+    de: env('CORREO_DE'),
+    responderA: env('CORREO_RESPONDER'),
+    // A quiénes avisar cada venta, separados por coma
+    avisos: env('CORREO_AVISOS').split(',').map(s => s.trim()).filter(s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)),
+  },
+  // Claude contesta solo el chat "Cambios por IA" del panel (Claude API). Sin clave, contesta Claude a mano.
+  IA: {
+    key: env('ANTHROPIC_API_KEY'),
+    modelo: env('CLAUDE_MODELO', 'claude-opus-5-5'),
   },
   // WhatsApp del socio (API de WhatsApp Business de Meta): recibe sus pedidos de cambios
   WA: {
