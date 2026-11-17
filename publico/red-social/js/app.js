@@ -653,12 +653,11 @@
   }
 
   // Después del catálogo, el feed sigue para siempre con estantes de recomendaciones.
+  // El inicio tiene un final: después de los bloques de SEQUENCE se ve el pie de página.
+  // (El modo video sí sigue para siempre: ver appendSlides.)
   function nextBlock() {
-    let key = SEQUENCE[step];
-    if (!key) {
-      const i = step - SEQUENCE.length;
-      key = i % 3 === 2 ? PROMOS[Math.floor(i / 3) % PROMOS.length] : 'more';
-    }
+    const key = SEQUENCE[step];
+    if (!key) return false;
     step++;
     if (PROMOS.includes(key)) {
       const el = promoEl(key);
@@ -707,7 +706,7 @@
     // En la home de una categoría no hay feed de celulares
     if (CAT || filters.brand === EXTRAS_KEY) return;
     let guard = 0;
-    while (sentinel.getBoundingClientRect().top < innerHeight + 1400 && guard++ < 8) nextBlock();
+    while (sentinel.getBoundingClientRect().top < innerHeight + 1400 && guard++ < 8) if (nextBlock() === false) break;
   }
   let fillRaf = 0;
   function onScroll() {
@@ -1045,8 +1044,41 @@
     else schedulePick();
   });
 
+  /* ---------- Pie de página ---------- */
+  function buildFooter() {
+    const el = $('#rs-foot');
+    if (!el) return;
+    const F = (window.SITE && window.SITE.footer) || {};
+    const ST = (window.SITE && window.SITE.story) || {};
+    const email = F.email || 'ventas@xoxotecno.com.ar';
+    const porProv = {};
+    for (const b of STORE.branches || []) (porProv[b.province || STORE.city] = porProv[b.province || STORE.city] || []).push(b);
+    el.innerHTML = `
+      <div class="rsf-grid">
+        <div class="rsf-brand">
+          <span class="rsf-logo">${$('.logo-xoxo').innerHTML}</span>
+          <p>${esc(F.about || 'Celulares, ventilación, creación de contenido y audio, en cuotas.')}</p>
+          <ul class="rsf-badges">
+            <li>🛡️ ${esc(ST.warrantyDays || 30)} días de garantía</li>
+            <li>🚚 Envíos a todo el país</li>
+            <li>💳 Mercado Pago${STORE.financing ? ` y ${esc(STORE.financing)} (débito)` : ''}</li>
+          </ul>
+        </div>
+        <nav aria-label="Secciones"><h3>Tienda</h3><a href="/red-social/">Inicio</a>${CATS.map(c => `<a href="/red-social/${c.id}/">${esc(c.name)}</a>`).join('')}</nav>
+        <div><h3>Sucursales</h3>${Object.entries(porProv).map(([p, list]) => `<p><b>${esc(p)}</b>${list.map(b => `<span>${esc(b.name)}${b.address && !/a confirmar/i.test(b.address) ? ` · ${esc(b.address.split(',')[0])}` : ''}</span>`).join('')}</p>`).join('')}</div>
+        <div><h3>Contacto</h3>
+          <a class="js-wa js-wa-general" target="_blank" rel="noopener" href="${esc(waHref(STORE.greeting))}">WhatsApp</a>
+          <a href="mailto:${esc(email)}">${esc(email)}</a>
+          ${F.instagram ? `<a href="https://instagram.com/${esc(F.instagram.replace(/^@/, ''))}" target="_blank" rel="noopener">${esc(F.instagram)}</a>` : ''}
+          ${F.hours ? `<p>${esc(F.hours)}</p>` : ''}
+        </div>
+      </div>
+      <p class="rsf-legal">© ${new Date().getFullYear()} ${esc(STORE.name)}${F.legal ? ` · ${esc(F.legal)}` : ''}</p>`;
+  }
+
   /* ---------- Avisos de la barra superior (desde /admin) ---------- */
   function buildTopbar() {
+    if (!$('.topbar')) return; // la barra de avisos se sacó el 17/11/2026
     const items = (TEXT.notices || [])
       .filter(s => s && (STORE.financing || !s.includes('{financiera}')))
       .slice(0, 3)
@@ -1066,6 +1098,7 @@
   $$('.js-wa-general').forEach(a => { a.href = waHref(STORE.greeting); });
   $('#story-segs').innerHTML = HOWTO.map(() => '<span><i></i></span>').join('');
   buildTopbar();
+  buildFooter();
   $('#hero-debito').innerHTML = boldText(TEXT.heroDebito);
   $('#hero-debito').hidden = !TEXT.heroDebito || (!STORE.financing && TEXT.heroDebito.includes('{financiera}'));
   // Menú de las 4 vistas (Inicio y la home de cada categoría) y, en una categoría, su home (shared/secciones.js)

@@ -100,7 +100,7 @@ img, svg, video { display: block; max-width: 100%; }
 
 .head {
   position: sticky;
-  top: 0;
+  top: var(--fl-h, 0px);
   z-index: 20;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -1157,3 +1157,11 @@ img, svg, video { display: block; max-width: 100%; }
 .cat-page #home > :not(#cat-home) { display: none; }
 #cat-home .sx-hero { padding-top: clamp(32px, 6vw, 72px); }
 .sx-info { border-top: 1px solid var(--line); }
+
+/* La otra forma de pago siempre a la vista: 9 cuotas con débito en GO cuotas (o 12 con crédito) */
+.alt, .pdp-alt { display: flex; flex-wrap: wrap; align-items: center; gap: 0 5px; margin: 6px 0 0; padding: 6px 10px; border-radius: 10px; background: var(--soft); color: var(--ink); font-size: 13.5px; line-height: 1.45; }
+.alt:empty, .pdp-alt:empty { display: none; }
+.alt b, .pdp-alt b { font-weight: 800; }
+.alt .go-logo, .pdp-alt .go-logo { height: 16px; width: auto; vertical-align: -3px; }
+.pdp-alt { font-size: 15px; padding: 8px 12px; }
+@media (max-width: 600px) { .alt { font-size: 12.5px; padding: 5px 8px; } }

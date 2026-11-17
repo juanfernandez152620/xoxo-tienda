@@ -152,8 +152,6 @@
   /* ---------- Encabezado y pie ---------- */
   function encabezado() {
     $('#nav').innerHTML = SX.nav(BASE, CAT ? CAT.id : '');
-    const d = STORY.warrantyDays || 30;
-    $('#util').innerHTML = [`${d} días de garantía`, 'Envíos a todo el país', 'Hasta 12 cuotas con Mercado Pago'].map(t => `<span>${esc(t)}</span>`).join('');
   }
 
   function pie() {

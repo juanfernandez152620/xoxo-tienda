@@ -48,7 +48,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: calc(var(--head-h) + 12px); -webkit-text-size-adjust: 100%; }
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--head-h) + var(--fl-h, 0px) + 12px); -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--font); -webkit-font-smoothing: antialiased; overflow-x: clip; }
 img, svg { display: block; max-width: 100%; }
 a { color: inherit; }
@@ -59,12 +59,12 @@ button { font: inherit; color: inherit; }
 .wrap { width: min(1180px, 100% - 2 * var(--gutter)); margin-inline: auto; }
 
 /* Barra de avance de la página */
-.progress { position: fixed; inset: 0 0 auto; z-index: 70; height: 3px; pointer-events: none; }
+.progress { position: fixed; inset: var(--fl-h, 0px) 0 auto; z-index: 70; height: 3px; pointer-events: none; }
 .progress span { display: block; height: 100%; background: linear-gradient(90deg, var(--ventilacion, #38bdf8), #ec4899, #8b5cf6); transform: scaleX(0); transform-origin: 0 50%; }
 
 /* ---------- Encabezado ---------- */
 .head {
-  position: sticky; top: 0; z-index: 50;
+  position: sticky; top: var(--fl-h, 0px); z-index: 50;
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px 24px;
   min-height: var(--head-h); padding: 10px var(--gutter);
   background: color-mix(in srgb, var(--bg) 70%, transparent);
@@ -180,7 +180,7 @@ section { position: relative; }
 /* ---------- Los 3 socios: llegan apilados y se abren con el scroll ---------- */
 .founders { height: 250vh; }
 .founders-sticky {
-  position: sticky; top: var(--head-h); height: calc(100svh - var(--head-h));
+  position: sticky; top: calc(var(--head-h) + var(--fl-h, 0px)); height: calc(100svh - var(--head-h) - var(--fl-h, 0px));
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); align-items: center; gap: clamp(24px, 5vw, 72px);
   width: min(1180px, 100% - 2 * var(--gutter)); margin-inline: auto;
   --q: clamp(0, calc((var(--p, 0) - .08) * 1.9), 1);
@@ -441,3 +441,6 @@ section { position: relative; }
 .h-sx > section { padding-block: clamp(36px, 6vw, 72px); }
 .h-sx .sx-benefit, .h-sx .sx-gcard { background: var(--bg-2); box-shadow: none; }
 .h-sx .sx-faq summary { font-size: 17px; }
+/* Aire entre la cinta de beneficios que se mueve y las 4 tarjetas de confianza de la categoría */
+.sx-page.h-sx > .sx-benefits { padding-top: clamp(40px, 6vw, 72px); padding-bottom: clamp(24px, 4vw, 40px); }
+.ribbon + .h-sx { margin-top: 0; }

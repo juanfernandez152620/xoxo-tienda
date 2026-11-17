@@ -257,3 +257,7 @@ html.x-lock, html.x-lock body { overflow: hidden; }
 .x-price-flash .x-was { color: var(--x-muted); font-size: 14px; line-height: 1.2; }
 .x-price-flash b { font-size: 24px; }
 .ficha-off b { font-variant-numeric: tabular-nums; }
+
+/* Cuotas con débito en GO cuotas, debajo de las de Mercado Pago */
+.x-debito { display: flex; flex-wrap: wrap; align-items: center; gap: 0 5px; margin-top: 2px; color: var(--x-ink); }
+.x-go { display: inline-block; height: 17px; width: auto; vertical-align: -4px; }

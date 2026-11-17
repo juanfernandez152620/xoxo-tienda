@@ -1,7 +1,7 @@
 /* Descuento flash, en los tres diseños.
- * Cada visitante tiene una hora (o los minutos de /admin → Descuento flash) para comprar con el cupón del mes:
- * xoxo-noviembre, xoxo-diciembre… Mientras dura, arriba de cada precio se ve el "precio de lista" tachado
- * (el precio de la página más el porcentaje, redondeado) y abajo de la página un contador.
+ * El cupón del mes (xoxo-noviembre, xoxo-diciembre…) se ve siempre: arriba de cada precio va el "precio de lista"
+ * tachado (el precio de la página más el porcentaje, redondeado), la barra queda fija arriba de la pantalla y
+ * tiene una cuenta regresiva (los minutos de /admin → Descuento flash) que vuelve a empezar cuando llega a cero.
  * El precio que se cobra es siempre el de la página: el cupón queda anotado en el pedido.
  * La cuenta del cupón es la misma en el servidor (require) y en la página (window.Flash).
  */
@@ -26,19 +26,22 @@
   /* ---------- En la página ---------- */
   const cfg = (window.SITE && window.SITE.flash) || { on: false, percent: 0, minutes: 0 };
   const KEY = 'xoxo:flash';
-  const DIA = 24 * 3600e3;
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
-  // La hora de cada visitante arranca en su primera visita; al día siguiente tiene otra
+  // La cuenta de cada visitante arranca en su primera visita y, cuando llega a cero, vuelve a empezar
   let inicio = (store.get(KEY) || {}).inicio || 0;
-  if (!inicio || Date.now() - inicio > DIA) {
-    inicio = Date.now();
+  const durar = () => Math.max(1, cfg.minutes) * 60e3;
+  function renovar() {
+    if (inicio && Date.now() < inicio + durar()) return;
+    // Se mantiene el ritmo: la nueva vuelta empieza donde terminó la anterior
+    inicio = inicio ? inicio + Math.floor((Date.now() - inicio) / durar()) * durar() : Date.now();
     store.set(KEY, { inicio });
   }
-  const restante = () => Math.max(0, inicio + cfg.minutes * 60e3 - Date.now());
-  const activo = () => Boolean(cfg.on && cfg.percent > 0 && restante() > 0);
+  renovar();
+  const restante = () => { renovar(); return Math.max(0, inicio + durar() - Date.now()); };
+  const activo = () => Boolean(cfg.on && cfg.percent > 0);
   const fmt = new Intl.NumberFormat('es-AR');
   const money = n => '$' + fmt.format(n);
   const reloj = ms => {
@@ -66,11 +69,12 @@
     document.querySelectorAll('.js-flash-reloj').forEach(el => { el.textContent = r; });
     if (pill) pill.hidden = !on;
     if (bar) bar.hidden = !on;
-    if (!on && timer) {
-      clearInterval(timer);
-      timer = 0;
-      document.dispatchEvent(new CustomEvent('flash:fin'));
-    }
+  }
+
+  // Alto de la barra fija: los encabezados de cada diseño se pegan justo debajo (var(--fl-h))
+  function medir() {
+    const h = bar && !bar.hidden ? bar.offsetHeight : 0;
+    document.documentElement.style.setProperty('--fl-h', `${h}px`);
   }
 
   async function copiar() {
@@ -99,6 +103,7 @@
   function montar(opts = {}) {
     if (!cfg.on || cfg.percent <= 0) {
       document.documentElement.classList.add('flash-off');
+      medir();
       return;
     }
     const code = cupon();
@@ -119,6 +124,8 @@
     document.body.append(pill);
     document.addEventListener('click', e => { if (e.target.closest('.js-flash-copy')) copiar(); });
     pintar();
+    medir();
+    if (bar && 'ResizeObserver' in window) new ResizeObserver(medir).observe(bar);
     timer = setInterval(pintar, 1000);
   }
 

@@ -66,9 +66,12 @@
     return `<p class="x-price"><b>${money(p.price)}</b>${off ? `<s aria-label="Precio normal ${money(p.listPrice)}">${money(p.listPrice)}</s>` : ''}</p>`;
   }
 
-  // Mercado Pago es el medio principal: las cuotas se eligen ahí
-  const cuotasText = () => 'Hasta 12 cuotas con Mercado Pago';
-  const cuotasHTML = () => `<p class="x-cuotas">${esc(cuotasText())}</p>`;
+  // Mercado Pago es el medio principal; abajo, siempre, que también se puede pagar con débito en GO cuotas
+  const cuotasText = () => `Hasta 12 cuotas con Mercado Pago${STORE.financing ? ` o ${STORE.extras.cuotas} con tu débito en ${STORE.financing}` : ''}`;
+  const goLogo = () => (STORE.financingLogo && STORE.financingLogo.color
+    ? `<img class="x-go" src="${esc(STORE.financingLogo.color)}" alt="${esc(STORE.financing)}">` : esc(STORE.financing));
+  const cuotasHTML = () => `<p class="x-cuotas">Hasta 12 cuotas con Mercado Pago</p>${STORE.financing
+    ? `<p class="x-cuotas x-debito">o <b>${esc(STORE.extras.cuotas)} cuotas</b> con tu <b>débito</b> en ${goLogo()}</p>` : ''}`;
 
   function buyMessage(p) {
     const lines = ['¡Hola! Vi este producto en la web y me interesa:', `🛒 ${p.name}`, `💵 ${money(p.price)}`, `💳 ${cuotasText()}`, '¿Sigue disponible?'];

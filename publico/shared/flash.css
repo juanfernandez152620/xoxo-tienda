@@ -61,3 +61,6 @@
   .fl-bar-ico, .fl-long { display: none; }
   .fl-code { padding: 2px 7px; }
 }
+
+/* La barra queda fija arriba de la pantalla; los encabezados de cada diseño van debajo con top: var(--fl-h) */
+.fl-bar { position: sticky; top: 0; z-index: 95; }

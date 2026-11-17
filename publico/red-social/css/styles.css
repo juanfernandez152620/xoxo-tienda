@@ -117,7 +117,7 @@ img, svg, video { display: block; max-width: 100%; }
 
 .site-head {
   position: sticky;
-  top: 0;
+  top: var(--fl-h, 0px);
   z-index: 20;
   display: flex;
   align-items: center;
@@ -1381,7 +1381,7 @@ a.story-btn { text-decoration: none; color: inherit; }
   --sx-bg2: var(--surface-2);
   --sx-max: 1180px;
 }
-.rs-nav { position: sticky; top: 0; z-index: 30; padding: 8px 12px; background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.rs-nav { position: relative; z-index: 3; padding: 8px 12px; background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .rs-nav .sx-nav { justify-content: center; }
 .rs-nav .sx-nav a { font-weight: 800; color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line); }
 .rs-nav .sx-nav a[aria-current="page"] { background: var(--soul-grad); color: #fff; box-shadow: none; }
@@ -1394,3 +1394,19 @@ a.story-btn { text-decoration: none; color: inherit; }
 .promo-sx > section { width: auto; padding-block: 0; }
 .promo-sx > section + section { margin-top: 24px; padding-top: 24px; }
 .promo-sx .sx-calc-form { background: var(--surface-2); box-shadow: none; }
+
+/* ============ Pie de página (el inicio ya no es infinito) ============ */
+.rs-foot { margin-top: 36px; padding: 40px 18px calc(28px + env(safe-area-inset-bottom)); background: #1a0a21; color: #f3e8f7; border-top: 4px solid transparent; border-image: var(--soul-grad-2) 1; }
+.rsf-grid { display: grid; grid-template-columns: 1.6fr repeat(3, 1fr); gap: 28px; width: min(1180px, 100%); margin: 0 auto; }
+.rsf-logo { display: block; width: 110px; margin-bottom: 12px; color: #fff; }
+.rsf-logo svg { width: 100%; height: auto; }
+.rsf-brand p { margin: 0; max-width: 40ch; color: #d9c7e0; font-size: 14px; font-weight: 500; }
+.rsf-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+.rsf-badges li { padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, .08); font-size: 12.5px; font-weight: 700; }
+.rs-foot h3 { margin: 0 0 10px; color: #ff8cc6; font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.rs-foot nav a, .rsf-grid > div a { display: block; margin: 0 0 7px; color: #fff; font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.rs-foot nav a:hover, .rsf-grid > div a:hover { text-decoration: underline; }
+.rsf-grid > div p { margin: 0 0 10px; font-size: 14px; }
+.rsf-grid > div p span { display: block; color: #d9c7e0; font-weight: 500; }
+.rsf-legal { width: min(1180px, 100%); margin: 28px auto 0; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, .12); color: #bfa9ca; font-size: 13px; }
+@media (max-width: 860px) { .rsf-grid { grid-template-columns: 1fr 1fr; } .rsf-brand { grid-column: 1 / -1; } }

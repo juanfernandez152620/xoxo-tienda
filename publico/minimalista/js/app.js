@@ -406,11 +406,18 @@
   const planOf = p => plan[p.id] || 12;
   const own = (root, sel) => $$(sel, root).filter(el => el.closest('[data-id]') === root);
 
+  // "o 9 x $59.811 con tu tarjeta de débito en GO cuotas": que se sepa que se puede comprar con débito
+  const altHTML = (p, n) => {
+    const o = n === 12 ? 9 : 12;
+    return p.cuotas[o] ? `o <b>${o} x ${money(p.cuotas[o])}</b>${sinInteres} con ${medioHTML(o)}` : '';
+  };
+
   function paint(root, p) {
     const n = planOf(p);
     own(root, '.js-n').forEach(el => { el.textContent = n; });
     own(root, '.js-amount').forEach(el => { el.textContent = money(p.cuotas[n]); });
     own(root, '.js-was').forEach(el => { el.innerHTML = FL ? FL.tachado(p.cuotas[n]) : ''; });
+    own(root, '.js-alt').forEach(el => { el.innerHTML = altHTML(p, n); });
     own(root, '.js-total').forEach(el => { el.textContent = `Total ${money(p.cuotas[n] * n)}`; });
     own(root, '.js-medio').forEach(el => { el.innerHTML = medioHTML(n); });
     own(root, '[data-n]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.n === n)));
@@ -443,6 +450,7 @@
         <p class="sub">${esc(p.brand)} · ${memory(p)}</p>
         <p class="price"><span class="js-was"></span><span class="js-n"></span> x <span class="js-amount"></span></p>
         <p class="total js-total"></p>
+        <p class="alt js-alt"></p>
       </a>`;
     paint(el, p);
     watch($('.media', el));
@@ -686,6 +694,7 @@
           <p class="pdp-sub">${esc(p.brand)} · ${memory(p)}</p>
           <p class="pdp-price"><span class="js-was"></span><span class="js-n"></span> cuotas${sinInteres} de <strong class="js-amount"></strong> con <span class="js-medio"></span></p>
           <p class="pdp-total js-total"></p>
+          <p class="pdp-alt js-alt"></p>
           <div class="plan-head"><span>Elegí tus cuotas</span></div>
           <div class="plan-grid" role="group" aria-label="Cantidad de cuotas">
             ${PLANS.map(n => `<button type="button" data-n="${n}"><b>${n} cuotas</b><span>${money(p.cuotas[n])} por mes</span><small>${esc(medio(n))}</small></button>`).join('')}
@@ -978,7 +987,10 @@
   });
 
   // Alto real del header (en celular ocupa dos renglones) para las barras que quedan fijas debajo.
-  const setHeadH = () => document.documentElement.style.setProperty('--head-h', $('.head').offsetHeight + 'px');
+  const setHeadH = () => {
+    const fl = document.querySelector('.fl-bar:not([hidden])');
+    document.documentElement.style.setProperty('--head-h', $('.head').offsetHeight + (fl ? fl.offsetHeight : 0) + 'px');
+  };
   addEventListener('resize', setHeadH);
   if (document.fonts) document.fonts.ready.then(setHeadH);
 
@@ -1016,20 +1028,6 @@
   }
   systemDark.addEventListener('change', paintTheme);
 
-  /* ---------- Aviso superior rotativo ---------- */
-  // Avisos de /admin; los que nombran a la financiera se ocultan si no hay financiera.
-  const PROMO = (TEXT.notices || [])
-    .filter(s => s && (STORE.financing || !s.includes('{financiera}')))
-    .map(richText);
-  let promoI = 0;
-  $('#promo').innerHTML = PROMO[0] || '';
-  $('#promo').hidden = !PROMO.length;
-  if (PROMO.length > 1) setInterval(() => {
-    const el = $('#promo');
-    promoI = (promoI + 1) % PROMO.length;
-    el.classList.add('out');
-    setTimeout(() => { el.innerHTML = PROMO[promoI]; el.classList.remove('out'); }, 260);
-  }, 4200);
 
   /* ---------- Pie de página (datos del local y redes, desde /admin) ---------- */
   function buildFooter() {
