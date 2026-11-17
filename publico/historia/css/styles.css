@@ -646,8 +646,67 @@ section { position: relative; }
 .hv-dirs .hv-dirs-mas { grid-template-columns: auto minmax(0, 1fr); }
 
 @media (max-width: 520px) {
-  .hv-promesa-fin { flex-direction: column; gap: 10px; }
+  /* El ícono al lado del título y el texto a todo el ancho, para que el recuadro sea más bajo */
+  .hv-promesa-fin { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px 12px; }
+  .hv-promesa-fin > div { display: contents; }
+  .hv-promesa-fin .hv-pf-ico { width: 38px; height: 38px; border-radius: 12px; }
+  .hv-promesa-fin .hv-pf-ico svg { width: 21px; height: 21px; }
+  .hv-promesa-fin .hv-pf-t { font-size: 16.5px; }
+  .hv-promesa-fin p { grid-column: 1 / -1; margin: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hv-pila-c { transition: none !important; }
+}
+
+/* ---------- Confianza más compacta: cada parte entra en una pantalla del celular ---------- */
+/* Equipo: solo las caras (fotos de perfil) */
+.hv-caras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px 18px; }
+.hv-cara { display: grid; justify-items: center; gap: 8px; margin: 0; }
+.hv-cara .ph, .hv-cara .ph-img { display: grid; width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 4px var(--bg), 0 14px 30px -18px rgba(11, 26, 46, .5); }
+.hv-cara .ph svg { width: 70%; }
+.hv-cara .ph-tag { display: none; }
+.hv-cara figcaption { font-size: 14px; font-weight: 700; text-align: center; }
+.hv-caras-nota { margin: 14px 0 0; color: var(--muted); font-size: 12.5px; text-align: center; }
+
+/* Sucursales: fotos más cuadradas, con el nombre, la dirección y "Cómo llegar" adentro */
+.hv-pila-ancha { aspect-ratio: 1 / 1; }
+.hv-pila-c figcaption.hv-pie {
+  right: 0; bottom: 0; left: 0; display: grid; gap: 2px; padding: 44px 16px 14px; border-radius: 0;
+  background: linear-gradient(rgba(11, 26, 46, 0), rgba(11, 26, 46, .82)); -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.hv-pie b { font-size: 16px; }
+.hv-pie span { font-size: 13.5px; font-weight: 600; opacity: .9; }
+.hv-pie a { display: inline-flex; justify-self: start; align-items: center; gap: 5px; margin-top: 6px; padding: 6px 12px; border-radius: 999px; background: #fff; color: #0b1a2e; font-size: 13px; font-weight: 800; text-decoration: none; }
+.hv-pie a svg { width: 15px; height: 15px; }
+
+@media (max-width: 899px) {
+  /* El banner sin la foto suelta: todo entra en la primera pantalla */
+  .hv-hero-foto { display: none; }
+
+  /* Títulos e historia un poco más chicos en las partes de confianza */
+  .hv-parte { padding-block: 28px; }
+  .hv-parte .hv-cap-title { font-size: clamp(30px, 8.6vw, 38px); }
+  .hv-parte .hv-cap-story { margin-top: 12px; font-size: 16px; line-height: 1.5; }
+  .hv-parte .hv-compra { margin-top: 18px; padding: 16px; }
+  .hv-parte .hv-cap-in { gap: 18px; }
+
+  /* Socios: la foto es el fondo de arriba y se funde con el texto */
+  .hv-parte-fondo { padding-top: 0; }
+  .hv-parte-fondo .hv-cap-media { position: relative; width: auto; height: 210px; margin: 0 calc(var(--gutter) * -1); transform: none; }
+  .hv-parte-fondo .hv-carrusel-box { height: 100%; }
+  .hv-parte-fondo .hv-pila { height: 100%; aspect-ratio: auto; cursor: default; }
+  .hv-parte-fondo .hv-pila-c { left: 0; width: 100%; border-radius: 0; box-shadow: none; transform: none; }
+  .hv-parte-fondo .hv-cap-media::after { content: ""; position: absolute; inset: 0; z-index: 20; background: linear-gradient(rgba(255, 255, 255, 0) 35%, var(--bg)); pointer-events: none; }
+  .hv-parte-fondo .hv-cap-copy { position: relative; z-index: 21; margin-top: -64px; }
+
+  /* Equipo: las caras en una fila, una encima de la otra */
+  .hv-caras { display: flex; justify-content: center; gap: 0; }
+  .hv-cara { width: 64px; margin-left: -10px; }
+  .hv-cara:first-child { margin-left: 0; }
+  .hv-cara figcaption { display: none; }
+  .hv-caras-nota { margin-top: 8px; }
+
+  /* Sucursales: la pila grande pero más baja */
+  .hv-parte .hv-pila-ancha { width: 86%; margin-inline: auto; }
+  .hv-parte .hv-pila-nav { margin-top: 10px; }
 }

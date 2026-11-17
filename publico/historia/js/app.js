@@ -383,12 +383,13 @@
   // Pila de fotos: la de adelante entera y las otras asomando detrás, a los costados. Llega como un abanico de
   // cartas y se acomoda al aparecer; se pasa deslizando con el dedo (o arrastrando con el mouse), tocando una
   // de atrás, con las flechas o con el teclado (hvCarruseles)
-  const carrusel = (fotos, que) => {
+  // ancha: fotos más cuadradas (los locales); f.pie: un pie con más datos que el nombre (dirección, cómo llegar)
+  const carrusel = (fotos, que, ancha = false) => {
     const varias = fotos.length > 1;
     return `
       <div class="hv-carrusel-box">
-        <div class="hv-pila${varias ? '' : ' abierto'}" tabindex="0" role="group" aria-roledescription="carrusel" aria-label="Fotos de ${esc(que)}${varias ? '. Deslizá para ver más' : ''}">${fotos.map((f, i) => `
-          <figure class="hv-pila-c" style="--d:${i};--a:${i}">${f.foto}${f.nombre ? `<figcaption>${esc(f.nombre)}</figcaption>` : ''}</figure>`).join('')}
+        <div class="hv-pila${varias ? '' : ' abierto'}${ancha ? ' hv-pila-ancha' : ''}" tabindex="0" role="group" aria-roledescription="carrusel" aria-label="Fotos de ${esc(que)}${varias ? '. Deslizá para ver más' : ''}">${fotos.map((f, i) => `
+          <figure class="hv-pila-c" style="--d:${i};--a:${i}">${f.foto}${f.pie ? `<figcaption class="hv-pie">${f.pie}</figcaption>` : f.nombre ? `<figcaption>${esc(f.nombre)}</figcaption>` : ''}</figure>`).join('')}
         </div>
         ${varias ? `
         <div class="hv-pila-nav">
@@ -400,8 +401,9 @@
   };
 
   // Cada parte, igual que un capítulo: las fotos de un lado; el encabezado, la historia y la promesa del otro
-  const hvParte = ({ id, alt, color, etiqueta, titulo, parrafos, promesa, visual }) => `
-    <section class="hv-cap hv-parte${alt ? ' hv-cap-alt' : ''}" id="${id}" data-scroll style="--c:${color}">
+  // fondo: en el celular la foto pasa a ser el fondo de arriba de la parte (los socios), para que entre en una pantalla
+  const hvParte = ({ id, alt, fondo, color, etiqueta, titulo, parrafos, promesa, visual }) => `
+    <section class="hv-cap hv-parte${alt ? ' hv-cap-alt' : ''}${fondo ? ' hv-parte-fondo' : ''}" id="${id}" data-scroll style="--c:${color}">
       <div class="hv-cap-in wrap">
         <div class="hv-cap-media">${visual}</div>
         <div class="hv-cap-copy">
@@ -421,7 +423,7 @@
     const n = (STORY.founders || []).length || 3;
     const d = STORY.warrantyDays || 30;
     return hvParte({
-      id: 'socios', color: '#63a3d1', etiqueta: 'Los socios',
+      id: 'socios', fondo: true, color: '#63a3d1', etiqueta: 'Los socios',
       titulo: `${esc(n)} socios detrás de cada venta`,
       parrafos: [
         esc(textoReal(STORY.foundersText, `Arrancamos ${STORE.name} entre tres y elegimos cada producto que vendemos: lo que no pondríamos en nuestra casa, no lo vendemos.`)),
@@ -440,10 +442,14 @@
     const t = (STORY.team || []).slice(0, 8);
     const n = Number(STORE.extras.cuotas) || 6;
     const debito = STORE.financing ? `, o <b>${esc(n)} cuotas${sinInteres} con tu tarjeta de débito</b> en ${goImg()}` : '';
-    const fotos = (t.length ? t : [{}, {}, {}]).map((p, i) => {
-      const nombre = nombreReal(p.name) ? p.name : '';
-      return { foto: fotoOEjemplo(p.photo, nombre || 'alguien del equipo', 'persona', TONOS[(i + 1) % TONOS.length]), nombre };
-    });
+    // Solo las caras, en círculos chicos (fotos de perfil)
+    const gente = t.length ? t : [{}, {}, {}];
+    const caras = `
+      <div class="hv-caras">${gente.map((p, i) => {
+        const nombre = nombreReal(p.name) ? p.name : '';
+        return `<figure class="hv-cara" data-reveal style="--i:${i}">${fotoOEjemplo(p.photo, nombre || 'alguien del equipo', 'persona', TONOS[(i + 1) % TONOS.length])}${nombre ? `<figcaption>${esc(nombre)}</figcaption>` : ''}</figure>`;
+      }).join('')}</div>
+      ${gente.some(p => !p.photo) ? '<p class="hv-caras-nota">Fotos de ejemplo</p>' : ''}`;
     return hvParte({
       id: 'equipo', alt: true, color: '#ec4899', etiqueta: 'El equipo',
       titulo: esc(textoReal(STORY.teamTitle, 'Un equipo que te atiende de verdad')),
@@ -455,7 +461,7 @@
         ico: I.card, titulo: 'Por eso te damos cuotas, y con pago seguro',
         texto: `Hasta <b>12 cuotas${sinInteres} con tarjeta de crédito</b> por Mercado Pago${debito}. Pagás en sus plataformas: los datos de tu tarjeta nunca pasan por nosotros.`,
       },
-      visual: carrusel(fotos, 'el equipo'),
+      visual: caras,
     });
   }
 
@@ -463,15 +469,16 @@
   function hvSucursales() {
     const branches = STORE.branches || [];
     const conDir = branches.filter(conDireccion);
-    const otras = [...new Set(branches.filter(b => !conDireccion(b)).map(b => b.province).filter(Boolean))];
     const provs = [...new Set(branches.map(b => b.province).filter(Boolean))];
-    const fotos = [...conDir, ...branches.filter(b => !conDireccion(b))]
-      .map((b, i) => ({ foto: fotoOEjemplo(b.photo, `el local de ${b.name}`, 'local', TONOS[(i + 3) % TONOS.length]), nombre: b.province && b.province !== b.name ? `${b.name} · ${b.province}` : b.name }));
-    const dirs = conDir.length ? `
-      <ul class="hv-dirs">${conDir.map(b => `
-        <li>${I.pin}<span><b>${esc(b.name)}</b>${esc(b.address)}</span><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">Cómo llegar</a></li>`).join('')}
-        ${otras.length ? `<li class="hv-dirs-mas">${I.pin}<span>También estamos en ${esc(listaY(otras))}</span></li>` : ''}
-      </ul>` : '';
+    // Cada foto lleva adentro el nombre del local, la dirección y "Cómo llegar"
+    const fotos = [...conDir, ...branches.filter(b => !conDireccion(b))].map((b, i) => {
+      const nombre = b.province && b.province !== b.name ? `${b.name} · ${b.province}` : b.name;
+      const calle = conDireccion(b) ? String(b.address).split(',')[0] : 'Dirección a confirmar';
+      return {
+        foto: fotoOEjemplo(b.photo, `el local de ${b.name}`, 'local', TONOS[(i + 3) % TONOS.length]),
+        pie: `<b>${esc(nombre)}</b><span>${esc(calle)}</span>${conDireccion(b) ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">${I.pin}Cómo llegar</a>` : ''}`,
+      };
+    });
     return hvParte({
       id: 'sucursales', color: '#8b5cf6', etiqueta: 'Las sucursales',
       titulo: esc(textoReal(STORY.branchesTitle, `Sucursales en ${listaY(provs)}`)),
@@ -482,9 +489,8 @@
       promesa: {
         ico: I.truck, titulo: 'Por eso enviamos a todo el país, y retirar es gratis',
         texto: 'Con <b>Andreani</b> o <b>Correo Argentino</b>, a tu casa o a la sucursal del correo, con seguimiento. Y si estás cerca, lo retirás <b>sin cargo en cualquiera de nuestras sucursales</b>.',
-        extra: dirs,
       },
-      visual: fotos.length ? carrusel(fotos, 'las sucursales') : '',
+      visual: fotos.length ? carrusel(fotos, 'las sucursales', true) : '',
     });
   }
 
