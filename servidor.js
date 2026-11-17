@@ -286,6 +286,7 @@ server.listen(PORT, HOST, () => {
   console.log(`  ${pagos.lineaArranque('gocuotas')}`);
   console.log(`  ${pagos.lineaArranque('mercadopago')}`);
   console.log(`  WhatsApp del socio: ${socio.configurado() ? 'conectado' : 'sin configurar'}`);
+  console.log(`  ${correo.lineaArranque()}`);
   console.log(`  Panel: ${BASE_URL}/admin/`);
   ia.iniciar().catch(err => console.error('[ia]', err.message));
   if (!HTTPS) console.log('  Aviso: con BASE_URL sin https los avisos de pago (webhooks) no pueden llegar desde internet.\n');
