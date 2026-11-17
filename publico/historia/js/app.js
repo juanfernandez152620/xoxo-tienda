@@ -363,14 +363,12 @@
       </section>`;
   }
 
-  /* 2. La historia, después del banner: los socios, el equipo y las sucursales. Cada parte trae una promesa:
-        la garantía, la financiación y los envíos. Los textos de /admin → Historia se usan cuando ya son reales. */
+  /* 2. La historia, después del banner: los socios, el equipo y las sucursales, armados igual que los capítulos
+        de los ventiladores (mismo marco vertical, mismo encabezado, misma historia y el recuadro al final).
+        Cada parte cuenta el porqué y termina en su promesa: la garantía, las cuotas y los envíos.
+        Los textos de /admin → Historia se usan cuando ya son reales; los porqués son de acá. */
   const textoReal = (t, porDefecto) => sinRelleno(t) || porDefecto;
   const nombreReal = n => Boolean(n && !/^(socio \d+|lorem|ipsum|dolor|sit|amet|elit|consectetur)$/i.test(String(n).trim()));
-  const hvPromesa = (ico, titulo, html) => `
-    <div class="hv-promesa" data-reveal style="--i:3"><span class="hv-promesa-ico">${ico}</span>
-      <div><b>${esc(titulo)}</b><p>${html}</p></div></div>`;
-
 
   // Fotos de ejemplo (marcadas así) hasta que se carguen las reales en /admin → Historia y → Sucursales
   const SILUETA = {
@@ -382,77 +380,142 @@
     ? `<img class="ph-img" src="${esc(src)}" alt="${esc(que)}" loading="lazy" decoding="async">`
     : `<div class="ph hv-ph hv-ph-${forma}" style="--h:${tono}" role="img" aria-label="Foto de ejemplo: ${esc(que)}">${SILUETA[forma]}<span class="ph-tag">Foto de ejemplo</span></div>`);
 
-  // Tres fotos como cartas en la mano: llegan apiladas y se abren en abanico al bajar
-  const abanico = cartas => `<div class="hv-abanico">${cartas.map((c, i) => `
-    <figure class="hv-carta" style="--k:${i - (cartas.length - 1) / 2}">${c.foto}${c.nombre ? `<figcaption>${esc(c.nombre)}</figcaption>` : ''}</figure>`).join('')}</div>`;
-
-  // Cada parte de la historia: el texto con su promesa de un lado y la foto (o el abanico) del otro
-  const hvParte = ({ id, invertida, kicker, titulo, texto, promesa, extra = '', visual }) => `
-    <section class="hv-parte${invertida ? ' hv-parte-inv' : ''}" id="${id}" data-scroll>
-      <div class="hv-parte-in wrap">
-        <div class="hv-parte-copy">
-          <p class="kicker" data-reveal>${kicker}</p>
-          <h2 class="sec-title" data-reveal style="--i:1">${titulo}</h2>
-          <p class="sec-text" data-reveal style="--i:2">${texto}</p>
-          ${promesa}${extra}
+  // Carrusel de fotos completas en el marco vertical: llegan como un abanico de cartas y se despliegan al
+  // aparecer (hvCarruseles); después se deslizan con el dedo, las flechas o los puntos
+  const carrusel = (fotos, que) => {
+    const varias = fotos.length > 1;
+    return `
+      <div class="hv-carrusel-box">
+        <div class="hv-carrusel${varias ? '' : ' abierto listo'}" tabindex="0" aria-label="Fotos de ${esc(que)}">${fotos.map((f, i) => `
+          <figure class="hv-foto" style="--i:${i}">${f.foto}${f.nombre ? `<figcaption>${esc(f.nombre)}</figcaption>` : ''}</figure>`).join('')}
         </div>
-        <div class="hv-parte-visual">${visual}</div>
+        ${varias ? `
+        <button type="button" class="hv-car-btn hv-car-prev" data-d="-1" aria-label="Foto anterior">${I.arrow}</button>
+        <button type="button" class="hv-car-btn hv-car-next" data-d="1" aria-label="Foto siguiente">${I.arrow}</button>
+        <div class="hv-dots" aria-hidden="true">${fotos.map((f, i) => `<span${i ? '' : ' class="on"'}></span>`).join('')}</div>` : ''}
+      </div>`;
+  };
+
+  // Cada parte, igual que un capítulo: las fotos de un lado; el encabezado, la historia y la promesa del otro
+  const hvParte = ({ id, alt, color, etiqueta, titulo, parrafos, promesa, visual }) => `
+    <section class="hv-cap hv-parte${alt ? ' hv-cap-alt' : ''}" id="${id}" data-scroll style="--c:${color}">
+      <div class="hv-cap-in wrap">
+        <div class="hv-cap-media">${visual}</div>
+        <div class="hv-cap-copy">
+          <p class="kicker hv-ocasion" data-reveal style="--i:0">Somos ${esc(STORE.name)}<span>${esc(etiqueta)}</span></p>
+          <h2 class="hv-cap-title" data-reveal style="--i:1">${titulo}</h2>
+          ${parrafos.filter(Boolean).map((t, i) => `<p class="hv-cap-story" data-reveal style="--i:${i + 2}">${t}</p>`).join('')}
+          <div class="hv-compra hv-promesa-fin" data-reveal style="--i:4">
+            <span class="hv-pf-ico">${promesa.ico}</span>
+            <div><b class="hv-pf-t">${promesa.titulo}</b><p>${promesa.texto}</p>${promesa.extra || ''}</div>
+          </div>
+        </div>
       </div>
     </section>`;
 
-  // Los 3 socios, en una sola foto + la garantía
+  // Los 3 socios, en una sola foto: por qué damos garantía
   function hvSocios() {
     const n = (STORY.founders || []).length || 3;
     const d = STORY.warrantyDays || 30;
     return hvParte({
-      id: 'socios', kicker: `Somos ${esc(STORE.name)}`,
+      id: 'socios', color: '#63a3d1', etiqueta: 'Los socios',
       titulo: `${esc(n)} socios detrás de cada venta`,
-      texto: esc(textoReal(STORY.foundersText, `Arrancamos ${STORE.name} entre tres y elegimos cada producto que vendemos. Si algo no anda, damos la cara.`)),
-      promesa: hvPromesa(I.shield, `Ofrecemos ${d} días de garantía`, esc(textoReal(STORY.warrantyText, `Si algo falla en los primeros ${d} días, lo resolvemos en la sucursal o por WhatsApp.`))),
-      visual: `<figure class="hv-grupo">${fotoOEjemplo(STORY.foundersPhoto, `los ${n} socios de ${STORE.name}`, 'grupo', '#63a3d1')}</figure>`,
+      parrafos: [
+        esc(textoReal(STORY.foundersText, `Arrancamos ${STORE.name} entre tres y elegimos cada producto que vendemos: lo que no pondríamos en nuestra casa, no lo vendemos.`)),
+        'Sabemos lo que es comprar algo y quedarse con la duda de qué pasa si falla. Preferimos que esa duda sea nuestra y no tuya.',
+      ],
+      promesa: {
+        ico: I.shield, titulo: `Por eso te damos ${esc(d)} días de garantía`,
+        texto: esc(textoReal(STORY.warrantyText, `Si algo no anda en los primeros ${d} días, lo resolvemos en la sucursal o por WhatsApp, sin vueltas.`)),
+      },
+      visual: carrusel([{ foto: fotoOEjemplo(STORY.foundersPhoto, `los ${n} socios de ${STORE.name}`, 'grupo', '#63a3d1') }], 'los socios'),
     });
   }
 
-  // El equipo, tres fotos en abanico + la financiación
+  // El equipo: por qué te damos cuotas y por qué el pago es seguro
   function hvEquipo() {
-    const t = STORY.team || [];
+    const t = (STORY.team || []).slice(0, 8);
     const n = Number(STORE.extras.cuotas) || 6;
-    const debito = STORE.financing ? ` o en <b>${esc(n)} cuotas${sinInteres} con tu tarjeta de débito</b> en ${goImg()}` : '';
-    const cartas = [0, 1, 2].map(i => {
-      const p = t[i] || {};
+    const debito = STORE.financing ? `, o <b>${esc(n)} cuotas${sinInteres} con tu tarjeta de débito</b> en ${goImg()}` : '';
+    const fotos = (t.length ? t : [{}, {}, {}]).map((p, i) => {
       const nombre = nombreReal(p.name) ? p.name : '';
       return { foto: fotoOEjemplo(p.photo, nombre || 'alguien del equipo', 'persona', TONOS[(i + 1) % TONOS.length]), nombre };
     });
     return hvParte({
-      id: 'equipo', invertida: true, kicker: 'El equipo',
+      id: 'equipo', alt: true, color: '#ec4899', etiqueta: 'El equipo',
       titulo: esc(textoReal(STORY.teamTitle, 'Un equipo que te atiende de verdad')),
-      texto: esc(textoReal(STORY.teamText, 'Te asesoramos en el local y por WhatsApp, y armamos cada pedido.')),
-      promesa: hvPromesa(I.card, 'Financiación segura', `Pagás en hasta <b>12 cuotas${sinInteres} con tarjeta de crédito</b> por Mercado Pago${debito}. Los datos de tu tarjeta los manejan ellos: nosotros no los vemos.`),
-      visual: abanico(cartas),
+      parrafos: [
+        esc(textoReal(STORY.teamText, 'Te asesoramos en el local y por WhatsApp, y armamos cada pedido.')),
+        'Un ventilador lo necesitás cuando aprieta el calor, no cuando cobrás. Y no todos tienen tarjeta de crédito: por eso también aceptamos el débito en cuotas.',
+      ],
+      promesa: {
+        ico: I.card, titulo: 'Por eso te damos cuotas, y con pago seguro',
+        texto: `Hasta <b>12 cuotas${sinInteres} con tarjeta de crédito</b> por Mercado Pago${debito}. Pagás en sus plataformas: los datos de tu tarjeta nunca pasan por nosotros.`,
+      },
+      visual: carrusel(fotos, 'el equipo'),
     });
   }
 
-  // Las sucursales, tres fotos en abanico + los envíos y el retiro gratis
+  // Las sucursales: por qué enviamos a todo el país y el retiro es gratis
   function hvSucursales() {
     const branches = STORE.branches || [];
-    const provs = [...new Set(branches.map(b => b.province).filter(Boolean))];
     const conDir = branches.filter(conDireccion);
     const otras = [...new Set(branches.filter(b => !conDireccion(b)).map(b => b.province).filter(Boolean))];
-    // La sucursal principal queda arriba de la pila (la carta de la derecha)
-    const cartas = [...conDir, ...branches.filter(b => !conDireccion(b))].slice(0, 3).reverse()
-      .map((b, i) => ({ foto: fotoOEjemplo(b.photo, `el local de ${b.name}`, 'local', TONOS[(i + 3) % TONOS.length]), nombre: b.name }));
+    const provs = [...new Set(branches.map(b => b.province).filter(Boolean))];
+    const fotos = [...conDir, ...branches.filter(b => !conDireccion(b))]
+      .map((b, i) => ({ foto: fotoOEjemplo(b.photo, `el local de ${b.name}`, 'local', TONOS[(i + 3) % TONOS.length]), nombre: b.province && b.province !== b.name ? `${b.name} · ${b.province}` : b.name }));
     const dirs = conDir.length ? `
-      <ul class="hv-dirs" data-reveal style="--i:4">${conDir.map(b => `
+      <ul class="hv-dirs">${conDir.map(b => `
         <li>${I.pin}<span><b>${esc(b.name)}</b>${esc(b.address)}</span><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">Cómo llegar</a></li>`).join('')}
         ${otras.length ? `<li class="hv-dirs-mas">${I.pin}<span>También estamos en ${esc(listaY(otras))}</span></li>` : ''}
       </ul>` : '';
     return hvParte({
-      id: 'sucursales', kicker: 'Nuestras sucursales',
+      id: 'sucursales', color: '#8b5cf6', etiqueta: 'Las sucursales',
       titulo: esc(textoReal(STORY.branchesTitle, `Sucursales en ${listaY(provs)}`)),
-      texto: esc(textoReal(STORY.branchesText, 'Vení a ver los ventiladores funcionando antes de llevarte el tuyo.')),
-      promesa: hvPromesa(I.truck, 'Envíos a todo el país y retiro gratis', 'Mandamos con <b>Andreani</b> y <b>Correo Argentino</b>, a tu casa o a la sucursal del correo. Y si estás cerca, <b>retirás gratis en cualquiera de nuestras sucursales</b>.'),
-      extra: dirs,
-      visual: cartas.length ? abanico(cartas) : '',
+      parrafos: [
+        esc(textoReal(STORY.branchesText, 'Vení a ver los ventiladores funcionando antes de llevarte el tuyo.')),
+        'El calor no es de una sola provincia, y no todos tienen una sucursal a la vuelta. Queremos que cualquiera pueda tener su ventilador, viva donde viva.',
+      ],
+      promesa: {
+        ico: I.truck, titulo: 'Por eso enviamos a todo el país, y retirar es gratis',
+        texto: 'Con <b>Andreani</b> o <b>Correo Argentino</b>, a tu casa o a la sucursal del correo, con seguimiento. Y si estás cerca, lo retirás <b>sin cargo en cualquiera de nuestras sucursales</b>.',
+        extra: dirs,
+      },
+      visual: fotos.length ? carrusel(fotos, 'las sucursales') : '',
+    });
+  }
+
+  // Carruseles: el abanico se despliega al aparecer; los puntos siguen a la foto que se ve; las flechas pasan de a una
+  function hvCarruseles() {
+    const cars = $$('.hv-carrusel');
+    if (!cars.length) return;
+    const paso = c => (c.firstElementChild ? c.firstElementChild.offsetWidth + 12 : c.clientWidth);
+    const abrir = c => {
+      if (c.classList.contains('abierto')) return;
+      c.classList.add('abierto');
+      setTimeout(() => c.classList.add('listo'), reduce.matches ? 0 : 1400);
+    };
+    if (reduce.matches || !('IntersectionObserver' in window)) cars.forEach(abrir);
+    else {
+      const io = new IntersectionObserver(entries => {
+        for (const e of entries) if (e.isIntersecting) { abrir(e.target); io.unobserve(e.target); }
+      }, { threshold: 0.4 });
+      cars.forEach(c => io.observe(c));
+    }
+    cars.forEach(c => {
+      const dots = $$('.hv-dots span', c.parentElement);
+      if (dots.length) c.addEventListener('scroll', () => {
+        const at = Math.round(c.scrollLeft / paso(c));
+        dots.forEach((d, k) => d.classList.toggle('on', k === at));
+      }, { passive: true });
+    });
+    document.addEventListener('click', e => {
+      const b = e.target.closest('.hv-car-btn');
+      if (!b) return;
+      const c = $('.hv-carrusel', b.parentElement);
+      abrir(c);
+      c.classList.add('listo');
+      c.scrollBy({ left: Number(b.dataset.d) * paso(c), behavior: reduce.matches ? 'auto' : 'smooth' });
     });
   }
 
@@ -798,6 +861,7 @@
   vistas();
   hvBarra();
   hvSonido();
+  hvCarruseles();
   // Producto compartido (#x=…) lo abre la vidriera; el ancla (#envios) baja después de armar la página
   if (/^#[a-z-]+$/.test(location.hash)) {
     const el = document.getElementById(location.hash.slice(1));
