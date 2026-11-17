@@ -203,14 +203,10 @@
       </section>`;
   }
 
-  // Calculadora de envíos: la misma cuenta que el checkout y el servidor (shared/envios.js)
+  // Calculadora de envíos: la misma cuenta que el checkout y el servidor (shared/envios.js).
+  // El envío cuesta lo mismo para cualquier producto (17/11/2026): alcanza con la provincia o el código postal.
   function calculadora() {
     if (!SHIP || !EN) return '';
-    const grupos = CATS.map(c => {
-      const list = V.byCat(c.id);
-      return list.length ? `<optgroup label="${esc(c.name)}">${list.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</optgroup>` : '';
-    }).join('');
-    const primero = (CAT && V.byCat(CAT.id)[0]) || EXTRAS[0];
     return `
       <section class="calc wrap" id="envios">
         <div class="calc-copy" data-reveal>
@@ -220,8 +216,6 @@
           <ul class="carriers"><li class="c-and">Andreani</li><li class="c-ca">Correo Argentino</li><li class="c-ret">Retiro gratis</li></ul>
         </div>
         <form class="calc-form" data-reveal novalidate>
-          <label class="fld"><span>¿Qué vas a comprar?</span>
-            <select name="producto">${grupos}</select></label>
           <div class="fld-row">
             <label class="fld"><span>Provincia</span>
               <select name="provincia"><option value="">Elegí…</option>${EN.PROVINCIAS.map(p => `<option>${esc(p.nombre)}</option>`).join('')}</select></label>
@@ -229,7 +223,6 @@
               <input name="cp" maxlength="8" placeholder="4000" autocomplete="postal-code"></label>
           </div>
           <div class="calc-out" aria-live="polite"></div>
-          ${primero ? '' : ''}
         </form>
       </section>`;
   }
@@ -313,6 +306,169 @@
       </section>`;
   }
 
+  /* ---------- Ventilación: la versión de la confianza (17/11/2026) ----------
+     La prueba ABC compara qué pesa más para el cliente: el precio (Red social), el producto (Minimalista) o la
+     confianza (Historia). Acá, en los primeros 5 segundos: quiénes somos y la oferta flash; enseguida, cada
+     ventilador como un capítulo con su historia, su video y la compra a un toque. Nada de relleno: lo que en
+     /admin → Historia sigue siendo de ejemplo (lorem ipsum, "Socio 1", sin foto) no se muestra. */
+  const CAPITULOS = {
+    ventilacion: [
+      { id: 'ventilador-piso-exahome-turbo-20', ocasion: 'Para las fiestas', color: '#ec4899', titulo: 'Para la mesa larga de las fiestas',
+        historia: 'Nochebuena en el patio, el quincho lleno, la mesa larga. El Turbo de 20 pulgadas mueve mucho aire en ambientes grandes: lo inclinás hacia la mesa y el brindis sale fresco.' },
+      { id: 'ventilador-pie-delhi-18', ocasion: 'Para tu casa', color: '#63a3d1', titulo: 'Para el día a día en tu casa',
+        historia: 'Del living a la cocina y de la cocina al comedor: gira de lado a lado y refresca hasta 30 m². Lo subís para la mesa o lo bajás para el sillón.' },
+      { id: 'ventilador-techo-kanji', ocasion: 'Para tu pieza', color: '#8b5cf6', titulo: 'Para dormir fresco en tu pieza',
+        historia: 'Lo manejás con el control desde la cama y el timer lo apaga cuando ya te dormiste. Al apagarlo, las aspas se esconden. Y en invierno, función reversa.' },
+    ],
+  };
+  const sinRelleno = t => String(t || '').replace(/\s*Lorem ipsum[\s\S]*$/i, '').trim();
+  const esReal = p => Boolean(p && p.photo && p.name && !/^Socio \d+$/i.test(p.name));
+  const listaY = arr => arr.join(', ').replace(/, ([^,]*)$/, ' y $1');
+  const conDireccion = b => b.address && !/a confirmar/i.test(b.address);
+  const flashOn = () => Boolean(FL && FL.cfg && FL.cfg.on && FL.cfg.percent > 0);
+  const sinInteres = STORE.sinInteres ? ' sin interés' : '';
+  const cuotaDe = (precio, n) => money(Math.ceil(precio / n));
+  const goImg = () => (STORE.financingLogo && STORE.financingLogo.color
+    ? `<img class="hv-go" src="${esc(STORE.financingLogo.color)}" alt="${esc(STORE.financing)}">` : esc(STORE.financing || ''));
+  const capitulosDe = c => (CAPITULOS[c.id] || []).map(k => ({ ...k, p: EXTRAS.find(p => p.id === k.id) })).filter(k => k.p);
+
+  // 1. Portada: una sola pantalla, lo que el cliente ve en los primeros segundos
+  function hvPortada(c) {
+    const provs = [...new Set((STORE.branches || []).map(b => b.province).filter(Boolean))];
+    const socios = (STORY.founders || []).filter(esReal).slice(0, 3);
+    const d = STORY.warrantyDays || 30;
+    return `
+      <section class="hv-hero" data-scroll>
+        <div class="hv-hero-in wrap">
+          <div class="hv-hero-copy">
+            <p class="kicker hv-anim" style="--i:0">Somos ${esc(STORE.name)}</p>
+            <h1 class="hv-title hv-anim" style="--i:1">Los ventiladores que elegimos para estas fiestas</h1>
+            <ul class="hv-trust hv-anim" style="--i:2">
+              <li>${I.store}<span>${esc((STORY.founders || []).length || 3)} socios y sucursales en ${esc(listaY(provs))}</span></li>
+              <li>${I.shield}<span>${esc(d)} días de garantía en todo</span></li>
+              <li>${I.wa}<span>Por WhatsApp te contesta una persona</span></li>
+            </ul>
+            ${socios.length ? `<div class="hv-socios hv-anim" style="--i:3">${socios.map((p, i) => `
+              <figure class="hv-socio" style="--k:${i}">${retrato(p, i)}<figcaption>${esc(p.name)}</figcaption></figure>`).join('')}</div>` : ''}
+            ${flashOn() ? `<p class="hv-flash hv-anim fl-only" style="--i:3"><b>-${FL.cfg.percent}% flash</b> con el cupón <b>${esc(FL.cupon())}</b> · termina en <b class="js-flash-reloj">${FL.reloj(FL.restante())}</b></p>` : ''}
+            <div class="hv-ctas hv-anim" style="--i:4">
+              <a class="btn" href="#cap-1" data-sx-go="cap-1">Ver los ventiladores ${I.down}</a>
+              <a class="btn ghost js-wa js-wa-general" data-donde="portada" target="_blank" rel="noopener">${I.wa}Hablar con nosotros</a>
+            </div>
+          </div>
+          ${c.banner ? `<figure class="hv-hero-foto" aria-hidden="true"><img src="${esc(c.banner)}" alt="" fetchpriority="high" decoding="async"></figure>` : ''}
+        </div>
+      </section>`;
+  }
+
+  // 2. Un capítulo por ventilador: la ocasión, la historia, lo que la respalda, el video y la compra
+  function hvCapitulo(k, i, total) {
+    const p = k.p;
+    const n = Number(STORE.extras.cuotas) || 6;
+    const ver = `href="#x=${esc(p.id)}" data-x="${esc(p.id)}"`;
+    return `
+      <section class="hv-cap${i % 2 ? ' hv-cap-alt' : ''}" id="cap-${i + 1}" data-cap="${esc(p.id)}" data-scroll style="--c:${esc(k.color)}">
+        <span class="hv-cap-n" aria-hidden="true">${i + 1}</span>
+        <div class="hv-cap-in wrap">
+          <div class="hv-cap-media">
+            <a class="hv-media js-ficha" ${ver} aria-label="Ver ${esc(p.name)}">
+              ${p.video ? V.videoHTML(p, false, true) : V.coverHTML(p, false)}
+            </a>
+          </div>
+          <div class="hv-cap-copy">
+            <p class="kicker hv-ocasion" data-reveal style="--i:0">${esc(k.ocasion)}<span>${i + 1} de ${total}</span></p>
+            <h2 class="hv-cap-title" data-reveal style="--i:1">${esc(k.titulo)}</h2>
+            <p class="hv-cap-story" data-reveal style="--i:2">${esc(k.historia)}</p>
+            <ul class="hv-datos" data-reveal style="--i:3">${(p.details || []).slice(0, 4).map(d => `<li>${I.check}<span>${esc(d)}</span></li>`).join('')}</ul>
+            <div class="hv-compra" data-reveal style="--i:4">
+              <p class="hv-name"><a class="js-ficha" ${ver}>${esc(p.name)}</a></p>
+              ${V.priceHTML(p)}
+              ${STORE.financing ? `<p class="hv-cuotas"><b>${n} cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, n)}</b> con débito ${goImg()}</p>` : ''}
+              <p class="hv-cuotas"><b>12 cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, 12)}</b> con crédito</p>
+              <div class="hv-btns">${PAY ? `${V.buyButton(p, 'Comprar')}${V.waLink(p, 'Consultar', 'ghost')}` : V.waLink(p, 'Pedilo por WhatsApp')}</div>
+            </div>
+          </div>
+        </div>
+      </section>`;
+  }
+
+  function hvCapitulos(c) {
+    const caps = capitulosDe(c);
+    // Los productos de la categoría que todavía no tienen capítulo se ven igual, para no esconder ninguno
+    const resto = V.byCat(c.id).filter(p => !caps.some(k => k.p === p));
+    return caps.map((k, i) => hvCapitulo(k, i, caps.length)).join('') + (resto.length ? `
+      <section class="shelf wrap" id="productos" style="--c:${esc(c.color)}">
+        <header class="shelf-head" data-reveal><h2 class="sec-title">También tenemos</h2></header>
+        ${cards(resto)}
+      </section>` : '');
+  }
+
+  // 3. Por qué comprarnos: corto, después de los ventiladores
+  function hvConfianza() {
+    const d = STORY.warrantyDays || 30;
+    const garantiaTxt = sinRelleno(STORY.warrantyText) || `Si algo falla en los primeros ${d} días, lo resolvemos en la sucursal o por WhatsApp.`;
+    const promesas = [
+      [I.card, `Pagás con Mercado Pago${STORE.financing ? ` o ${STORE.financing}` : ''}`, 'Los datos de tu tarjeta los maneja Mercado Pago: nosotros no los vemos.'],
+      [I.truck, 'Envío con seguimiento', 'Andreani o Correo Argentino, a tu casa o a la sucursal. Te mandamos el seguimiento por mail.'],
+      [I.store, 'Retiro gratis', 'Si estás cerca, lo retirás sin cargo en una de nuestras sucursales.'],
+      [I.shield, `${d} días de garantía`, garantiaTxt],
+    ];
+    const branches = STORE.branches || [];
+    const conDir = branches.filter(conDireccion);
+    const otras = [...new Set(branches.filter(b => !conDireccion(b)).map(b => b.province).filter(Boolean))];
+    return `
+      <section class="hv-confianza wrap" id="confianza">
+        ${sectionHead('Por qué comprarnos', 'Tu compra, cuidada de punta a punta')}
+        <ul class="hv-promesas">${promesas.map(([ico, t, x], i) => `
+          <li data-reveal style="--i:${i}"><span class="hv-p-ico">${ico}</span><b>${esc(t)}</b><span>${esc(x)}</span></li>`).join('')}
+        </ul>
+        ${conDir.length ? `
+        <div class="hv-locales" data-reveal>
+          <p class="hv-locales-t">${I.pin}<b>Vení a verlos funcionando</b></p>
+          <ul>${conDir.map(b => `<li><b>${esc(b.name)}</b><span>${esc(b.address)}</span><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">Cómo llegar</a></li>`).join('')}</ul>
+          ${otras.length ? `<p class="hv-locales-mas">También estamos en ${esc(listaY(otras))}.</p>` : ''}
+        </div>` : ''}
+      </section>`;
+  }
+
+  // 6. Cierre: una persona del otro lado
+  function hvCierre() {
+    return `
+      <section class="hv-cierre wrap" data-reveal>
+        <h2 class="sec-title">¿Dudas? Te contesta una persona</h2>
+        <p class="sec-text">Escribinos por WhatsApp y alguien del equipo te ayuda a elegir el tuyo.</p>
+        <div class="hv-ctas">
+          <a class="btn js-wa js-wa-general" data-donde="cierre" target="_blank" rel="noopener">${I.wa}Escribinos</a>
+          <a class="btn ghost" href="#cap-1" data-sx-go="cap-1">Volver a los ventiladores</a>
+        </div>
+      </section>`;
+  }
+
+  // Celular: abajo, siempre a mano, comprar el ventilador que se está viendo
+  function hvBarra() {
+    const caps = $$('.hv-cap');
+    if (!caps.length) return;
+    document.body.insertAdjacentHTML('beforeend', '<div class="hv-bar" hidden><span class="hv-bar-txt"><small></small><b></b></span><span class="hv-bar-btn"></span></div>');
+    const bar = $('.hv-bar');
+    let actual = '';
+    let ticking = false;
+    const pintar = () => {
+      ticking = false;
+      const mitad = innerHeight / 2;
+      const cap = caps.find(c => { const r = c.getBoundingClientRect(); return r.top < mitad && r.bottom > mitad; });
+      const id = cap ? cap.dataset.cap : '';
+      bar.hidden = !id;
+      if (!id || id === actual) return;
+      actual = id;
+      const p = EXTRAS.find(x => x.id === id);
+      $('small', bar).textContent = p.name;
+      $('b', bar).textContent = money(p.price);
+      $('.hv-bar-btn', bar).innerHTML = PAY ? V.buyButton(p, 'Comprar') : V.waLink(p, 'Pedilo');
+    };
+    addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(pintar); } }, { passive: true });
+    pintar();
+  }
+
   /* ---------- Encabezado, pie y armado ---------- */
   // Menú de las 4 vistas: Inicio y la home de cada categoría (shared/secciones.js), más el atajo a Envíos
   function nav() {
@@ -327,7 +483,7 @@
       <div class="foot-grid wrap">
         <div class="foot-brand">
           <span class="foot-logo">${$('.logo-svg').outerHTML}</span>
-          <p>${esc(f.about || STORY.text || '')}</p>
+          <p>${esc(sinRelleno(f.about || STORY.text) || 'Ventilación, creación de contenido y audio en cuotas.')}</p>
         </div>
         <nav aria-label="Categorías"><h3>Categorías</h3>${CATS.map(c => `<a href="${catUrl(c)}">${esc(c.name)}</a>`).join('')}</nav>
         <div><h3>Sucursales</h3>${provs.map(p => `<p>${esc(p)}</p>`).join('') || `<p>${esc(STORE.city)}</p>`}</div>
@@ -343,7 +499,11 @@
 
   function armar() {
     const main = $('#contenido');
-    main.innerHTML = CAT
+    const sx = html => `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${html}</div>`;
+    if (CAT && capitulosDe(CAT).length) document.body.classList.add('hv-page');
+    main.innerHTML = CAT && capitulosDe(CAT).length
+      ? [hvPortada(CAT), franja(), hvCapitulos(CAT), hvConfianza(), calculadora(), sx(window.Secciones.faq(CAT)), hvCierre(), categorias(CAT)].join('')
+      : CAT
       ? [CAT.banner ? `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.hero(CAT)}${window.Secciones.videos(CAT)}</div>` : heroCategoria(CAT), franja(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.beneficios(CAT)}</div>`,
         productosCategoria(CAT), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.guia(CAT)}</div>`,
         comoComprar(), calculadora(), garantia(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.faq(CAT)}</div>`, categorias(CAT)].join('')
@@ -382,7 +542,7 @@
         // Las secciones altas (con contenido fijo) cuentan mientras el contenido está pegado arriba
         // La portada cuenta desde arriba de todo (0) hasta que salió de pantalla (1)
         const tall = el.classList.contains('founders');
-        const top = el.classList.contains('hero');
+        const top = el.classList.contains('hero') || el.classList.contains('hv-hero');
         const p = tall ? -r.top / Math.max(1, r.height - vh) : top ? -r.top / Math.max(1, r.height) : (vh - r.top) / (vh + r.height);
         el.style.setProperty('--p', Math.min(1, Math.max(0, p)).toFixed(4));
       }
@@ -432,20 +592,19 @@
     const form = $('.calc-form');
     if (!form) return;
     const out = $('.calc-out', form);
-    const byId = Object.fromEntries(EXTRAS.map(p => [p.id, p]));
     const saved = (() => { try { return JSON.parse(localStorage.getItem('cc:buyer') || 'null') || {}; } catch { return {}; } })();
     if (saved.province) form.elements.provincia.value = saved.province;
     if (saved.cp) form.elements.cp.value = saved.cp;
-    if (CAT && V.byCat(CAT.id)[0]) form.elements.producto.value = V.byCat(CAT.id)[0].id;
+    // Si en /admin → Envíos se vuelve a poner un recargo por kg, los precios se muestran "desde" (1 kg)
+    const porKg = Object.values(SHIP.rates || {}).some(r => r && r.on && r.extraKg > 0);
 
     function pintar() {
-      const p = byId[form.elements.producto.value];
       const prov = EN.provincia(form.elements.provincia.value);
       if (!prov) {
         out.innerHTML = '<p class="calc-hint">Elegí tu provincia o escribí tu código postal.</p>';
         return;
       }
-      const ops = EN.opciones(SHIP, prov.zona, EN.peso(p), p ? p.price : 0);
+      const ops = EN.opciones(SHIP, prov.zona, 1, 0);
       const cerca = (STORE.branches || []).filter(b => b.province && EN.provincia(b.province) && EN.provincia(b.province).nombre === prov.nombre);
       out.innerHTML = `
         <ul class="quotes">
@@ -454,11 +613,10 @@
             <li class="q q-${o.empresa}" style="--i:${i}">
               <span class="q-mark">${o.empresa === 'andreani' ? 'A' : 'CA'}</span>
               <span class="q-name"><b>${esc(o.nombre)}</b><small>Llega en ${esc(EN.diasTexto(o.dias))}</small></span>
-              <span class="q-price">${o.costo ? money(o.costo) : 'Gratis'}</span>
+              <span class="q-price">${o.costo ? `${porKg ? 'Desde ' : ''}${money(o.costo)}` : 'Gratis'}</span>
             </li>`).join('')}
         </ul>
-        <p class="calc-note">Precio estimado para ${esc(p ? p.name : 'tu compra')} a ${esc(prov.nombre)}. El total exacto lo ves antes de pagar.</p>
-        ${p && PAY ? `<button type="button" class="btn js-x-buy" data-x="${esc(p.id)}">Comprar ${esc(p.name)} ${I.arrow}</button>` : ''}`;
+        <p class="calc-note">${porKg ? 'Precio para productos de hasta 1 kg; los más pesados suman un poco más.' : 'El mismo precio para cualquier producto.'} El total exacto lo ves antes de pagar.</p>`;
     }
     // Lo que elige acá queda cargado en el checkout (shared/checkout.js lee cc:buyer)
     const recordar = () => {
@@ -506,12 +664,13 @@
     const io = new IntersectionObserver(entries => {
       for (const e of entries) {
         if (!e.isIntersecting) continue;
-        const id = ($('[data-x]', e.target) || {}).dataset;
+        const id = (e.target.matches('[data-x]') ? e.target : $('[data-x]', e.target) || {}).dataset;
         if (id && id.x) window.TB_TRACK('vista', id.x);
         io.unobserve(e.target);
       }
     }, { threshold: 0.6 });
-    $$('.xcard').forEach(el => io.observe(el));
+    // También la foto o el video de cada capítulo de ventilación (.hv-media)
+    $$('.xcard, .hv-media').forEach(el => io.observe(el));
   }
 
   /* ---------- Modo claro / oscuro (el mismo botón que en Minimalista) ---------- */
@@ -544,6 +703,7 @@
   calc();
   if (CAT) chips();
   vistas();
+  hvBarra();
   // Producto compartido (#x=…) lo abre la vidriera; el ancla (#envios) baja después de armar la página
   if (/^#[a-z-]+$/.test(location.hash)) {
     const el = document.getElementById(location.hash.slice(1));

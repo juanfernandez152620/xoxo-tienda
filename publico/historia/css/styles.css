@@ -449,3 +449,137 @@ section { position: relative; }
 /* Aire entre la cinta de beneficios que se mueve y las 4 tarjetas de confianza de la categoría */
 .sx-page.h-sx > .sx-benefits { padding-top: clamp(40px, 6vw, 72px); padding-bottom: clamp(24px, 4vw, 40px); }
 .ribbon + .h-sx { margin-top: 0; }
+
+/* ============ Ventilación: la versión de la confianza (17/11/2026) ============
+   En 5 segundos quiénes somos y la oferta flash; después un capítulo por ventilador, con su historia, su video
+   y la compra a un toque. Todo se mueve con el scroll (--p de cada sección [data-scroll], ver progreso()). */
+@keyframes hv-subir { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes hv-foto { from { opacity: 0; clip-path: inset(10% 10% 10% 10% round 28px); } to { opacity: 1; clip-path: inset(0 round 28px); } }
+
+/* Portada: una sola pantalla */
+.hv-hero {
+  position: relative; overflow: hidden; display: grid; align-items: center;
+  min-height: calc(100svh - var(--head-h) - var(--fl-h, 0px)); padding-block: clamp(24px, 5vw, 56px);
+  background:
+    radial-gradient(70% 60% at 0% 0%, color-mix(in srgb, var(--cielo) 18%, transparent), transparent 70%),
+    radial-gradient(60% 60% at 100% 100%, color-mix(in srgb, #ec4899 11%, transparent), transparent 70%),
+    var(--bg);
+}
+.hv-hero-in { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: center; gap: clamp(24px, 4vw, 56px); }
+.hv-anim { animation: hv-subir .9s var(--ease) both; animation-delay: calc(var(--i, 0) * 110ms); }
+.hv-title { margin: 0; font: 400 clamp(44px, 6.4vw, 86px)/1 var(--display); letter-spacing: .005em; text-transform: uppercase; text-wrap: balance; }
+.hv-trust { display: grid; gap: 10px; margin: 22px 0 0; padding: 0; list-style: none; }
+.hv-trust li { display: flex; align-items: center; gap: 12px; font-size: clamp(15px, 1.5vw, 17px); font-weight: 600; }
+.hv-trust svg { flex: none; width: 36px; height: 36px; padding: 8px; border-radius: 11px; background: var(--bg-2); color: var(--accent); }
+.hv-socios { display: flex; gap: 14px; margin-top: 18px; }
+.hv-socio { display: grid; justify-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 700; }
+.hv-socio .ph-img, .hv-socio .ph { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; }
+.hv-flash {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; width: fit-content; margin: 20px 0 0; padding: 10px 16px;
+  border-radius: 14px; background: color-mix(in srgb, #ec4899 8%, var(--bg)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #ec4899 35%, transparent); font-size: 15px;
+}
+.hv-flash b { font-variant-numeric: tabular-nums; }
+.hv-flash b:first-child { color: #be185d; letter-spacing: .04em; text-transform: uppercase; }
+.hv-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.hv-ctas .btn svg { width: 18px; height: 18px; }
+.hv-hero-foto {
+  position: relative; margin: 0; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 28px; box-shadow: var(--lift);
+  animation: hv-foto 1.2s .15s var(--ease) both; transform: translateY(calc(var(--p, 0) * 70px));
+}
+.hv-hero-foto img { width: 100%; height: 100%; object-fit: cover; transform: scale(calc(1.1 - var(--p, 0) * .1)); }
+
+/* Capítulos: uno por ventilador */
+.hv-cap { position: relative; overflow: hidden; padding-block: clamp(48px, 8vw, 110px); }
+.hv-cap-alt { background: var(--bg-2); }
+.hv-cap-n {
+  position: absolute; top: 0; right: 2%; color: transparent; font: 400 clamp(200px, 30vw, 400px)/1 var(--display);
+  -webkit-text-stroke: 2px color-mix(in srgb, var(--c) 32%, transparent); pointer-events: none;
+  transform: translateY(calc((var(--p, 0) - .5) * -140px));
+}
+.hv-cap-alt .hv-cap-n { right: auto; left: 2%; }
+.hv-cap-in { position: relative; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: center; gap: clamp(28px, 5vw, 72px); }
+.hv-cap-alt .hv-cap-in { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
+.hv-cap-alt .hv-cap-media { order: 2; }
+.hv-cap-media { transform: scale(calc(.86 + min(var(--p, 0), .5) * .28)) rotate(calc((.5 - min(var(--p, 0), .5)) * -8deg)); }
+.hv-cap-alt .hv-cap-media { transform: scale(calc(.86 + min(var(--p, 0), .5) * .28)) rotate(calc((.5 - min(var(--p, 0), .5)) * 8deg)); }
+.hv-media { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 28px; background: #fff; box-shadow: 0 0 0 1px var(--line), var(--lift); }
+.hv-media .x-video { object-fit: contain; background: #fff; } /* el producto entero, foto y video */
+.hv-media .x-photo { padding: 8%; }
+.hv-ocasion { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: var(--c); }
+.hv-ocasion span { padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--c) 13%, transparent); color: var(--ink); font-size: 11.5px; letter-spacing: .08em; }
+.hv-cap-title { margin: 0; font: 400 clamp(38px, 5.2vw, 68px)/1 var(--display); text-transform: uppercase; text-wrap: balance; }
+.hv-cap-story { max-width: 52ch; margin: 18px 0 0; color: var(--ink); font-size: clamp(17px, 1.8vw, 20px); line-height: 1.55; text-wrap: pretty; }
+.hv-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; margin: 22px 0 0; padding: 0; list-style: none; }
+.hv-datos li { display: flex; align-items: flex-start; gap: 8px; color: var(--muted); font-size: 14.5px; font-weight: 600; }
+.hv-datos svg { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--c); }
+.hv-compra {
+  display: grid; gap: 6px; max-width: 460px; margin-top: 26px; padding: 20px 22px; border-radius: 22px;
+  background: var(--surface); box-shadow: 0 0 0 1px var(--line), 0 18px 40px -26px rgba(11, 26, 46, .35);
+}
+.hv-name { margin: 0; font-size: 16px; font-weight: 800; }
+.hv-name a { color: inherit; text-decoration: none; }
+.hv-name a:hover { text-decoration: underline; }
+.hv-compra .x-price { margin: 0; }
+.hv-compra .x-price b { font-size: 30px; }
+.hv-cuotas { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0; color: var(--muted); font-size: 14.5px; }
+.hv-cuotas b { color: var(--ink); }
+.hv-go { width: auto; height: 18px; }
+.hv-btns { display: flex; gap: 10px; margin-top: 10px; }
+.hv-btns .x-btn { flex: 1; min-height: 50px; }
+
+/* Por qué comprarnos, corto */
+.hv-confianza { padding-block: clamp(48px, 8vw, 96px); }
+.hv-promesas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 28px 0 0; padding: 0; list-style: none; }
+.hv-promesas li { display: grid; align-content: start; gap: 6px; padding: 22px; border-radius: var(--radius); background: var(--bg-2); }
+.hv-p-ico { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 6px; border-radius: 14px; background: var(--menta); color: #0b3a12; }
+.hv-p-ico svg { width: 24px; height: 24px; }
+.hv-promesas b { font-size: 17px; }
+.hv-promesas li > span:last-child { color: var(--muted); font-size: 14.5px; line-height: 1.5; }
+.hv-locales { margin-top: 18px; padding: 22px; border-radius: var(--radius); box-shadow: inset 0 0 0 1.5px var(--line); }
+.hv-locales-t { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 17px; }
+.hv-locales-t svg { width: 22px; height: 22px; color: var(--accent); }
+.hv-locales ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.hv-locales li { display: grid; gap: 2px; }
+.hv-locales li span { color: var(--muted); font-size: 14.5px; }
+.hv-locales li a { justify-self: start; color: var(--accent); font-size: 14px; font-weight: 700; }
+.hv-locales-mas { margin: 12px 0 0; color: var(--muted); font-size: 14.5px; }
+
+/* Cierre */
+.hv-cierre { display: grid; justify-items: center; padding-block: clamp(48px, 8vw, 96px); text-align: center; }
+.hv-cierre .sec-text { margin-inline: auto; }
+.hv-cierre .hv-ctas { justify-content: center; }
+
+/* Barra de compra del celular */
+.hv-bar { display: none; }
+
+@media (max-width: 899px) {
+  .hv-hero { min-height: 0; padding-block: 22px 30px; }
+  .hv-hero-in { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .hv-hero-foto { aspect-ratio: 16 / 10; border-radius: 22px; }
+  .hv-cap-in, .hv-cap-alt .hv-cap-in { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .hv-cap-alt .hv-cap-media { order: 0; }
+  .hv-media { max-height: 72vh; margin-inline: auto; }
+  .hv-datos { grid-template-columns: minmax(0, 1fr); }
+  .hv-promesas { grid-template-columns: 1fr 1fr; }
+  .hv-page .foot { padding-bottom: 96px; }
+  .hv-bar {
+    position: fixed; right: 84px; bottom: max(16px, env(safe-area-inset-bottom)); left: 12px; z-index: 58;
+    display: flex; align-items: center; gap: 10px; padding: 7px 7px 7px 16px; border-radius: 999px;
+    background: var(--btn); color: var(--btn-ink); box-shadow: 0 16px 40px -16px rgba(11, 26, 46, .55); animation: hv-subir .35s var(--ease) both;
+  }
+  .hv-bar[hidden] { display: none; }
+  .hv-bar-txt { display: grid; flex: 1; min-width: 0; line-height: 1.15; }
+  .hv-bar-txt small { overflow: hidden; font-size: 12px; opacity: .8; white-space: nowrap; text-overflow: ellipsis; }
+  .hv-bar-txt b { font-size: 17px; font-variant-numeric: tabular-nums; }
+  .hv-bar .x-btn { min-height: 44px; padding: 0 18px; border-radius: 999px; background: var(--btn-ink); color: var(--btn); }
+}
+@media (max-width: 520px) {
+  .hv-promesas { grid-template-columns: minmax(0, 1fr); }
+  .hv-ctas .btn { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hv-anim, .hv-hero-foto, .hv-bar { animation: none !important; }
+  .hv-hero-foto, .hv-hero-foto img, .hv-cap-media, .hv-cap-alt .hv-cap-media, .hv-cap-n { transform: none !important; }
+}
+/* La barra del flash ya queda fija arriba: sin la etiqueta flotante, que chocaba con la barra de compra */
+.hv-page .fl-pill { display: none !important; }

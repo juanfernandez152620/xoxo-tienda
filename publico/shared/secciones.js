@@ -23,7 +23,9 @@
   const fmt = new Intl.NumberFormat('es-AR');
   const money = n => '$' + fmt.format(n);
   const plano = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  const par = s => { const [a, ...b] = String(s).split('|'); return { t: a.trim(), x: b.join('|').trim() }; };
+  // Texto de ejemplo que quedó sin reemplazar en /admin (lorem ipsum): no se muestra
+  const sinRelleno = t => String(t || '').replace(/[:,;]?\s*lorem ipsum[\s\S]*$/i, '').trim().replace(/[^.!?]$/, m => m + '.');
+  const par = s => { const [a, ...b] = String(s).split('|'); return { t: a.trim(), x: sinRelleno(b.join('|').trim()) }; };
   const email = (SITE.footer && SITE.footer.email) || 'ventas@xoxotecno.com.ar';
   const dias = () => STORY.warrantyDays || 30;
 
@@ -225,7 +227,7 @@
   }
 
   function faq(c) {
-    const list = (c.faq || []).map(par);
+    const list = (c.faq || []).map(par).filter(q => q.t && q.x);
     if (!list.length) return '';
     return `
       <section class="sx-faq" style="--sx-accent:${esc(c.color)}">
