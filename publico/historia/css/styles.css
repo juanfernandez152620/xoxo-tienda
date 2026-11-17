@@ -603,34 +603,39 @@ section { position: relative; }
 .hv-ph-local { place-items: center; }
 .hv-ph-local svg { width: 72%; }
 
-/* Carrusel en el marco vertical: abanico de cartas que se despliega en fotos completas, sin bordes */
+/* Pila de fotos: la de adelante entera y las otras asomando a los costados (como cartas apiladas).
+   Llega como abanico y se acomoda al aparecer; se pasa deslizando con el dedo o arrastrando con el mouse. */
+.hv-parte .hv-cap-media { width: min(420px, 40vw); }
 .hv-carrusel-box { position: relative; }
-.hv-carrusel { display: flex; gap: 12px; overflow: visible; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
-.hv-carrusel.listo { overflow-x: auto; border-radius: 28px; }
-.hv-carrusel::-webkit-scrollbar { display: none; }
-.hv-foto {
-  position: relative; z-index: calc(20 - var(--i)); flex: 0 0 100%; margin: 0; aspect-ratio: 9 / 16; overflow: hidden;
-  border-radius: 28px; background: var(--bg-2); box-shadow: var(--lift); scroll-snap-align: center;
-  transform-origin: 50% 115%; transition: transform 1s var(--ease); transition-delay: calc(var(--i) * 70ms);
+.hv-pila { position: relative; aspect-ratio: 45 / 64; touch-action: pan-y; cursor: grab; -webkit-user-select: none; user-select: none; outline-offset: 8px; }
+.hv-pila.arrastrando { cursor: grabbing; }
+.hv-pila-c {
+  position: absolute; top: 0; left: 10%; z-index: calc(10 - var(--a, 0)); width: 80%; height: 100%; margin: 0; overflow: hidden;
+  border-radius: 26px; background: var(--bg-2); box-shadow: 0 22px 44px -24px rgba(11, 26, 46, .5);
+  opacity: clamp(0, calc(3 - var(--a, 0)), 1); filter: brightness(calc(1 - min(var(--a, 0), 2) * .07));
+  transform-origin: 50% 85%;
+  transform: translateX(calc(var(--d, 0) * 13% + var(--drag, 0px))) rotate(var(--rot, 0deg)) scale(calc(1 - min(var(--a, 0), 2) * .08));
+  transition: transform .55s var(--ease), opacity .35s, filter .35s;
 }
-.hv-carrusel:not(.abierto) .hv-foto { transform: translateX(calc(var(--i) * (-100% - 12px))) rotate(calc(var(--i) * 7deg)); }
-.hv-foto .ph, .hv-foto .ph-img { display: grid; width: 100%; height: 100%; object-fit: cover; }
-.hv-foto figcaption {
+.hv-pila:not(.abierto) .hv-pila-c { transform: rotate(calc(var(--d, 0) * 6deg)) scale(calc(1 - min(var(--a, 0), 2) * .04)); transition-duration: .9s; }
+.hv-pila.arrastrando .hv-pila-c { transition: none; }
+.hv-pila-c .ph, .hv-pila-c .ph-img { display: grid; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
+.hv-pila-c figcaption {
   position: absolute; bottom: 14px; left: 14px; padding: 7px 13px; border-radius: 999px;
   background: rgba(11, 26, 46, .72); color: #fff; font-size: 14px; font-weight: 800;
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
-.hv-car-btn {
-  position: absolute; top: 50%; z-index: 30; display: grid; place-items: center; width: 42px; height: 42px; margin-top: -21px;
-  border: 0; border-radius: 50%; background: rgba(255, 255, 255, .92); color: #0b1a2e; box-shadow: 0 6px 18px -6px rgba(0, 0, 0, .35); cursor: pointer;
-}
-.hv-car-btn svg { width: 20px; height: 20px; }
-.hv-car-prev { left: 10px; }
+.hv-pila-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; }
+.hv-car-btn { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--bg-2); color: var(--ink); cursor: pointer; }
+.hv-cap-alt .hv-car-btn { background: var(--bg); }
+.hv-car-btn svg { width: 18px; height: 18px; }
 .hv-car-prev svg { transform: rotate(180deg); }
-.hv-car-next { right: 10px; }
-.hv-dots { display: flex; justify-content: center; gap: 7px; margin-top: 14px; }
+.hv-dots { display: flex; justify-content: center; gap: 7px; }
 .hv-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: width .25s var(--ease), background .25s; }
 .hv-dots span.on { width: 22px; border-radius: 999px; background: var(--c, var(--accent)); }
+@media (max-width: 899px) {
+  .hv-parte .hv-cap-media { width: min(100%, 380px); }
+}
 
 /* Direcciones, dentro del recuadro de envíos */
 .hv-dirs { display: grid; gap: 10px; margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); list-style: none; }
@@ -644,5 +649,5 @@ section { position: relative; }
   .hv-promesa-fin { flex-direction: column; gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hv-foto { transition: none; }
+  .hv-pila-c { transition: none !important; }
 }

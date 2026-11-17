@@ -380,19 +380,22 @@
     ? `<img class="ph-img" src="${esc(src)}" alt="${esc(que)}" loading="lazy" decoding="async">`
     : `<div class="ph hv-ph hv-ph-${forma}" style="--h:${tono}" role="img" aria-label="Foto de ejemplo: ${esc(que)}">${SILUETA[forma]}<span class="ph-tag">Foto de ejemplo</span></div>`);
 
-  // Carrusel de fotos completas en el marco vertical: llegan como un abanico de cartas y se despliegan al
-  // aparecer (hvCarruseles); después se deslizan con el dedo, las flechas o los puntos
+  // Pila de fotos: la de adelante entera y las otras asomando detrás, a los costados. Llega como un abanico de
+  // cartas y se acomoda al aparecer; se pasa deslizando con el dedo (o arrastrando con el mouse), tocando una
+  // de atrás, con las flechas o con el teclado (hvCarruseles)
   const carrusel = (fotos, que) => {
     const varias = fotos.length > 1;
     return `
       <div class="hv-carrusel-box">
-        <div class="hv-carrusel${varias ? '' : ' abierto listo'}" tabindex="0" aria-label="Fotos de ${esc(que)}">${fotos.map((f, i) => `
-          <figure class="hv-foto" style="--i:${i}">${f.foto}${f.nombre ? `<figcaption>${esc(f.nombre)}</figcaption>` : ''}</figure>`).join('')}
+        <div class="hv-pila${varias ? '' : ' abierto'}" tabindex="0" role="group" aria-roledescription="carrusel" aria-label="Fotos de ${esc(que)}${varias ? '. Deslizá para ver más' : ''}">${fotos.map((f, i) => `
+          <figure class="hv-pila-c" style="--d:${i};--a:${i}">${f.foto}${f.nombre ? `<figcaption>${esc(f.nombre)}</figcaption>` : ''}</figure>`).join('')}
         </div>
         ${varias ? `
-        <button type="button" class="hv-car-btn hv-car-prev" data-d="-1" aria-label="Foto anterior">${I.arrow}</button>
-        <button type="button" class="hv-car-btn hv-car-next" data-d="1" aria-label="Foto siguiente">${I.arrow}</button>
-        <div class="hv-dots" aria-hidden="true">${fotos.map((f, i) => `<span${i ? '' : ' class="on"'}></span>`).join('')}</div>` : ''}
+        <div class="hv-pila-nav">
+          <button type="button" class="hv-car-btn hv-car-prev" data-d="-1" aria-label="Foto anterior">${I.arrow}</button>
+          <div class="hv-dots" aria-hidden="true">${fotos.map((f, i) => `<span${i ? '' : ' class="on"'}></span>`).join('')}</div>
+          <button type="button" class="hv-car-btn hv-car-next" data-d="1" aria-label="Foto siguiente">${I.arrow}</button>
+        </div>` : ''}
       </div>`;
   };
 
@@ -485,37 +488,97 @@
     });
   }
 
-  // Carruseles: el abanico se despliega al aparecer; los puntos siguen a la foto que se ve; las flechas pasan de a una
+  // Pilas de fotos: el abanico se acomoda al aparecer; después se pasan de a una, en ronda (de la última a la primera)
   function hvCarruseles() {
-    const cars = $$('.hv-carrusel');
-    if (!cars.length) return;
-    const paso = c => (c.firstElementChild ? c.firstElementChild.offsetWidth + 12 : c.clientWidth);
-    const abrir = c => {
-      if (c.classList.contains('abierto')) return;
-      c.classList.add('abierto');
-      setTimeout(() => c.classList.add('listo'), reduce.matches ? 0 : 1400);
-    };
-    if (reduce.matches || !('IntersectionObserver' in window)) cars.forEach(abrir);
+    const pilas = $$('.hv-pila');
+    if (!pilas.length) return;
+    const abrir = p => p.classList.add('abierto');
+    if (reduce.matches || !('IntersectionObserver' in window)) pilas.forEach(abrir);
     else {
       const io = new IntersectionObserver(entries => {
         for (const e of entries) if (e.isIntersecting) { abrir(e.target); io.unobserve(e.target); }
       }, { threshold: 0.4 });
-      cars.forEach(c => io.observe(c));
+      pilas.forEach(p => io.observe(p));
     }
-    cars.forEach(c => {
-      const dots = $$('.hv-dots span', c.parentElement);
-      if (dots.length) c.addEventListener('scroll', () => {
-        const at = Math.round(c.scrollLeft / paso(c));
-        dots.forEach((d, k) => d.classList.toggle('on', k === at));
-      }, { passive: true });
+
+    pilas.forEach(pila => {
+      const cartas = $$('.hv-pila-c', pila);
+      const n = cartas.length;
+      const dots = $$('.hv-dots span', pila.parentElement);
+      let cur = 0;
+      // Distancia de cada foto a la de adelante: 0 adelante, -1/+1 asomando a cada lado, y así
+      const distancia = i => { let d = (((i - cur) % n) + n) % n; if (d > n / 2) d -= n; return d; };
+      const pintar = () => {
+        cartas.forEach((c, i) => {
+          const d = distancia(i);
+          c.style.setProperty('--d', d);
+          c.style.setProperty('--a', Math.abs(d));
+          c.setAttribute('aria-hidden', String(d !== 0));
+        });
+        dots.forEach((d, k) => d.classList.toggle('on', k === cur));
+      };
+      const ir = k => { cur = ((k % n) + n) % n; abrir(pila); pintar(); };
+      pila.pasar = d => ir(cur + d);
+      pintar();
+      if (n < 2) return;
+
+      // Arrastrar: la foto de adelante sigue al dedo; al soltar pasa si se movió lo suficiente o rápido
+      let x0 = 0;
+      let dx = 0;
+      let t0 = 0;
+      let quien = null;
+      let movio = false;
+      pila.addEventListener('pointerdown', e => {
+        if (e.button) return;
+        quien = e.pointerId;
+        x0 = e.clientX;
+        dx = 0;
+        t0 = performance.now();
+        movio = false;
+      });
+      pila.addEventListener('pointermove', e => {
+        if (e.pointerId !== quien) return;
+        dx = e.clientX - x0;
+        if (!movio && Math.abs(dx) > 6) {
+          movio = true;
+          pila.classList.add('arrastrando');
+          try { pila.setPointerCapture(quien); } catch {}
+        }
+        if (!movio) return;
+        cartas[cur].style.setProperty('--drag', `${dx}px`);
+        cartas[cur].style.setProperty('--rot', `${dx / 28}deg`);
+      });
+      const soltar = e => {
+        if (e.pointerId !== quien) return;
+        quien = null;
+        pila.classList.remove('arrastrando');
+        cartas[cur].style.removeProperty('--drag');
+        cartas[cur].style.removeProperty('--rot');
+        if (!movio) return;
+        const v = dx / Math.max(1, performance.now() - t0);
+        if (dx < -45 || v < -0.45) ir(cur + 1);
+        else if (dx > 45 || v > 0.45) ir(cur - 1);
+      };
+      pila.addEventListener('pointerup', soltar);
+      pila.addEventListener('pointercancel', soltar);
+      // Tocar una de las de atrás la trae adelante (un arrastre no cuenta como toque)
+      pila.addEventListener('click', e => {
+        if (movio) { movio = false; return; }
+        const c = e.target.closest('.hv-pila-c');
+        const i = cartas.indexOf(c);
+        if (i >= 0 && i !== cur) ir(i);
+      });
+      pila.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight') { e.preventDefault(); ir(cur + 1); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); ir(cur - 1); }
+      });
     });
+
     document.addEventListener('click', e => {
       const b = e.target.closest('.hv-car-btn');
       if (!b) return;
-      const c = $('.hv-carrusel', b.parentElement);
-      abrir(c);
-      c.classList.add('listo');
-      c.scrollBy({ left: Number(b.dataset.d) * paso(c), behavior: reduce.matches ? 'auto' : 'smooth' });
+      const pila = $('.hv-pila', b.closest('.hv-carrusel-box'));
+      if (pila && pila.pasar) pila.pasar(Number(b.dataset.d));
     });
   }
 
