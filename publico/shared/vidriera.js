@@ -37,6 +37,7 @@
     ventilador: line('<circle cx="12" cy="10" r="1.6"/><path d="M12 8.4c-.4-2.6.6-5 3-5.4 2.2-.3 2.9 2.2 1 3.6-1.3 1-2.6 1.4-4 1.8M13.4 11c2.3 1.2 3.7 3.4 2.7 5.6-.9 2-3.3 1.3-3.4-1-.1-1.6.3-3 .7-4.6M10.6 10.8c-2.1 1.6-4.7 1.9-6.1 0-1.3-1.8.5-3.6 2.6-2.6 1.4.7 2.4 1.7 3.5 2.6M12 11.6V19M8 21.5h8"/>'),
     parlante: line('<rect x="5.5" y="2.5" width="13" height="19" rx="3"/><circle cx="12" cy="14.5" r="3.5"/><circle cx="12" cy="6.8" r="1.4"/>'),
     auricular: line('<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13.5" width="4.5" height="7" rx="1.8"/><rect x="16.5" y="13.5" width="4.5" height="7" rx="1.8"/>'),
+    play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13l10.5-6.5z"/></svg>',
     cart: line('<path d="M3 4h2.2l2.3 11h10.3l2.1-8H6.3"/><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="16.5" cy="19.5" r="1.5"/>'),
     share: line('<path d="M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M12 15V3M7 8l5-5 5 5"/>'),
     close: line('<path d="M6 6l12 12M18 6L6 18"/>'),
@@ -56,7 +57,11 @@
     return `<span class="x-art" aria-hidden="true"><svg class="x-shapes" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">${shapes}</svg>${ICON[p.icon] || ICON.luz}</span>`;
   }
   const photoHTML = (p, src, alt) => `<img class="x-photo" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async">`;
-  const coverHTML = p => ((p.gallery || [])[0] ? photoHTML(p, p.gallery[0], p.name) : artHTML(p));
+  // Video del producto: arranca solo y sin sonido cuando aparece en pantalla (ver "Videos" más abajo)
+  const videoHTML = (p, controls = false) => `<video class="x-video" src="${esc(p.video)}" poster="${esc((p.gallery || [])[0] || '')}"
+    muted loop playsinline preload="none" data-auto${controls ? ' controls' : ''} aria-label="Video de ${esc(p.name)}"></video>`;
+  const coverHTML = p => (p.video ? `${videoHTML(p)}<span class="x-vtag">${ICON.play}Video</span>`
+    : (p.gallery || [])[0] ? photoHTML(p, p.gallery[0], p.name) : artHTML(p));
 
   /* ---------- Precio y botones ---------- */
   function priceHTML(p) {
@@ -132,18 +137,21 @@
 
   function galleryHTML(p) {
     const photos = p.gallery || [];
-    const slides = photos.length
+    // Primero el video (con controles, para activar el sonido) y después las fotos
+    const slides = (p.video ? `<div class="ficha-slide ficha-video">${videoHTML(p, true)}</div>` : '') + (photos.length
       ? photos.map((src, i) => `<div class="ficha-slide">${photoHTML(p, src, `${p.name}, foto ${i + 1}`)}</div>`).join('')
-      : `<div class="ficha-slide">${artHTML(p)}</div>`;
-    const many = photos.length > 1;
+      : (p.video ? '' : `<div class="ficha-slide">${artHTML(p)}</div>`));
+    const total = photos.length + (p.video ? 1 : 0);
+    const many = total > 1;
     return `
       <div class="ficha-gal">
         <div class="ficha-slides" tabindex="0" aria-label="Fotos de ${esc(p.name)}">${slides}</div>
         ${many ? `
         <button class="ficha-arrow prev" type="button" data-d="-1" aria-label="Foto anterior">${ICON.left}</button>
         <button class="ficha-arrow next" type="button" data-d="1" aria-label="Foto siguiente">${ICON.right}</button>
-        <div class="ficha-thumbs" role="group" aria-label="Elegir foto">${photos.map((src, i) => `
-          <button class="ficha-thumb" type="button" data-i="${i}" aria-pressed="${i === 0}" aria-label="Foto ${i + 1}"><img src="${esc(src)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
+        <div class="ficha-thumbs" role="group" aria-label="Elegir foto">${p.video ? `
+          <button class="ficha-thumb ficha-thumb-video" type="button" data-i="0" aria-pressed="true" aria-label="Video"><img src="${esc(photos[0] || '')}" alt="" loading="lazy">${ICON.play}</button>` : ''}${photos.map((src, i) => `
+          <button class="ficha-thumb" type="button" data-i="${i + (p.video ? 1 : 0)}" aria-pressed="${!p.video && i === 0}" aria-label="Foto ${i + 1}"><img src="${esc(src)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
       </div>`;
   }
 
@@ -210,6 +218,7 @@
 
   function hide() {
     if (!root || root.hidden) return;
+    $$('video', root).forEach(v => v.pause());
     root.hidden = true;
     current = null;
     document.documentElement.classList.remove('x-lock');
@@ -284,9 +293,25 @@
     open(m[1]);
   });
 
+  /* ---------- Videos: se reproducen solos (sin sonido) mientras se ven, y se pausan al salir ---------- */
+  const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches || Boolean(navigator.connection && navigator.connection.saveData);
+  const vio = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+    for (const e of entries) {
+      const v = e.target;
+      if (e.isIntersecting && e.intersectionRatio >= 0.5) {
+        if (!quieto || v.dataset.played) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+      } else if (!v.paused) v.pause();
+    }
+  }, { threshold: [0, 0.5] }) : null;
+  const mirarVideos = (el = document) => $$('video[data-auto]:not([data-io])', el).forEach(v => { v.dataset.io = '1'; if (vio) vio.observe(v); });
+  if (vio) {
+    new MutationObserver(() => mirarVideos()).observe(document.documentElement, { childList: true, subtree: true });
+    addEventListener('DOMContentLoaded', () => mirarVideos());
+  }
+
   const byCat = cat => filter('', cat);
   window.Vidriera = {
     title: STORE.extras.title, short: STORE.extras.short, groups, cats: CATS, filter, byCat, gridHTML, shelfHTML,
-    cardHTML, priceHTML, coverHTML, icon: key => ICON[key], open, close,
+    cardHTML, priceHTML, coverHTML, videoHTML, buyButton, waLink, icon: key => ICON[key], open, close,
   };
 })();

@@ -122,6 +122,8 @@ function normalizarOtro(p, i, ids) {
     pitch: txt(p.pitch, 200),
     details: lineas(p.details, 12, 120),
     gallery: items(p.gallery, (g, k) => mediaUrl(g, `${label}: foto ${k + 1}`), 12).filter(Boolean),
+    // Video del producto (.mp4): se ve en la tarjeta y es lo primero de la ficha
+    video: mediaUrl(p.video, `${label}: video`),
   };
 }
 
@@ -169,6 +171,8 @@ function normalizarCategorias(list) {
       id, num: i + 1, name, short: txt(c.short, 20) || name,
       title: txt(c.title, 90), text: txt(c.text, 400),
       color: hexColor(c.color || '#7c3aed', `Categoría ${name}: color`),
+      // Foto de fondo del banner de la home de la categoría (gente usando los productos)
+      banner: mediaUrl(c.banner, `Categoría ${name}: foto del banner`),
       benefits: pares(c.benefits, 6),
       guideTitle: txt(c.guideTitle, 90),
       guide: pares(c.guide, 6),
@@ -260,12 +264,39 @@ function migrar(s) {
   return out;
 }
 
+// 17/11/2026: los 3 ventiladores reales (con fotos y video) reemplazan a los 4 de ejemplo, y la categoría
+// Ventilación suma su banner. Pasa una sola vez: queda anotada en "migraciones" (si después se borra un
+// ventilador a mano, no vuelve).
+function migrarVentiladores(s) {
+  const hechas = Array.isArray(s.migraciones) ? s.migraciones : [];
+  if (hechas.includes('ventiladores-reales')) return s;
+  const semilla = leerJson(SEMILLA) || {};
+  const reales = (semilla.extras || []).filter(p => p.cat === 'ventilacion' && !p.example);
+  const extras = (Array.isArray(s.extras) ? s.extras : []).filter(p => !(p && p.example && p.cat === 'ventilacion'));
+  const ids = new Set(extras.map(p => p && p.id));
+  const fab = (semilla.categories || []).find(c => c.id === 'ventilacion') || {};
+  return {
+    ...s,
+    migraciones: [...hechas, 'ventiladores-reales'],
+    extras: [...reales.filter(p => !ids.has(p.id)), ...extras],
+    categories: Array.isArray(s.categories) ? s.categories.map(c => (c && c.id === 'ventilacion' ? {
+      ...c,
+      banner: c.banner || fab.banner,
+      // Textos de ejemplo (lorem ipsum) o que nombraban ventiladores que ya no están: pasan a los de fábrica
+      ...(/^Lorem ipsum/.test(c.text || '') || /de torre|de escritorio y de mano/.test(c.text || '') ? { text: fab.text, title: fab.title } : {}),
+      ...(JSON.stringify(c.benefits || []).includes('en la mano') ? { benefits: fab.benefits } : {}),
+      // La guía de antes hablaba de ventiladores de torre y de mano, que ya no están
+      ...(JSON.stringify(c.guide || []).includes('De torre') ? { guideTitle: fab.guideTitle, guide: fab.guide } : {}),
+    } : c)) : s.categories,
+  };
+}
+
 // Revisa y ordena el contenido antes de guardarlo: si algo está mal, devuelve un mensaje claro y no guarda.
 function normalizar(s) {
   if (!s || typeof s !== 'object' || !s.store || typeof s.store !== 'object' || !Array.isArray(s.products)) {
     fallar('El contenido no tiene el formato esperado');
   }
-  s = migrar(s);
+  s = migrarVentiladores(migrar(s));
   const st = s.store;
   const logo = obj(st.financingLogo);
   const closing = st.closing && typeof st.closing === 'object' ? st.closing : null;
@@ -346,6 +377,7 @@ function normalizar(s) {
     rev: Math.max(1, Math.round(Number(s.rev) || 1)),
     updatedAt: typeof s.updatedAt === 'string' ? s.updatedAt : null,
     store, texts, footer, ab, products, extras,
+    migraciones: items(s.migraciones, m => txt(m, 40), 20).filter(Boolean),
     categories: normalizarCategorias(s.categories),
     flash: normalizarFlash(s.flash),
     shipping: normalizarEnvios(s.shipping),

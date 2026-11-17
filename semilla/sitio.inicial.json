@@ -684,6 +684,96 @@
   ],
   "extras": [
     {
+      "id": "ventilador-pie-delhi-18",
+      "hidden": false,
+      "cat": "ventilacion",
+      "group": "Ventiladores de pie",
+      "brand": "Delhi",
+      "name": "Ventilador de pie Delhi 18\"",
+      "icon": "ventilador",
+      "weight": 6,
+      "price": 99999,
+      "listPrice": 0,
+      "pitch": "Oscilante, con 3 velocidades y 95 W de potencia: refresca ambientes de hasta 30 m².",
+      "details": [
+        "Potencia de 95 W",
+        "3 velocidades",
+        "Oscilante, con altura regulable",
+        "5 aspas de 18\" para un flujo de aire constante",
+        "Cubre hasta 30 m²"
+      ],
+      "gallery": [
+        "/media/ventiladores/delhi-18/foto-5.webp",
+        "/media/ventiladores/delhi-18/foto-4.webp",
+        "/media/ventiladores/delhi-18/foto-1.webp",
+        "/media/ventiladores/delhi-18/foto-2.webp",
+        "/media/ventiladores/delhi-18/foto-3.webp",
+        "/media/ventiladores/delhi-18/foto-6.webp",
+        "/media/ventiladores/delhi-18/foto-7.webp",
+        "/media/ventiladores/delhi-18/foto-8.webp"
+      ],
+      "video": "/media/ventiladores/delhi-18/video.mp4"
+    },
+    {
+      "id": "ventilador-piso-exahome-turbo-20",
+      "hidden": false,
+      "cat": "ventilacion",
+      "group": "Ventiladores de piso",
+      "brand": "Exahome",
+      "name": "Ventilador de piso Exahome Turbo 20\"",
+      "icon": "ventilador",
+      "weight": 6,
+      "price": 129999,
+      "listPrice": 0,
+      "pitch": "Turbo de 20\" con 5 aspas: mucho aire para ambientes grandes, locales y talleres.",
+      "details": [
+        "Potencia de 90 W",
+        "5 aspas de 20\"",
+        "Para el hogar, locales y talleres",
+        "Inclinación regulable"
+      ],
+      "gallery": [
+        "/media/ventiladores/exahome-turbo-20/foto-1.webp",
+        "/media/ventiladores/exahome-turbo-20/foto-2.webp",
+        "/media/ventiladores/exahome-turbo-20/foto-3.webp",
+        "/media/ventiladores/exahome-turbo-20/foto-4.webp",
+        "/media/ventiladores/exahome-turbo-20/foto-5.webp"
+      ],
+      "video": "/media/ventiladores/exahome-turbo-20/video.mp4"
+    },
+    {
+      "id": "ventilador-techo-kanji",
+      "hidden": false,
+      "cat": "ventilacion",
+      "group": "Ventiladores de techo",
+      "brand": "Kanji",
+      "name": "Ventilador de techo Kanji retráctil",
+      "icon": "ventilador",
+      "weight": 7,
+      "price": 399999,
+      "listPrice": 0,
+      "pitch": "Retráctil, con luz y control remoto: las aspas se esconden cuando lo apagás.",
+      "details": [
+        "4 aspas retráctiles",
+        "6 velocidades",
+        "Función reversa para invierno",
+        "Timer y control remoto",
+        "Potencia de 65 W",
+        "Color blanco"
+      ],
+      "gallery": [
+        "/media/ventiladores/kanji-techo/foto-2.webp",
+        "/media/ventiladores/kanji-techo/foto-3.webp",
+        "/media/ventiladores/kanji-techo/foto-4.webp",
+        "/media/ventiladores/kanji-techo/foto-5.webp",
+        "/media/ventiladores/kanji-techo/foto-6.webp",
+        "/media/ventiladores/kanji-techo/foto-7.webp",
+        "/media/ventiladores/kanji-techo/foto-8.webp",
+        "/media/ventiladores/kanji-techo/foto-1.webp"
+      ],
+      "video": "/media/ventiladores/kanji-techo/video.mp4"
+    },
+    {
       "id": "microfono-aitech",
       "hidden": false,
       "group": "Micrófonos",
@@ -799,86 +889,6 @@
       "weight": 0.4
     },
     {
-      "id": "ventilador-torre",
-      "hidden": false,
-      "example": true,
-      "cat": "ventilacion",
-      "group": "Ventiladores",
-      "brand": "",
-      "name": "Ventilador de torre",
-      "icon": "ventilador",
-      "weight": 5,
-      "price": 89999,
-      "listPrice": 0,
-      "pitch": "Lorem ipsum dolor sit amet, aire parejo en todo el ambiente.",
-      "details": [
-        "Lorem ipsum dolor sit amet",
-        "Consectetur adipiscing elit",
-        "Sed do eiusmod tempor"
-      ],
-      "gallery": []
-    },
-    {
-      "id": "ventilador-pie",
-      "hidden": false,
-      "example": true,
-      "cat": "ventilacion",
-      "group": "Ventiladores",
-      "brand": "",
-      "name": "Ventilador de pie 18\"",
-      "icon": "ventilador",
-      "weight": 6,
-      "price": 74999,
-      "listPrice": 0,
-      "pitch": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-      "details": [
-        "Lorem ipsum dolor sit amet",
-        "Consectetur adipiscing elit",
-        "Sed do eiusmod tempor"
-      ],
-      "gallery": []
-    },
-    {
-      "id": "ventilador-escritorio-usb",
-      "hidden": false,
-      "example": true,
-      "cat": "ventilacion",
-      "group": "Ventiladores",
-      "brand": "",
-      "name": "Ventilador de escritorio USB",
-      "icon": "ventilador",
-      "weight": 0.6,
-      "price": 18999,
-      "listPrice": 0,
-      "pitch": "Lorem ipsum: silencioso y se conecta a la compu.",
-      "details": [
-        "Lorem ipsum dolor sit amet",
-        "Consectetur adipiscing elit",
-        "Sed do eiusmod tempor"
-      ],
-      "gallery": []
-    },
-    {
-      "id": "ventilador-mano",
-      "hidden": false,
-      "example": true,
-      "cat": "ventilacion",
-      "group": "Ventiladores",
-      "brand": "",
-      "name": "Mini ventilador de mano",
-      "icon": "ventilador",
-      "weight": 0.3,
-      "price": 12999,
-      "listPrice": 0,
-      "pitch": "Lorem ipsum dolor sit amet, recargable por USB-C.",
-      "details": [
-        "Lorem ipsum dolor sit amet",
-        "Consectetur adipiscing elit",
-        "Sed do eiusmod tempor"
-      ],
-      "gallery": []
-    },
-    {
       "id": "parlante-bluetooth",
       "hidden": false,
       "example": true,
@@ -965,27 +975,28 @@
       "name": "Ventilación",
       "short": "Ventilación",
       "title": "Aire fresco todo el verano",
-      "text": "Ventiladores de torre, de pie, de escritorio y de mano. Elegí el tamaño justo para cada ambiente y pagalo en cuotas con Mercado Pago.",
+      "text": "Ventiladores de pie, de piso y de techo para pasar el verano fresco. Mirá cómo funciona cada uno en su video y pagalo en hasta 12 cuotas con Mercado Pago o en cuotas con tu débito en GO cuotas.",
       "color": "#38bdf8",
       "benefits": [
-        "Silenciosos | Para dormir o trabajar sin ruido de fondo.",
-        "Bajo consumo | Gastan mucho menos que un aire acondicionado.",
-        "Para cada ambiente | Del living al escritorio, o en la mano.",
+        "Mirá cómo funcionan | Cada ventilador tiene su video: ves el tamaño y cuánto aire mueve.",
+        "Para cada ambiente | De pie para el living, de piso para lugares grandes y de techo para no ocupar lugar.",
+        "Pagalo en cuotas | Hasta 12 con Mercado Pago o con tu débito en GO cuotas.",
         "30 días de garantía | Si algo falla, lo resolvemos."
       ],
       "guideTitle": "¿Qué ventilador te conviene?",
       "guide": [
-        "De torre | Livings y dormitorios: ocupa poco lugar y reparte el aire parejo.",
-        "De pie | Ambientes grandes: más potencia y altura regulable.",
-        "De escritorio | Oficina o mesa de luz: se conecta por USB a la compu.",
-        "De mano | Para llevar a todos lados: recargable y liviano."
+        "De pie | Para el living o el dormitorio: oscila, se regula la altura y refresca hasta 30 m².",
+        "De piso | Turbo para ambientes grandes, locales o talleres: mueve mucho aire.",
+        "De techo | No ocupa lugar: retráctil, con luz y control remoto.",
+        "¿No sabés cuál elegir? | Escribinos por WhatsApp y te ayudamos según el ambiente."
       ],
       "faq": [
         "¿Cuánto consume un ventilador? | Mucho menos que un aire acondicionado: lorem ipsum dolor sit amet.",
         "¿Hacen ruido? | Los de torre y los de escritorio son los más silenciosos.",
         "¿Hacen envíos? | Sí, a todo el país con Andreani o Correo Argentino. Calculá el costo más abajo.",
         "¿Tienen garantía? | Todos los productos tienen 30 días de garantía."
-      ]
+      ],
+      "banner": "/media/ventiladores/banner-living.webp"
     },
     {
       "id": "contenido",
@@ -1183,5 +1194,8 @@
         "l": "días de garantía"
       }
     ]
-  }
+  },
+  "migraciones": [
+    "ventiladores-reales"
+  ]
 }

@@ -37,6 +37,9 @@
     check: line('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
     arrow: line('<path d="M5 12h14M13 6l6 6-6 6"/>'),
     plus: line('<path d="M12 5v14M5 12h14"/>'),
+    play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13l10.5-6.5z"/></svg>',
+    mute: line('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/>'),
+    sound: line('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>'),
   };
   const CAT_ICON = { ventilacion: 'ventilador', contenido: 'mic', audio: 'auricular' };
   const catIcon = c => (V && V.icon(CAT_ICON[c.id])) || '';
@@ -59,7 +62,34 @@
       ${text ? `<p class="sx-text">${esc(text)}</p>` : ''}
     </header>`;
 
+  // Banner con foto de fondo (gente usando los productos), la marca, el título y los productos en círculos
+  function banner(c) {
+    const list = V ? V.byCat(c.id) : [];
+    const conVideo = list.some(p => p.video);
+    return `
+      <section class="sx-banner" style="--sx-accent:${esc(c.color)};--sx-foto:url('${esc(c.banner)}')">
+        <div class="sx-banner-in">
+          <div class="sx-banner-copy">
+            <p class="sx-banner-brand"><img src="/media/marca/xoxo-avatar.svg" alt=""><span><b>${esc(STORE.name)} · ${esc(c.name)}</b>
+              <small>${list.length} producto${list.length === 1 ? '' : 's'} · ${esc(dias())} días de garantía</small></span></p>
+            <h1 class="sx-banner-title">${esc(c.title || c.name)}</h1>
+            <p class="sx-banner-text">${esc(c.text)}</p>
+            <div class="sx-ctas">
+              ${conVideo ? `<a class="sx-btn sx-btn-light" href="#sx-videos" data-sx-go="sx-videos">${I.play}Mirá los videos</a>` : ''}
+              <a class="sx-btn ${conVideo ? 'sx-btn-glass' : 'sx-btn-light'}" href="#sx-productos" data-sx-go="sx-productos">Ver los productos ${I.arrow}</a>
+            </div>
+          </div>
+          ${list.length ? `<div class="sx-banner-prods" aria-label="Productos de ${esc(c.name)}">${list.slice(0, 3).map(p => `
+            <a class="sx-bp js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}">
+              <span class="sx-bp-img">${(p.gallery || [])[0] ? `<img src="${esc(p.gallery[0])}" alt="" loading="lazy">` : catIcon(c)}</span>
+              <span class="sx-bp-name">${esc(p.group || p.name)}</span>
+            </a>`).join('')}</div>` : ''}
+        </div>
+      </section>`;
+  }
+
   function hero(c) {
+    if (c.banner) return banner(c);
     const n = V ? V.byCat(c.id).length : 0;
     return `
       <section class="sx-hero" style="--sx-accent:${esc(c.color)}">
@@ -96,6 +126,32 @@
           ${grupos.length > 1 ? `<div class="sx-chips" role="group" aria-label="Filtrar">${['', ...grupos].map(g => `<button type="button" class="sx-chip" data-g="${esc(g)}" data-cat="${esc(c.id)}" aria-pressed="${!g}">${esc(g || 'Todos')}</button>`).join('')}</div>` : ''}
         </div>
         <div class="sx-grid">${list.length ? V.gridHTML('', c.id) : '<p class="sx-empty">Muy pronto vas a ver los productos de esta categoría acá.</p>'}</div>
+      </section>`;
+  }
+
+  // Videos de cada producto, como reels: arrancan solos y sin sonido; el botón activa el sonido
+  function videos(c) {
+    const list = (V ? V.byCat(c.id) : []).filter(p => p.video);
+    if (!list.length) return '';
+    return `
+      <section class="sx-videos" id="sx-videos" style="--sx-accent:${esc(c.color)}">
+        ${head('Mirá cómo funcionan', 'Los videos de cada producto')}
+        <div class="sx-reels">
+          ${list.map(p => `
+            <article class="sx-reel">
+              <div class="sx-reel-media">
+                ${V.videoHTML(p)}
+                <button class="sx-sound" type="button" aria-pressed="false" aria-label="Activar el sonido del video de ${esc(p.name)}">${I.mute}</button>
+              </div>
+              <div class="sx-reel-info">
+                <p class="sx-kicker">${esc(p.group || c.name)}${p.brand ? ` · ${esc(p.brand)}` : ''}</p>
+                <h3><a class="js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}">${esc(p.name)}</a></h3>
+                ${V.priceHTML(p)}
+                <div class="sx-reel-ctas">${PAY ? V.buyButton(p, 'Comprar') : V.waLink(p, 'Pedilo')}
+                  <a class="sx-more js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}">Ver detalles</a></div>
+              </div>
+            </article>`).join('')}
+        </div>
       </section>`;
   }
 
@@ -196,7 +252,7 @@
   // La home completa de una categoría
   function categoria(c, base) {
     return `<div class="sx-page" style="--sx-accent:${esc(c.color)}" data-sx-cat="${esc(c.id)}">
-      ${hero(c)}${beneficios(c)}${productos(c)}${guia(c)}${pasos()}${calculadora(c.id)}${garantia()}${faq(c)}${otras(c, base)}
+      ${hero(c)}${videos(c)}${beneficios(c)}${productos(c)}${guia(c)}${pasos()}${calculadora(c.id)}${garantia()}${faq(c)}${otras(c, base)}
     </div>`;
   }
 
@@ -243,6 +299,20 @@
     pintar();
   }
 
+  // Sonido de los reels: al activar uno, los demás se callan
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.sx-sound');
+    if (!b) return;
+    const v = b.closest('.sx-reel-media').querySelector('video');
+    const on = v.muted;
+    $$('.sx-reel-media video').forEach(x => { x.muted = true; });
+    $$('.sx-sound').forEach(x => { x.setAttribute('aria-pressed', 'false'); x.innerHTML = I.mute; });
+    v.muted = !on;
+    if (on) { v.dataset.played = '1'; const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+    b.setAttribute('aria-pressed', String(on));
+    b.innerHTML = on ? I.sound : I.mute;
+  });
+
   // Los botones "Ver los productos" y "Calculá tu envío" bajan sin tocar la dirección (los diseños usan el # para navegar)
   document.addEventListener('click', e => {
     const a = e.target.closest('[data-sx-go]');
@@ -275,5 +345,5 @@
     });
   }
 
-  window.Secciones = { nav, categoria, info, hero, beneficios, productos, guia, pasos, garantia, calculadora, faq, otras, init, icon: k => I[k], catIcon, cats: CATS };
+  window.Secciones = { nav, categoria, info, hero, banner, videos, beneficios, productos, guia, pasos, garantia, calculadora, faq, otras, init, icon: k => I[k], catIcon, cats: CATS };
 })();

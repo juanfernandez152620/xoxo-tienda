@@ -344,7 +344,7 @@
   function armar() {
     const main = $('#contenido');
     main.innerHTML = CAT
-      ? [heroCategoria(CAT), franja(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.beneficios(CAT)}</div>`,
+      ? [CAT.banner ? `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.hero(CAT)}${window.Secciones.videos(CAT)}</div>` : heroCategoria(CAT), franja(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.beneficios(CAT)}</div>`,
         productosCategoria(CAT), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.guia(CAT)}</div>`,
         comoComprar(), calculadora(), garantia(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.faq(CAT)}</div>`, categorias(CAT)].join('')
       : [heroHome(), socios(), numeros(), equipo(), sucursales(), garantia(), franja(), categorias(), productosHome(), comoComprar(), calculadora()].join('');

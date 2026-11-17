@@ -668,6 +668,7 @@
         ${field('Precio normal (opcional)', b + '.listPrice', { type: 'number', live: 'title', help: 'Si es mayor al precio, se muestra tachado y con el % de descuento.' })}
       </div></fieldset>
       ${photosField(p, i, 'extras', 'La primera es la principal: la de la tarjeta.')}
+      <fieldset><legend>Video</legend>${mediaField('Video del producto (.mp4, vertical)', b + '.video', 'Se reproduce solo y sin sonido en la tarjeta, y es lo primero de la ficha. Hasta 30 MB.')}</fieldset>
       <fieldset><legend>Textos</legend>
         ${field('Frase principal', b + '.pitch')}
         ${area('Descripción (un renglón por línea)', b + '.details', { kind: 'lines', rows: 5 })}
@@ -760,7 +761,8 @@
         ${field('Nombre corto (menú)', `categories.${i}.short`)}
         ${field('Título', `categories.${i}.title`)}
         <label class="field">Color ${color(`categories.${i}.color`, `Color de ${c.name}`)}</label>
-      </div>${area('Texto', `categories.${i}.text`)}
+      </div>
+        ${mediaField('Foto de fondo del banner', `categories.${i}.banner`, 'Gente usando los productos. Horizontal, con lugar a la izquierda para el texto. Sin foto, la portada muestra el ícono.')}${area('Texto', `categories.${i}.text`)}
         ${area('Beneficios (uno por renglón: Título | texto)', `categories.${i}.benefits`, { kind: 'lines', rows: 4 })}
         ${field('Título de la guía', `categories.${i}.guideTitle`)}
         ${area('Guía para elegir (uno por renglón: Título | texto)', `categories.${i}.guide`, { kind: 'lines', rows: 4, help: 'Si el título nombra un producto (ej. "De torre"), la tarjeta muestra ese producto con su precio.' })}

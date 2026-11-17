@@ -48,6 +48,8 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+/* Lo marcado como hidden no se ve nunca (la ficha y el checkout se cierran así) */
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; scroll-padding-top: calc(var(--head-h) + var(--fl-h, 0px) + 12px); -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--font); -webkit-font-smoothing: antialiased; overflow-x: clip; }
 img, svg { display: block; max-width: 100%; }
