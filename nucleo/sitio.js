@@ -284,6 +284,15 @@ function migrarVentiladores2(s) {
   return { ...s, extras, migraciones: [...hechas, 'ventiladores-v2'] };
 }
 
+// El envío cuesta lo mismo para cualquier producto (17/11/2026): sin recargo por kg. Pasa una sola vez; si
+// después se vuelve a poner un recargo en /admin → Envíos, se respeta.
+function migrarEnvioParejo(s) {
+  const hechas = Array.isArray(s.migraciones) ? s.migraciones : [];
+  if (hechas.includes('envio-parejo') || !s.shipping || !s.shipping.rates) return s;
+  const rates = Object.fromEntries(Object.entries(s.shipping.rates).map(([k, r]) => [k, r && typeof r === 'object' ? { ...r, extraKg: 0 } : r]));
+  return { ...s, shipping: { ...s.shipping, rates }, migraciones: [...hechas, 'envio-parejo'] };
+}
+
 function migrarSinCelulares(s) {
   const t = s.texts || {};
   const viejo = {
@@ -327,7 +336,7 @@ function normalizar(s) {
   if (!s || typeof s !== 'object' || !s.store || typeof s.store !== 'object' || !Array.isArray(s.products)) {
     fallar('El contenido no tiene el formato esperado');
   }
-  s = migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s))));
+  s = migrarEnvioParejo(migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s)))));
   const st = s.store;
   const logo = obj(st.financingLogo);
   const closing = st.closing && typeof st.closing === 'object' ? st.closing : null;

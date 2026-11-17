@@ -65,7 +65,8 @@
   const videoHTML = (p, controls = false, auto = true) => `<video class="x-video" src="${esc(p.video)}" poster="${esc((p.gallery || [])[0] || '')}"
     ${auto ? 'muted loop data-auto' : ''} playsinline preload="none"${controls ? ' controls' : ''} aria-label="Video de ${esc(p.name)}"></video>`;
   // En la tarjeta va siempre la foto (con fondo blanco); si el producto tiene video, un aviso y se ve en la ficha
-  const coverHTML = p => `${(p.gallery || [])[0] ? photoHTML(p, p.gallery[0], p.name) : artHTML(p)}${p.video ? `<span class="x-vtag">${ICON.play}Video</span>` : ''}`;
+  // tag = false: solo la foto, sin el aviso de video (la usa "También te puede servir")
+  const coverHTML = (p, tag = true) => `${(p.gallery || [])[0] ? photoHTML(p, p.gallery[0], p.name) : artHTML(p)}${tag && p.video ? `<span class="x-vtag">${ICON.play}Video</span>` : ''}`;
   // Red social (<script ... data-preview>): la tarjeta trae el video escondido y arranca al pasar el mouse
   // o cuando queda en el medio de la pantalla del celular (ver "Videos de las tarjetas" más abajo)
   const PREVIEW = Boolean(document.currentScript && document.currentScript.hasAttribute('data-preview'));
@@ -87,8 +88,12 @@
   const cuotasText = () => `Hasta 12 cuotas con Mercado Pago${STORE.financing ? ` o ${STORE.extras.cuotas} con tu débito en ${STORE.financing}` : ''}`;
   const goLogo = () => (STORE.financingLogo && STORE.financingLogo.color
     ? `<img class="x-go" src="${esc(STORE.financingLogo.color)}" alt="${esc(STORE.financing)}">` : esc(STORE.financing));
-  const cuotasHTML = () => `<p class="x-cuotas">Hasta 12 cuotas con Mercado Pago</p>${STORE.financing
-    ? `<p class="x-cuotas x-debito">o <b>${esc(STORE.extras.cuotas)} cuotas</b> con tu <b>débito</b> en ${goLogo()}</p>` : ''}`;
+  // corto: en la tarjeta (angosta en el celular) dos renglones cortos; el texto completo va en la ficha
+  const cuotasHTML = (corto = false) => (corto
+    ? `<p class="x-cuotas"><b>12 cuotas</b> con crédito</p>${STORE.financing
+      ? `<p class="x-cuotas x-debito"><b>${esc(STORE.extras.cuotas)} cuotas</b> con débito ${goLogo()}</p>` : ''}`
+    : `<p class="x-cuotas">Hasta 12 cuotas con Mercado Pago</p>${STORE.financing
+      ? `<p class="x-cuotas x-debito">o <b>${esc(STORE.extras.cuotas)} cuotas</b> con tu <b>débito</b> en ${goLogo()}</p>` : ''}`);
 
   function buyMessage(p) {
     const lines = ['¡Hola! Vi este producto en la web y me interesa:', `🛒 ${p.name}`, `💵 ${money(p.price)}`, `💳 ${cuotasText()}`, '¿Sigue disponible?'];
@@ -105,14 +110,14 @@
     return `
       <article class="xcard">
         <a class="xcard-media js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}" aria-label="Ver ${esc(p.name)}">
-          ${coverHTML(p)}${previewHTML(p)}
+          ${coverHTML(p, PREVIEW)}${previewHTML(p)}
           ${off ? (FL ? `<span class="x-off fl-only">-${off}%</span>` : `<span class="x-off">${off}% OFF</span>`) : ''}
         </a>
         <div class="xcard-info">
           <p class="x-kicker">${esc(kicker(p))}</p>
           <h3 class="x-name"><a class="js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}">${esc(p.name)}</a></h3>
           ${priceHTML(p)}
-          ${cuotasHTML()}
+          ${cuotasHTML(true)}
           ${PAY ? buyButton(p, 'Comprar') : waLink(p, 'Pedilo')}
         </div>
       </article>`;
@@ -178,7 +183,7 @@
         <h3>También te puede servir</h3>
         ${others.map(x => `
           <a class="ficha-rel-item js-ficha" href="#x=${esc(x.id)}" data-x="${esc(x.id)}">
-            <span class="ficha-rel-art">${coverHTML(x)}</span>
+            <span class="ficha-rel-art">${coverHTML(x, false)}</span>
             <span><b>${esc(x.name)}</b><small>${money(x.price)}</small></span>
           </a>`).join('')}
       </div>`;

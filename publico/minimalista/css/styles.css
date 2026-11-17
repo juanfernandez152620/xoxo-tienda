@@ -1165,3 +1165,14 @@ img, svg, video { display: block; max-width: 100%; }
 .alt .go-logo, .pdp-alt .go-logo { height: 16px; width: auto; vertical-align: -3px; }
 .pdp-alt { font-size: 15px; padding: 8px 12px; }
 @media (max-width: 600px) { .alt { font-size: 12.5px; padding: 5px 8px; } }
+
+/* Celular: al bajar, el menú se esconde detrás de la barra del descuento flash (que queda fija); al subir, vuelve */
+@media (max-width: 899px) {
+  .head { transition: transform .25s ease, border-color .2s; }
+  .head.oculto { transform: translateY(-100%); }
+}
+@media (max-width: 899px) and (prefers-reduced-motion: reduce) {
+  .head { transition: none; }
+}
+/* La barra del descuento flash queda siempre arriba: sin la etiqueta flotante de abajo, que tapaba los botones */
+.fl-pill { display: none !important; }

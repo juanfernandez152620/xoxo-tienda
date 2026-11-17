@@ -525,7 +525,9 @@
     if (!CAT && PRODUCTS.length) return;
     document.body.classList.add('cat-page');
     $$('.js-favs').forEach(b => { b.hidden = !PRODUCTS.length; });
-    $('#home').insertAdjacentHTML('afterbegin', `<div id="cat-home">${CAT ? window.Secciones.categoria(CAT, '/minimalista') : window.Secciones.inicio('/minimalista')}</div>`);
+    // Los productos con video van como "Productos destacados": en el celular uno debajo del otro
+    const o = { videos: { title: 'Productos destacados', lista: true } };
+    $('#home').insertAdjacentHTML('afterbegin', `<div id="cat-home">${CAT ? window.Secciones.categoria(CAT, '/minimalista', o) : window.Secciones.inicio('/minimalista', o)}</div>`);
   }
 
 
@@ -989,16 +991,35 @@
   });
 
   // Alto real del header (en celular ocupa dos renglones) para las barras que quedan fijas debajo.
+  // Con el menú escondido (celular, al bajar) solo cuenta la barra del flash.
   const setHeadH = () => {
     const fl = document.querySelector('.fl-bar:not([hidden])');
-    document.documentElement.style.setProperty('--head-h', $('.head').offsetHeight + (fl ? fl.offsetHeight : 0) + 'px');
+    const head = $('.head');
+    document.documentElement.style.setProperty('--head-h', (head.classList.contains('oculto') ? 0 : head.offsetHeight) + (fl ? fl.offsetHeight : 0) + 'px');
   };
   addEventListener('resize', setHeadH);
   if (document.fonts) document.fonts.ready.then(setHeadH);
 
+  // Celular: al bajar, el menú se esconde y queda solo la barra del descuento flash; al subir un poco, vuelve
+  const movil = matchMedia('(max-width: 899px)');
+  let ultimoY = scrollY;
+  const menuAlBajar = () => {
+    const head = $('.head');
+    const y = scrollY;
+    const d = y - ultimoY;
+    if (Math.abs(d) < 8 && y > 10) return;
+    ultimoY = y;
+    const ocultar = movil.matches && d > 0 && y > head.offsetHeight + 80;
+    if (ocultar === head.classList.contains('oculto')) return;
+    head.classList.toggle('oculto', ocultar);
+    setHeadH();
+  };
+  movil.addEventListener('change', () => { $('.head').classList.remove('oculto'); setHeadH(); });
+
   addEventListener('popstate', route);
   addEventListener('scroll', () => {
     $('.head').classList.toggle('scrolled', scrollY > 8);
+    menuAlBajar();
     schedulePick();
   }, { passive: true });
   addEventListener('resize', schedulePick);

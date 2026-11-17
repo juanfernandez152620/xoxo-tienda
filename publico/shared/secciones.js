@@ -133,12 +133,13 @@
   }
 
   // Videos de cada producto, como reels: arrancan solos y sin sonido; el botón activa el sonido
-  function videos(c) {
+  // o.title cambia el título; o.lista: en el celular van uno debajo del otro en vez de deslizarse de costado
+  function videos(c, o = {}) {
     const list = (V ? (c ? V.byCat(c.id) : EXTRAS) : []).filter(p => p.video);
     if (!list.length) return '';
     return `
-      <section class="sx-videos" id="sx-videos" style="--sx-accent:${esc(c ? c.color : 'var(--sx-accent)')}">
-        ${head('Mirá cómo funcionan', 'Los videos de cada producto')}
+      <section class="sx-videos${o.lista ? ' sx-videos-lista' : ''}" id="sx-videos" style="--sx-accent:${esc(c ? c.color : 'var(--sx-accent)')}">
+        ${head('Mirá cómo funcionan', o.title || 'Los videos de cada producto')}
         <div class="sx-reels">
           ${list.map(p => `
             <article class="sx-reel">
@@ -204,20 +205,15 @@
       </section>`;
   }
 
-  function calculadora(catId = '') {
+  // El envío cuesta lo mismo para cualquier producto (17/11/2026): alcanza con la provincia o el código postal
+  function calculadora() {
     if (!SHIP || !EN || !V) return '';
-    const orden = catId ? [catOf(catId), ...CATS.filter(c => c.id !== catId)] : CATS;
-    const grupos = orden.filter(Boolean).map(c => {
-      const list = V.byCat(c.id);
-      return list.length ? `<optgroup label="${esc(c.name)}">${list.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</optgroup>` : '';
-    }).join('');
     return `
       <section class="sx-calc" id="sx-envios">
         <div class="sx-calc-copy">
           ${head('Envíos a todo el país', 'Calculá tu envío', 'Con Andreani y Correo Argentino, a domicilio o a sucursal. O retirás gratis en una de nuestras sucursales.')}
         </div>
         <form class="sx-calc-form" novalidate>
-          <label class="sx-fld"><span>¿Qué vas a comprar?</span><select name="producto">${grupos}</select></label>
           <div class="sx-fld-row">
             <label class="sx-fld"><span>Provincia</span>
               <select name="provincia"><option value="">Elegí…</option>${EN.PROVINCIAS.map(p => `<option>${esc(p.nombre)}</option>`).join('')}</select></label>
@@ -252,9 +248,10 @@
   }
 
   // La home completa de una categoría
-  function categoria(c, base) {
+  // o.videos: opciones de la sección de videos de ese diseño (ver videos())
+  function categoria(c, base, o = {}) {
     return `<div class="sx-page" style="--sx-accent:${esc(c.color)}" data-sx-cat="${esc(c.id)}">
-      ${hero(c)}${videos(c)}${beneficios(c)}${productos(c)}${guia(c)}${pasos()}${calculadora(c.id)}${garantia()}${faq(c)}${otras(c, base)}
+      ${hero(c)}${videos(c, o.videos)}${beneficios(c)}${productos(c)}${guia(c)}${pasos()}${calculadora(c.id)}${garantia()}${faq(c)}${otras(c, base)}
     </div>`;
   }
 
@@ -333,9 +330,9 @@
   }
 
   // El inicio completo, para los diseños que antes mostraban celulares (Red social y Minimalista)
-  function inicio(base) {
+  function inicio(base, o = {}) {
     return `<div class="sx-page sx-inicio">
-      ${portadaInicio(base)}${beneficiosInicio()}${categoriasInicio(base)}${estantes(base)}${videos(null)}${sucursales()}${pasos()}${calculadora()}${garantia()}
+      ${portadaInicio(base)}${beneficiosInicio()}${categoriasInicio(base)}${estantes(base)}${videos(null, o.videos)}${sucursales()}${pasos()}${calculadora()}${garantia()}
     </div>`;
   }
 
@@ -345,7 +342,6 @@
   /* ---------- Comportamiento ---------- */
   function calc(form) {
     const out = $('.sx-calc-out', form);
-    const byId = Object.fromEntries(EXTRAS.map(p => [p.id, p]));
     try {
       const b = JSON.parse(localStorage.getItem('cc:buyer') || 'null') || {};
       if (b.province) form.elements.provincia.value = b.province;
@@ -357,19 +353,20 @@
         localStorage.setItem('cc:buyer', JSON.stringify({ ...b, province: form.elements.provincia.value, cp: form.elements.cp.value }));
       } catch {}
     };
+    // Si en /admin → Envíos se vuelve a poner un recargo por kg, los precios se muestran "desde" (1 kg)
+    const porKg = Object.values(SHIP.rates || {}).filter(r => r && r.on && r.extraKg > 0);
     function pintar() {
-      const p = byId[form.elements.producto.value];
       const prov = EN.provincia(form.elements.provincia.value);
       if (!prov) { out.innerHTML = '<p class="sx-hint">Elegí tu provincia o escribí tu código postal.</p>'; return; }
-      const ops = EN.opciones(SHIP, prov.zona, EN.peso(p), p ? p.price : 0);
+      const ops = EN.opciones(SHIP, prov.zona, 1, 0);
       const cerca = (STORE.branches || []).filter(b => b.province && EN.provincia(b.province) && EN.provincia(b.province).nombre === prov.nombre);
       out.innerHTML = `
         <table class="sx-quotes"><tbody>
           ${SHIP.pickup ? `<tr><td><b>Retiro en sucursal</b><small>${cerca.length ? `${cerca.length} sucursal${cerca.length === 1 ? '' : 'es'} en ${esc(prov.nombre)}` : 'En nuestras sucursales'}</small></td><td>Gratis</td></tr>` : ''}
-          ${ops.map(o => `<tr class="sx-q-${o.empresa}"><td><b>${esc(o.nombre)}</b><small>Llega en ${esc(EN.diasTexto(o.dias))}</small></td><td>${o.costo ? money(o.costo) : 'Gratis'}</td></tr>`).join('')}
+          ${ops.map(o => `<tr class="sx-q-${o.empresa}"><td><b>${esc(o.nombre)}</b><small>Llega en ${esc(EN.diasTexto(o.dias))}</small></td><td>${o.costo ? `${porKg.length ? 'Desde ' : ''}${money(o.costo)}` : 'Gratis'}</td></tr>`).join('')}
         </tbody></table>
-        <p class="sx-note">Precio estimado para ${esc(p ? p.name : 'tu compra')} a ${esc(prov.nombre)}. El total exacto lo ves antes de pagar.</p>
-        ${p && PAY ? `<button type="button" class="sx-btn js-x-buy" data-x="${esc(p.id)}">Comprar ${esc(p.name)} ${I.arrow}</button>` : ''}`;
+        <p class="sx-note">${porKg.length ? 'Precio para productos de hasta 1 kg; los más pesados suman un poco más.' : 'El mismo precio para cualquier producto.'}
+          ${SHIP.freeFrom > 0 ? `Gratis en compras desde ${money(SHIP.freeFrom)}.` : ''} El total exacto lo ves antes de pagar.</p>`;
     }
     form.addEventListener('change', () => { pintar(); recordar(); });
     form.elements.cp.addEventListener('input', () => {
@@ -400,9 +397,6 @@
     $$('.sx-calc-form', root).forEach(form => {
       if (form.dataset.sxOn) return;
       form.dataset.sxOn = '1';
-      const cat = form.closest('[data-sx-cat]');
-      const first = cat && V.byCat(cat.dataset.sxCat)[0];
-      if (first) form.elements.producto.value = first.id;
       calc(form);
     });
     $$('.sx-chips', root).forEach(box => {

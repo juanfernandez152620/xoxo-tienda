@@ -292,3 +292,7 @@ html.x-lock, html.x-lock body { overflow: hidden; }
 html:root { --x-stage: #ffffff; --x-shadow: none; }
 .xcard-media, .ficha-slide { background: #ffffff; }
 .x-photo { padding: 6%; }
+
+/* Tarjeta: las dos líneas de cuotas juntas, y el aire antes del botón (que sigue abajo de todo) */
+.xcard-info .x-cuotas { margin-bottom: 0; }
+.xcard-info .x-cuotas:last-of-type { padding-bottom: 10px; }

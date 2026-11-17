@@ -1077,7 +1077,7 @@
           9400,
           12700
         ],
-        "extraKg": 1200
+        "extraKg": 0
       },
       "correo": {
         "on": true,
@@ -1093,7 +1093,7 @@
           8100,
           10900
         ],
-        "extraKg": 1000
+        "extraKg": 0
       }
     },
     "days": [
@@ -1198,6 +1198,7 @@
   },
   "migraciones": [
     "ventiladores-reales",
-    "ventiladores-v2"
+    "ventiladores-v2",
+    "envio-parejo"
   ]
 }

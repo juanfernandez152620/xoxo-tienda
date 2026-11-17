@@ -744,8 +744,8 @@
           ${fila('correo', 'domicilio', 'Correo Argentino a domicilio')}${fila('correo', 'sucursal', 'Correo Argentino a sucursal')}
         </tbody></table></div>
       <div class="grid-3">
-        ${field('Andreani: cada kg de más', 'shipping.rates.andreani.extraKg', { type: 'number' })}
-        ${field('Correo Argentino: cada kg de más', 'shipping.rates.correo.extraKg', { type: 'number' })}
+        ${field('Andreani: cada kg de más (0 = mismo envío para todo)', 'shipping.rates.andreani.extraKg', { type: 'number' })}
+        ${field('Correo Argentino: cada kg de más (0 = mismo envío para todo)', 'shipping.rates.correo.extraKg', { type: 'number' })}
         ${field('Envío gratis desde (0 = nunca)', 'shipping.freeFrom', { type: 'number' })}
       </div>
       <div class="row">${check('Andreani', 'shipping.rates.andreani.on')}${check('Correo Argentino', 'shipping.rates.correo.on')}${check('Retiro gratis en sucursal', 'shipping.pickup')}</div>

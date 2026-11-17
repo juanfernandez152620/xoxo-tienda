@@ -203,6 +203,9 @@
   .sx-reels { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: calc(var(--sx-gutter) * -1); padding-inline: var(--sx-gutter); scrollbar-width: none; }
   .sx-reels::-webkit-scrollbar { display: none; }
   .sx-reel { flex: 0 0 min(78vw, 320px); scroll-snap-align: start; }
+  /* Destacados en lista: uno debajo del otro, y el video arranca en el que queda en el medio al bajar */
+  .sx-videos-lista .sx-reels { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; overflow: visible; margin-inline: 0; padding-inline: 0; scroll-snap-type: none; }
+  .sx-videos-lista .sx-reel { flex: none; }
 }
 
 /* ---------- Inicio sin celulares ---------- */
