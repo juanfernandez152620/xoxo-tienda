@@ -34,7 +34,11 @@
     mic: line('<rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"/>'),
     tripode: line('<rect x="7.5" y="2.5" width="9" height="6" rx="1.5"/><path d="M12 8.5v5M12 13.5l-6.5 8M12 13.5l6.5 8M12 13.5v8"/>'),
     luz: line('<path d="M9.5 18.5h5M10.5 21.5h3"/><path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.8.6 1.3 1.4 1.3 2.2v2h5v-2c0-.8.5-1.6 1.3-2.2A6.5 6.5 0 0 0 12 2.5z"/>'),
-    ventilador: line('<circle cx="12" cy="10" r="1.6"/><path d="M12 8.4c-.4-2.6.6-5 3-5.4 2.2-.3 2.9 2.2 1 3.6-1.3 1-2.6 1.4-4 1.8M13.4 11c2.3 1.2 3.7 3.4 2.7 5.6-.9 2-3.3 1.3-3.4-1-.1-1.6.3-3 .7-4.6M10.6 10.8c-2.1 1.6-4.7 1.9-6.1 0-1.3-1.8.5-3.6 2.6-2.6 1.4.7 2.4 1.7 3.5 2.6M12 11.6V19M8 21.5h8"/>'),
+    'ventilador-pie': "<svg viewBox=\"0 0 48 48\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"15\" r=\"11\"/><circle cx=\"24\" cy=\"15\" r=\"7.5\" stroke-dasharray=\"1.5 2.2\" stroke-width=\"1.2\"/><path transform=\"rotate(0 24 15)\" d=\"M24 13.4c.4-4.4 2.8-7.2 5.6-6.4.2-.1 2.0.4 1.6 4.4-.1 2.4-2.4 3.6-5.6 2.4\"/><path transform=\"rotate(120 24 15)\" d=\"M24 13.4c.4-4.4 2.8-7.2 5.6-6.4.2-.1 2.0.4 1.6 4.4-.1 2.4-2.4 3.6-5.6 2.4\"/><path transform=\"rotate(240 24 15)\" d=\"M24 13.4c.4-4.4 2.8-7.2 5.6-6.4.2-.1 2.0.4 1.6 4.4-.1 2.4-2.4 3.6-5.6 2.4\"/><circle cx=\"24\" cy=\"15\" r=\"1.8\"/><path d=\"M24 26v14M21.5 30h5\"/><ellipse cx=\"24\" cy=\"42\" rx=\"9\" ry=\"2.4\"/></svg>",
+    ventilador: "<svg viewBox=\"0 0 48 48\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"15\" r=\"11\"/><circle cx=\"24\" cy=\"15\" r=\"7.5\" stroke-dasharray=\"1.5 2.2\" stroke-width=\"1.2\"/><path transform=\"rotate(0 24 15)\" d=\"M24 13.4c.4-4.4 2.8-7.2 5.6-6.4.2-.1 2.0.4 1.6 4.4-.1 2.4-2.4 3.6-5.6 2.4\"/><path transform=\"rotate(120 24 15)\" d=\"M24 13.4c.4-4.4 2.8-7.2 5.6-6.4.2-.1 2.0.4 1.6 4.4-.1 2.4-2.4 3.6-5.6 2.4\"/><path transform=\"rotate(240 24 15)\" d=\"M24 13.4c.4-4.4 2.8-7.2 5.6-6.4.2-.1 2.0.4 1.6 4.4-.1 2.4-2.4 3.6-5.6 2.4\"/><circle cx=\"24\" cy=\"15\" r=\"1.8\"/><path d=\"M24 26v14M21.5 30h5\"/><ellipse cx=\"24\" cy=\"42\" rx=\"9\" ry=\"2.4\"/></svg>",
+    'ventilador-piso': "<svg viewBox=\"0 0 48 48\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"20\" r=\"14\"/><circle cx=\"24\" cy=\"20\" r=\"10\" stroke-dasharray=\"1.5 2.2\" stroke-width=\"1.2\"/><path transform=\"rotate(0 24 20)\" d=\"M24 18.4c.4-5.5 3.5-9.0 7.0-8.0.2-.1 2.5.4 2.0 5.5-.1 3.0-3.0 4.5-7.0 3.0\"/><path transform=\"rotate(120 24 20)\" d=\"M24 18.4c.4-5.5 3.5-9.0 7.0-8.0.2-.1 2.5.4 2.0 5.5-.1 3.0-3.0 4.5-7.0 3.0\"/><path transform=\"rotate(240 24 20)\" d=\"M24 18.4c.4-5.5 3.5-9.0 7.0-8.0.2-.1 2.5.4 2.0 5.5-.1 3.0-3.0 4.5-7.0 3.0\"/><circle cx=\"24\" cy=\"20\" r=\"2.2\"/><path d=\"M10.5 22 7.5 39M37.5 22l3 17M4 39h7.5M36.5 39H44\"/></svg>",
+    'ventilador-techo': "<svg viewBox=\"0 0 48 48\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17 5h14\"/><path d=\"M20.5 5v2.5h7V5\"/><path d=\"M24 7.5v7\"/><path d=\"M16.5 14.5h15l-2 5h-11z\"/><path d=\"M16.8 16.2C10.5 15.6 4.6 16.4 3 17.6c1.7 1 8.3 1.2 14.4.3M31.2 16.2c6.3-.6 12.2.2 13.8 1.4-1.7 1-8.3 1.2-14.4.3\"/><path d=\"M19.5 19.5a4.5 3.2 0 0 0 9 0\"/><path d=\"M21.5 27.5l-1 2M24 28v2.3M26.5 27.5l1 2\" stroke-width=\"1.4\"/></svg>",
+    ventiladorViejo: line('<circle cx="12" cy="10" r="1.6"/><path d="M12 8.4c-.4-2.6.6-5 3-5.4 2.2-.3 2.9 2.2 1 3.6-1.3 1-2.6 1.4-4 1.8M13.4 11c2.3 1.2 3.7 3.4 2.7 5.6-.9 2-3.3 1.3-3.4-1-.1-1.6.3-3 .7-4.6M10.6 10.8c-2.1 1.6-4.7 1.9-6.1 0-1.3-1.8.5-3.6 2.6-2.6 1.4.7 2.4 1.7 3.5 2.6M12 11.6V19M8 21.5h8"/>'),
     parlante: line('<rect x="5.5" y="2.5" width="13" height="19" rx="3"/><circle cx="12" cy="14.5" r="3.5"/><circle cx="12" cy="6.8" r="1.4"/>'),
     auricular: line('<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13.5" width="4.5" height="7" rx="1.8"/><rect x="16.5" y="13.5" width="4.5" height="7" rx="1.8"/>'),
     play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13l10.5-6.5z"/></svg>',
@@ -58,10 +62,10 @@
   }
   const photoHTML = (p, src, alt) => `<img class="x-photo" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async">`;
   // Video del producto: arranca solo y sin sonido cuando aparece en pantalla (ver "Videos" más abajo)
-  const videoHTML = (p, controls = false) => `<video class="x-video" src="${esc(p.video)}" poster="${esc((p.gallery || [])[0] || '')}"
-    muted loop playsinline preload="none" data-auto${controls ? ' controls' : ''} aria-label="Video de ${esc(p.name)}"></video>`;
-  const coverHTML = p => (p.video ? `${videoHTML(p)}<span class="x-vtag">${ICON.play}Video</span>`
-    : (p.gallery || [])[0] ? photoHTML(p, p.gallery[0], p.name) : artHTML(p));
+  const videoHTML = (p, controls = false, auto = true) => `<video class="x-video" src="${esc(p.video)}" poster="${esc((p.gallery || [])[0] || '')}"
+    ${auto ? 'muted loop data-auto' : ''} playsinline preload="none"${controls ? ' controls' : ''} aria-label="Video de ${esc(p.name)}"></video>`;
+  // En la tarjeta va siempre la foto (con fondo blanco); si el producto tiene video, un aviso y se ve en la ficha
+  const coverHTML = p => `${(p.gallery || [])[0] ? photoHTML(p, p.gallery[0], p.name) : artHTML(p)}${p.video ? `<span class="x-vtag">${ICON.play}Video</span>` : ''}`;
 
   /* ---------- Precio y botones ---------- */
   function priceHTML(p) {
@@ -308,6 +312,11 @@
     new MutationObserver(() => mirarVideos()).observe(document.documentElement, { childList: true, subtree: true });
     addEventListener('DOMContentLoaded', () => mirarVideos());
   }
+
+  document.addEventListener('play', e => {
+    if (e.target.tagName !== 'VIDEO') return;
+    $$('video').forEach(v => { if (v !== e.target && !v.paused) v.pause(); });
+  }, true);
 
   const byCat = cat => filter('', cat);
   window.Vidriera = {

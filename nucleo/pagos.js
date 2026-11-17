@@ -277,7 +277,7 @@ async function crear(body) {
   if (!sitio.VARIANTS.includes(body.version)) return [400, { error: 'Versión de la tienda desconocida.' }];
 
   const site = sitio.cargar();
-  const product = [...site.products, ...site.extras].find(p => !p.hidden && p.id === body.productId);
+  const product = [...(site.store.phones ? site.products : []), ...site.extras].find(p => !p.hidden && p.id === body.productId);
   if (!product) return [404, { error: 'Ese producto ya no está en el catálogo.' }];
   const check = validar(body);
   if (check.error) return [400, { error: check.error }];

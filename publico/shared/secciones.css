@@ -204,3 +204,38 @@
   .sx-reels::-webkit-scrollbar { display: none; }
   .sx-reel { flex: 0 0 min(78vw, 320px); scroll-snap-align: start; }
 }
+
+/* ---------- Inicio sin celulares ---------- */
+.sx-banner-inicio {
+  background:
+    radial-gradient(60% 80% at 85% 20%, color-mix(in srgb, #8b5cf6 55%, transparent), transparent 60%),
+    radial-gradient(50% 70% at 70% 90%, color-mix(in srgb, #ec4899 45%, transparent), transparent 60%),
+    radial-gradient(45% 60% at 100% 60%, color-mix(in srgb, #38bdf8 45%, transparent), transparent 60%),
+    #11131c;
+}
+.sx-banner-inicio::before { background: linear-gradient(90deg, rgba(8, 10, 16, .55), rgba(8, 10, 16, 0) 70%); }
+.sx-bp-cat { background: var(--sx-accent); color: #fff; }
+.sx-bp-cat svg { width: 52%; height: 52%; stroke-width: 1.5; }
+.sx-seeall { display: inline-flex; align-items: center; gap: 6px; color: var(--sx-accent); font-weight: 700; text-decoration: none; }
+.sx-seeall svg { width: 16px; height: 16px; }
+.sx-page > .sx-shelf + .sx-shelf { border-top: 0; padding-top: 0; }
+.sx-prov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 16px; }
+.sx-prov { padding: 20px; border-radius: var(--sx-radius); background: var(--sx-bg2); }
+.sx-prov h3 { margin: 0 0 10px; font-family: var(--sx-title-font); font-size: 22px; font-weight: var(--sx-title-weight); text-transform: var(--sx-title-transform); }
+.sx-prov ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.sx-prov li { display: grid; gap: 1px; }
+.sx-prov li span { color: var(--sx-muted); font-size: 14px; }
+.sx-prov li a { justify-self: start; color: var(--sx-accent); font-size: 14px; font-weight: 700; }
+
+/* Banner: los tipos de producto como dibujos, en círculos blancos */
+.sx-bp-svg { color: #111827; }
+.sx-bp-svg svg { width: 70%; height: 70%; }
+.sx-bp-cat.sx-bp-svg, .sx-bp-cat { color: #fff; }
+/* Reels: la foto del producto (fondo blanco) hasta que se toca play */
+.sx-reel-media { background: #ffffff; }
+.sx-reel-media .x-video { object-fit: contain; background: transparent; }
+.sx-reel-media .x-video[controls] { background: #000; }
+.sx-play { position: absolute; inset: 0; margin: auto; width: 68px; height: 68px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(17, 24, 39, .78); color: #fff; cursor: pointer; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); transition: transform .2s; }
+.sx-play svg { width: 30px; height: 30px; margin-left: 4px; }
+.sx-play:hover { transform: scale(1.06); }
+.sx-play[hidden] { display: none; }

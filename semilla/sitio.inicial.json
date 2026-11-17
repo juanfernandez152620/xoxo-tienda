@@ -5,7 +5,7 @@
     "name": "XOXO Tecno",
     "tag": "",
     "city": "Tucumán",
-    "greeting": "¡Hola! Quiero consultar por un celular.",
+    "greeting": "¡Hola! Quiero hacer una consulta.",
     "financing": "GO cuotas",
     "financingLogo": {
       "color": "/media/marcas/gocuotas-logo.svg",
@@ -116,11 +116,12 @@
         "bg": "#08274d",
         "fg": "#c1f4a4"
       }
-    ]
+    ],
+    "phones": false
   },
   "texts": {
-    "seoTitle": "XOXO Tecno · Celulares en cuotas en Tucumán",
-    "seoDescription": "Celulares en 12 cuotas sin interés con tarjeta de crédito o hasta 9 con tu tarjeta de débito en GO cuotas. Comprá online o pedilo por WhatsApp.",
+    "seoTitle": "XOXO Tecno · Ventilación, creación de contenido y audio en cuotas",
+    "seoDescription": "Ventiladores, micrófonos, luces, parlantes y auriculares en hasta 12 cuotas con Mercado Pago o con tu débito en GO cuotas. Envíos a todo el país y 30 días de garantía.",
     "ogImage": "",
     "heroLogo": "",
     "heroTitle1": "Tu equipo nuevo",
@@ -690,7 +691,7 @@
       "group": "Ventiladores de pie",
       "brand": "Delhi",
       "name": "Ventilador de pie Delhi 18\"",
-      "icon": "ventilador",
+      "icon": "ventilador-pie",
       "weight": 6,
       "price": 99999,
       "listPrice": 0,
@@ -721,7 +722,7 @@
       "group": "Ventiladores de piso",
       "brand": "Exahome",
       "name": "Ventilador de piso Exahome Turbo 20\"",
-      "icon": "ventilador",
+      "icon": "ventilador-piso",
       "weight": 6,
       "price": 129999,
       "listPrice": 0,
@@ -748,7 +749,7 @@
       "group": "Ventiladores de techo",
       "brand": "Kanji",
       "name": "Ventilador de techo Kanji retráctil",
-      "icon": "ventilador",
+      "icon": "ventilador-techo",
       "weight": 7,
       "price": 399999,
       "listPrice": 0,
@@ -762,8 +763,8 @@
         "Color blanco"
       ],
       "gallery": [
-        "/media/ventiladores/kanji-techo/foto-2.webp",
         "/media/ventiladores/kanji-techo/foto-3.webp",
+        "/media/ventiladores/kanji-techo/foto-2.webp",
         "/media/ventiladores/kanji-techo/foto-4.webp",
         "/media/ventiladores/kanji-techo/foto-5.webp",
         "/media/ventiladores/kanji-techo/foto-6.webp",
@@ -1196,6 +1197,7 @@
     ]
   },
   "migraciones": [
-    "ventiladores-reales"
+    "ventiladores-reales",
+    "ventiladores-v2"
   ]
 }

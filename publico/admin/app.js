@@ -605,7 +605,7 @@
   }
 
   /* ----- Otros productos (la vidriera de la tienda) ----- */
-  const EXTRA_ICONS = { ventilador: 'Ventilador', mic: 'Micrófono', tripode: 'Trípode', luz: 'Luz', parlante: 'Parlante', auricular: 'Auriculares' };
+  const EXTRA_ICONS = { 'ventilador-pie': 'Ventilador de pie', 'ventilador-piso': 'Ventilador de piso', 'ventilador-techo': 'Ventilador de techo', ventilador: 'Ventilador', mic: 'Micrófono', tripode: 'Trípode', luz: 'Luz', parlante: 'Parlante', auricular: 'Auriculares' };
   const catName = id => ((S.draft && S.draft.categories) || []).find(c => c.id === id)?.name || '';
   const extraMeta = p => `${p.example ? 'EJEMPLO · ' : ''}${catName(p.cat) ? `${catName(p.cat)} · ` : ''}${[p.group, p.brand].filter(Boolean).join(' · ') || 'Sin tipo'} · ${money(p.price)}${Number(p.listPrice) > Number(p.price) ? ` · antes ${money(p.listPrice)}` : ''}`;
 
@@ -839,7 +839,12 @@
     </div>`;
     return `
       <div class="page-head"><h1>Tienda y textos</h1></div>
-      <p class="muted">Lo que cambies acá se ve en los tres diseños apenas guardes.</p>
+      <p class="muted">Lo que cambies acá se ve en todos los diseños apenas guardes.</p>
+      <section class="card"><div class="card-head"><h2>Celulares</h2></div>
+        <div class="row">${check('Vendemos celulares', 'store.phones')}</div>
+        <p class="muted">Apagado (así está desde el 17/11/2026): Red social y Minimalista muestran solo ventilación, creación de contenido y audio,
+          y los celulares no se pueden comprar. Prendido, vuelve el catálogo de celulares de la pestaña Celulares.</p>
+      </section>
       ${flashCard()}
       ${enviosCard()}
       ${categoriasCard()}

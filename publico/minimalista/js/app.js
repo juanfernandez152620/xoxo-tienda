@@ -501,7 +501,7 @@
   }
 
   /* ---------- Vidriera: productos que no son celulares ---------- */
-  const CAT_ICON = { ventilacion: 'ventilador', contenido: 'mic', audio: 'auricular' };
+  const CAT_ICON = { ventilacion: 'ventilador-pie', contenido: 'mic', audio: 'auricular' };
   // En el inicio filtra por categoría; en la página de una categoría, por tipo de producto (Parlantes, Auriculares…)
   function renderExtras(sel = '') {
     const cat = CAT ? CAT.id : sel;
@@ -520,10 +520,12 @@
   }
 
   // Home de una categoría (/minimalista/audio/): la arma shared/secciones.js, sin el catálogo de celulares
+  // Sin celulares (se dejaron de vender el 17/11/2026), el inicio también lo arma shared/secciones.js
   function buildCategory() {
-    if (!CAT) return;
+    if (!CAT && PRODUCTS.length) return;
     document.body.classList.add('cat-page');
-    $('#home').insertAdjacentHTML('afterbegin', `<div id="cat-home">${window.Secciones.categoria(CAT, '/minimalista')}</div>`);
+    $$('.js-favs').forEach(b => { b.hidden = !PRODUCTS.length; });
+    $('#home').insertAdjacentHTML('afterbegin', `<div id="cat-home">${CAT ? window.Secciones.categoria(CAT, '/minimalista') : window.Secciones.inicio('/minimalista')}</div>`);
   }
 
 
@@ -1056,10 +1058,10 @@
   $('#year').textContent = new Date().getFullYear();
   buildFooter();
   buildCategory();
-  buildHero();
+  if (PRODUCTS.length) buildHero();
   buildBrands();
   // Inicio: garantía, cómo comprar y calculadora de envíos, después de los productos
-  if (!CAT) $('#contenido').insertAdjacentHTML('afterend', window.Secciones.info());
+  if (!CAT && PRODUCTS.length) $('#contenido').insertAdjacentHTML('afterend', window.Secciones.info());
   window.Secciones.init(document);
   if (FL) FL.montar();
   paintLikeCount();

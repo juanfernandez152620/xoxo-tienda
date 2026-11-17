@@ -7,7 +7,7 @@
   // Las 3 categorías (ventilación, contenido, audio) y la de esta página (/red-social/audio/)
   const CATS = (window.SITE && window.SITE.categories) || [];
   const CAT = CATS.find(c => c.id === window.CATEGORIA) || null;
-  const CAT_ICON = { ventilacion: 'ventilador', contenido: 'mic', audio: 'auricular' };
+  const CAT_ICON = { ventilacion: 'ventilador-pie', contenido: 'mic', audio: 'auricular' };
   // Descuento flash: precio de lista tachado arriba de cada cuota (shared/flash.js)
   const FL = window.Flash && window.Flash.cfg && window.Flash.cfg.on ? window.Flash : null;
   // Estadísticas para comparar los dos diseños (/shared/seguimiento.js)
@@ -704,7 +704,7 @@
 
   function fill() {
     // En la home de una categoría no hay feed de celulares
-    if (CAT || filters.brand === EXTRAS_KEY) return;
+    if (CAT || !PRODUCTS.length || filters.brand === EXTRAS_KEY) return;
     let guard = 0;
     while (sentinel.getBoundingClientRect().top < innerHeight + 1400 && guard++ < 8) if (nextBlock() === false) break;
   }
@@ -1057,7 +1057,7 @@
       <div class="rsf-grid">
         <div class="rsf-brand">
           <span class="rsf-logo">${$('.logo-xoxo').innerHTML}</span>
-          <p>${esc(F.about || 'Celulares, ventilación, creación de contenido y audio, en cuotas.')}</p>
+          <p>${esc(F.about || 'Ventilación, creación de contenido y audio, en cuotas.')}</p>
           <ul class="rsf-badges">
             <li>🛡️ ${esc(ST.warrantyDays || 30)} días de garantía</li>
             <li>🚚 Envíos a todo el país</li>
@@ -1106,6 +1106,11 @@
   if (CAT) {
     document.body.classList.add('cat-page');
     $('main').insertAdjacentHTML('afterbegin', `<div id="cat-home">${window.Secciones.categoria(CAT, '/red-social')}</div>`);
+    window.Secciones.init($('#cat-home'));
+  } else if (!PRODUCTS.length) {
+    // Sin celulares (se dejaron de vender el 17/11/2026): el inicio muestra las 3 categorías (shared/secciones.js)
+    document.body.classList.add('cat-page');
+    $('main').insertAdjacentHTML('afterbegin', `<div id="cat-home">${window.Secciones.inicio('/red-social')}</div>`);
     window.Secciones.init($('#cat-home'));
   } else {
     buildStories();

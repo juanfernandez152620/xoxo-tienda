@@ -273,3 +273,9 @@ html.x-lock, html.x-lock body { overflow: hidden; }
 .ficha-video .x-video { object-fit: contain; }
 .ficha-thumb-video { position: relative; }
 .ficha-thumb-video svg { position: absolute; inset: 0; margin: auto; width: 22px; height: 22px; color: #fff; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .6)); }
+
+/* Fondo blanco y parejo detrás de las fotos, en todos los diseños y también en modo oscuro (las fotos de los
+   productos vienen con fondo blanco). Va con html:root para ganarle al fondo de color de cada diseño. */
+html:root { --x-stage: #ffffff; --x-shadow: none; }
+.xcard-media, .ficha-slide { background: #ffffff; }
+.x-photo { padding: 6%; }

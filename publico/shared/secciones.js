@@ -41,7 +41,7 @@
     mute: line('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/>'),
     sound: line('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>'),
   };
-  const CAT_ICON = { ventilacion: 'ventilador', contenido: 'mic', audio: 'auricular' };
+  const CAT_ICON = { ventilacion: 'ventilador-pie', contenido: 'mic', audio: 'auricular' };
   const catIcon = c => (V && V.icon(CAT_ICON[c.id])) || '';
   const catOf = id => CATS.find(c => c.id === id) || null;
 
@@ -62,6 +62,9 @@
       ${text ? `<p class="sx-text">${esc(text)}</p>` : ''}
     </header>`;
 
+  // "Ventiladores de pie" → "De pie": el nombre corto del tipo de producto
+  const corto = p => { const g = String(p.group || p.name).replace(/^(ventiladores|parlantes|auriculares|micrófonos|luces|trípodes)\s+/i, ''); return g.charAt(0).toUpperCase() + g.slice(1); };
+
   // Banner con foto de fondo (gente usando los productos), la marca, el título y los productos en círculos
   function banner(c) {
     const list = V ? V.byCat(c.id) : [];
@@ -81,8 +84,8 @@
           </div>
           ${list.length ? `<div class="sx-banner-prods" aria-label="Productos de ${esc(c.name)}">${list.slice(0, 3).map(p => `
             <a class="sx-bp js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}">
-              <span class="sx-bp-img">${(p.gallery || [])[0] ? `<img src="${esc(p.gallery[0])}" alt="" loading="lazy">` : catIcon(c)}</span>
-              <span class="sx-bp-name">${esc(p.group || p.name)}</span>
+              <span class="sx-bp-img sx-bp-svg">${(V && V.icon(p.icon)) || catIcon(c)}</span>
+              <span class="sx-bp-name">${esc(corto(p))}</span>
             </a>`).join('')}</div>` : ''}
         </div>
       </section>`;
@@ -131,20 +134,20 @@
 
   // Videos de cada producto, como reels: arrancan solos y sin sonido; el botón activa el sonido
   function videos(c) {
-    const list = (V ? V.byCat(c.id) : []).filter(p => p.video);
+    const list = (V ? (c ? V.byCat(c.id) : EXTRAS) : []).filter(p => p.video);
     if (!list.length) return '';
     return `
-      <section class="sx-videos" id="sx-videos" style="--sx-accent:${esc(c.color)}">
+      <section class="sx-videos" id="sx-videos" style="--sx-accent:${esc(c ? c.color : 'var(--sx-accent)')}">
         ${head('Mirá cómo funcionan', 'Los videos de cada producto')}
         <div class="sx-reels">
           ${list.map(p => `
             <article class="sx-reel">
               <div class="sx-reel-media">
-                ${V.videoHTML(p)}
-                <button class="sx-sound" type="button" aria-pressed="false" aria-label="Activar el sonido del video de ${esc(p.name)}">${I.mute}</button>
+                ${V.videoHTML(p, false, false)}
+                <button class="sx-play" type="button" aria-label="Ver el video de ${esc(p.name)}">${I.play}</button>
               </div>
               <div class="sx-reel-info">
-                <p class="sx-kicker">${esc(p.group || c.name)}${p.brand ? ` · ${esc(p.brand)}` : ''}</p>
+                <p class="sx-kicker">${esc(p.group || (c && c.name) || '')}${p.brand ? ` · ${esc(p.brand)}` : ''}</p>
                 <h3><a class="js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}">${esc(p.name)}</a></h3>
                 ${V.priceHTML(p)}
                 <div class="sx-reel-ctas">${PAY ? V.buyButton(p, 'Comprar') : V.waLink(p, 'Pedilo')}
@@ -244,7 +247,7 @@
         <div class="sx-others-grid">
           ${list.map(x => `<a class="sx-ocard" href="${base}/${x.id}/" style="--sx-accent:${esc(x.color)}">
             <span class="sx-oico">${catIcon(x)}</span><b>${esc(x.name)}</b><span>${esc(x.title)}</span><em>Ver ${I.arrow}</em></a>`).join('')}
-          <a class="sx-ocard" href="${base}/"><span class="sx-oico">${I.store}</span><b>Todo ${esc(STORE.name)}</b><span>Celulares y todas las categorías</span><em>Ver ${I.arrow}</em></a>
+          <a class="sx-ocard" href="${base}/"><span class="sx-oico">${I.store}</span><b>Todo ${esc(STORE.name)}</b><span>Todas las categorías</span><em>Ver ${I.arrow}</em></a>
         </div>
       </section>`;
   }
@@ -253,6 +256,87 @@
   function categoria(c, base) {
     return `<div class="sx-page" style="--sx-accent:${esc(c.color)}" data-sx-cat="${esc(c.id)}">
       ${hero(c)}${videos(c)}${beneficios(c)}${productos(c)}${guia(c)}${pasos()}${calculadora(c.id)}${garantia()}${faq(c)}${otras(c, base)}
+    </div>`;
+  }
+
+  /* ---------- Inicio sin celulares: toda la tienda en una página ---------- */
+  function portadaInicio(base) {
+    const provs = [...new Set((STORE.branches || []).map(b => b.province).filter(Boolean))];
+    const donde = provs.length ? `Sucursales en ${provs.join(', ').replace(/, ([^,]*)$/, ' y $1')}` : STORE.city;
+    return `
+      <section class="sx-banner sx-banner-inicio">
+        <div class="sx-banner-in">
+          <div class="sx-banner-copy">
+            <p class="sx-banner-brand"><img src="/media/marca/xoxo-avatar.svg" alt=""><span><b>${esc(STORE.name)}</b><small>${esc(donde)}</small></span></p>
+            <h1 class="sx-banner-title">${esc(CATS.map(c => c.name).join(', ').replace(/, ([^,]*)$/, ' y $1'))}</h1>
+            <p class="sx-banner-text">Pagalo en hasta 12 cuotas con Mercado Pago o en cuotas con tu tarjeta de débito en ${esc(STORE.financing || 'GO cuotas')}. Envíos a todo el país y ${esc(dias())} días de garantía.</p>
+            <div class="sx-ctas">
+              <a class="sx-btn sx-btn-light" href="#sx-categorias" data-sx-go="sx-categorias">Ver productos ${I.arrow}</a>
+              <a class="sx-btn sx-btn-glass" href="#sx-envios" data-sx-go="sx-envios">Calculá tu envío</a>
+            </div>
+          </div>
+          <div class="sx-banner-prods" aria-label="Categorías">${CATS.map(c => `
+            <a class="sx-bp" href="${base}/${c.id}/" style="--sx-accent:${esc(c.color)}">
+              <span class="sx-bp-img sx-bp-cat">${catIcon(c)}</span><span class="sx-bp-name">${esc(c.short || c.name)}</span>
+            </a>`).join('')}</div>
+        </div>
+      </section>`;
+  }
+
+  function beneficiosInicio() {
+    const fin = STORE.financing || 'GO cuotas';
+    const list = [
+      [I.card, 'Hasta 12 cuotas', 'Con tarjeta de crédito en Mercado Pago.'],
+      [I.card, 'Cuotas con débito', `Con tu tarjeta de débito en ${fin}.`],
+      [I.truck, 'Envíos a todo el país', 'Andreani y Correo Argentino, o retiro gratis.'],
+      [I.shield, `${dias()} días de garantía`, 'En todos los productos.'],
+    ];
+    return `<section class="sx-benefits" aria-label="Por qué comprar en ${esc(STORE.name)}">${list.map(([i, t, x]) => `
+      <div class="sx-benefit"><span class="sx-bico">${i}</span><b>${esc(t)}</b><span>${esc(x)}</span></div>`).join('')}</section>`;
+  }
+
+  function categoriasInicio(base) {
+    return `
+      <section class="sx-cats" id="sx-categorias">
+        ${head('Nuestras categorías', '¿Qué estás buscando?')}
+        <div class="sx-others-grid">${CATS.map(c => {
+          const n = V ? V.byCat(c.id).length : 0;
+          return `<a class="sx-ocard" href="${base}/${c.id}/" style="--sx-accent:${esc(c.color)}">
+            <span class="sx-oico">${catIcon(c)}</span><b>${esc(c.name)}</b><span>${esc(c.title)}</span><em>${n} producto${n === 1 ? '' : 's'} ${I.arrow}</em></a>`;
+        }).join('')}</div>
+      </section>`;
+  }
+
+  function estantes(base) {
+    return CATS.map(c => {
+      const list = V ? V.byCat(c.id) : [];
+      if (!list.length) return '';
+      return `
+        <section class="sx-products sx-shelf" style="--sx-accent:${esc(c.color)}">
+          <div class="sx-products-head"><h2 class="sx-title">${esc(c.name)}</h2><a class="sx-seeall" href="${base}/${c.id}/">Ver todo ${I.arrow}</a></div>
+          <div class="sx-grid"><div class="xgrid">${list.slice(0, 4).map(V.cardHTML).join('')}</div></div>
+        </section>`;
+    }).join('');
+  }
+
+  function sucursales() {
+    const porProv = {};
+    for (const b of STORE.branches || []) (porProv[b.province || STORE.city] = porProv[b.province || STORE.city] || []).push(b);
+    const provs = Object.entries(porProv);
+    if (!provs.length) return '';
+    return `
+      <section class="sx-branches" id="sx-sucursales">
+        ${head('Sucursales', 'Vení a conocernos')}
+        <div class="sx-prov-grid">${provs.map(([prov, list]) => `
+          <div class="sx-prov"><h3>${esc(prov)}</h3><ul>${list.map(b => `<li><b>${esc(b.name)}</b><span>${esc(b.address)}</span>
+            ${b.address && !/a confirmar/i.test(b.address) ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}</li>`).join('')}</ul></div>`).join('')}</div>
+      </section>`;
+  }
+
+  // El inicio completo, para los diseños que antes mostraban celulares (Red social y Minimalista)
+  function inicio(base) {
+    return `<div class="sx-page sx-inicio">
+      ${portadaInicio(base)}${beneficiosInicio()}${categoriasInicio(base)}${estantes(base)}${videos(null)}${sucursales()}${pasos()}${calculadora()}${garantia()}
     </div>`;
   }
 
@@ -298,6 +382,19 @@
     form.addEventListener('submit', e => e.preventDefault());
     pintar();
   }
+
+  // Reels: el botón de play arranca el video con sonido y muestra los controles (vidriera pausa los demás)
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.sx-play');
+    if (!b) return;
+    const v = b.parentElement.querySelector('video');
+    v.controls = true;
+    v.muted = false;
+    b.hidden = true;
+    const p = v.play();
+    if (p && p.catch) p.catch(() => { b.hidden = false; });
+    v.addEventListener('ended', () => { b.hidden = false; v.controls = false; }, { once: true });
+  });
 
   // Sonido de los reels: al activar uno, los demás se callan
   document.addEventListener('click', e => {
@@ -345,5 +442,5 @@
     });
   }
 
-  window.Secciones = { nav, categoria, info, hero, banner, videos, beneficios, productos, guia, pasos, garantia, calculadora, faq, otras, init, icon: k => I[k], catIcon, cats: CATS };
+  window.Secciones = { nav, categoria, info, inicio, sucursales, hero, banner, videos, beneficios, productos, guia, pasos, garantia, calculadora, faq, otras, init, icon: k => I[k], catIcon, cats: CATS };
 })();

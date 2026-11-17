@@ -14,9 +14,9 @@ const VARIANTS = ['red-social', 'minimalista', 'historia', 'profesional'];
 // Las 3 categorías de la tienda (1, 2 y 3): cada diseño tiene una página para cada una (/historia/audio/…)
 const CATS = ['ventilacion', 'contenido', 'audio'];
 const SPEC_ICONS = ['pantalla', 'camara', 'bateria', 'memoria', 'ram', 'parlante', 'update', 'carga'];
-const EXTRA_ICONS = ['mic', 'tripode', 'luz', 'ventilador', 'parlante', 'auricular'];
+const EXTRA_ICONS = ['mic', 'tripode', 'luz', 'ventilador', 'ventilador-pie', 'ventilador-piso', 'ventilador-techo', 'parlante', 'auricular'];
 // Categoría que corresponde a cada ícono, para los productos guardados antes de que existieran las categorías
-const CAT_DE_ICONO = { ventilador: 'ventilacion', parlante: 'audio', auricular: 'audio' };
+const CAT_DE_ICONO = { ventilador: 'ventilacion', 'ventilador-pie': 'ventilacion', 'ventilador-piso': 'ventilacion', 'ventilador-techo': 'ventilacion', parlante: 'audio', auricular: 'audio' };
 
 /* ---------- Revisión del contenido ---------- */
 const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
@@ -267,6 +267,37 @@ function migrar(s) {
 // 17/11/2026: los 3 ventiladores reales (con fotos y video) reemplazan a los 4 de ejemplo, y la categoría
 // Ventilación suma su banner. Pasa una sola vez: queda anotada en "migraciones" (si después se borra un
 // ventilador a mano, no vuelve).
+// 17/11/2026: cada ventilador con el dibujo de su tipo (pie, piso, techo) y el Kanji con la foto de fondo blanco primero
+function migrarVentiladores2(s) {
+  const hechas = Array.isArray(s.migraciones) ? s.migraciones : [];
+  if (hechas.includes('ventiladores-v2')) return s;
+  const icono = { 'ventilador-pie-delhi-18': 'ventilador-pie', 'ventilador-piso-exahome-turbo-20': 'ventilador-piso', 'ventilador-techo-kanji': 'ventilador-techo' };
+  const extras = (Array.isArray(s.extras) ? s.extras : []).map(p => {
+    if (!p || !icono[p.id]) return p;
+    const out = { ...p, icon: p.icon === 'ventilador' || !p.icon ? icono[p.id] : p.icon };
+    const blanca = '/media/ventiladores/kanji-techo/foto-3.webp';
+    if (p.id === 'ventilador-techo-kanji' && Array.isArray(p.gallery) && p.gallery[0] !== blanca && p.gallery.includes(blanca)) {
+      out.gallery = [blanca, ...p.gallery.filter(g => g !== blanca)];
+    }
+    return out;
+  });
+  return { ...s, extras, migraciones: [...hechas, 'ventiladores-v2'] };
+}
+
+function migrarSinCelulares(s) {
+  const t = s.texts || {};
+  const viejo = {
+    seoTitle: 'XOXO Tecno · Celulares en cuotas en Tucumán',
+    seoDescription: 'Celulares en 12 cuotas sin interés con tarjeta de crédito o hasta 9 con tu tarjeta de débito en GO cuotas. Comprá online o pedilo por WhatsApp.',
+  };
+  const nuevo = { seoTitle: "XOXO Tecno · Ventilación, creación de contenido y audio en cuotas", seoDescription: "Ventiladores, micrófonos, luces, parlantes y auriculares en hasta 12 cuotas con Mercado Pago o con tu débito en GO cuotas. Envíos a todo el país y 30 días de garantía." };
+  const texts = { ...t };
+  for (const k of Object.keys(viejo)) if (t[k] === viejo[k]) texts[k] = nuevo[k];
+  const store = { ...s.store };
+  if (store.greeting === '¡Hola! Quiero consultar por un celular.') store.greeting = "¡Hola! Quiero hacer una consulta.";
+  return { ...s, texts, store };
+}
+
 function migrarVentiladores(s) {
   const hechas = Array.isArray(s.migraciones) ? s.migraciones : [];
   if (hechas.includes('ventiladores-reales')) return s;
@@ -296,7 +327,7 @@ function normalizar(s) {
   if (!s || typeof s !== 'object' || !s.store || typeof s.store !== 'object' || !Array.isArray(s.products)) {
     fallar('El contenido no tiene el formato esperado');
   }
-  s = migrarVentiladores(migrar(s));
+  s = migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s))));
   const st = s.store;
   const logo = obj(st.financingLogo);
   const closing = st.closing && typeof st.closing === 'object' ? st.closing : null;
@@ -304,6 +335,9 @@ function normalizar(s) {
   const vidriera = obj(st.extras);
   const store = {
     name: txt(st.name, 60) || fallar('Falta el nombre de la tienda'),
+    // ¿Se venden celulares? Desde el 17/11/2026 no: Red social y Minimalista muestran las 3 categorías.
+    // Prendido, vuelve el catálogo de celulares (con sus videos y cuotas).
+    phones: st.phones === true,
     tag: txt(st.tag, 20),
     city: txt(st.city, 60),
     greeting: txt(st.greeting, 300),
@@ -339,8 +373,9 @@ function normalizar(s) {
 
   const ids = new Set();
   const products = items(s.products, (p, i) => normalizarCelular(p, i, ids), 300);
-  if (!products.some(p => !p.hidden)) fallar('Dejá al menos un producto visible');
+  if (store.phones && !products.some(p => !p.hidden)) fallar('Dejá al menos un celular visible (o apagá "Vendemos celulares")');
   const extras = items(s.extras, (p, i) => normalizarOtro(p, i, ids), 300);
+  if (![...(store.phones ? products : []), ...extras].some(p => !p.hidden)) fallar('Dejá al menos un producto visible');
 
   const t = obj(s.texts);
   const texts = {
@@ -459,7 +494,8 @@ const absoluta = u => (u === '' || u.startsWith('https://') ? u : BASE_URL + u);
 function ogImage() {
   const site = cargar();
   if (site.texts.ogImage) return absoluta(site.texts.ogImage);
-  const visibles = site.products.filter(p => !p.hidden);
+  // Sin celulares: la foto del primer producto con foto
+  const visibles = (site.store.phones ? site.products : site.extras).filter(p => !p.hidden && (p.gallery || []).length);
   const pick = visibles.find(p => p.id === site.store.featured) || visibles[0];
   return pick && pick.gallery.length ? absoluta(pick.gallery[0]) : '';
 }
@@ -474,7 +510,7 @@ function publico() {
   store.branches = store.branches.map(b => ({ id: b.id, name: b.name, province: b.province, address: b.address }));
   const visibles = list => list.filter(p => !p.hidden).map(({ hidden, ...p }) => p);
   return {
-    store, products: visibles(site.products), extras: visibles(site.extras),
+    store, products: site.store.phones ? visibles(site.products) : [], extras: visibles(site.extras),
     site: {
       texts: site.texts, footer: site.footer, categories: site.categories, flash: site.flash,
       shipping: site.shipping, story: site.story,
