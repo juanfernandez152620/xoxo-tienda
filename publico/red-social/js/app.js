@@ -1037,6 +1037,102 @@
 
   addEventListener('scroll', onScroll, { passive: true });
   addEventListener('resize', onScroll);
+
+  // Celular: al bajar, el encabezado se esconde y queda la barra del descuento flash; al subir un poco, vuelve
+  const movil = matchMedia('(max-width: 899px)');
+  let ultimoY = scrollY;
+  addEventListener('scroll', () => {
+    const head = $('.site-head');
+    const y = scrollY;
+    const d = y - ultimoY;
+    if (!head || (Math.abs(d) < 8 && y > 10)) return;
+    ultimoY = y;
+    head.classList.toggle('oculto', movil.matches && d > 0 && y > head.offsetHeight + 80);
+  }, { passive: true });
+  movil.addEventListener('change', () => { const head = $('.site-head'); if (head) head.classList.remove('oculto'); });
+
+  /* ---------- Ventilación en modo promoción (17/11/2026): banner de fiestas y el precio en cuotas primero ---------- */
+  const PROMO = {
+    ventilacion: {
+      tag: 'Fiestas calurosas',
+      titulo: 'Ofertón',
+      titulo2: 'para las fiestas',
+      grito: '¡Comprá ya!',
+      debito: '¡Sacá tu ventilador en <b>{n} cuotas</b> con tu tarjeta de <b>débito</b> hoy!',
+      ofertas: 'Elegí el tuyo y llevalo en cuotas',
+      iconos: ['ventilador-pie', 'ventilador-piso', 'ventilador-techo'],
+    },
+  };
+  const SOL = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg>';
+  const FLECHA = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  const cuotaDe = (precio, n) => Math.ceil(precio / n);
+
+  function promoCard(p) {
+    const V = window.Vidriera;
+    const n = Number(STORE.extras.cuotas) || 6;
+    const off = FL ? FL.cfg.percent : 0;
+    const ver = `href="#x=${esc(p.id)}" data-x="${esc(p.id)}"`;
+    return `
+      <article class="pr-card">
+        <a class="pr-media x-prev-host js-ficha" ${ver} aria-label="Ver ${esc(p.name)}">
+          ${V.coverHTML(p, false)}${V.previewHTML(p)}
+          ${off ? `<span class="pr-off fl-only"><b>-${off}%</b><small>off</small></span>` : ''}
+        </a>
+        <div class="pr-body">
+          ${STORE.financing ? `
+          <div class="pr-deb">
+            <p class="pr-deb-l"><b>${n} cuotas${sinInteres}</b> con tu <b>débito</b></p>
+            <p class="pr-deb-amt"><small>$</small>${fmt.format(cuotaDe(p.price, n))}<span>c/u</span></p>
+            <span class="pr-go">${finLogo()}</span>
+          </div>` : ''}
+          <p class="pr-cred"><b>12 cuotas${sinInteres}</b> de <b>${money(cuotaDe(p.price, 12))}</b> con crédito</p>
+          <div class="pr-total"><span>Total</span>${V.priceHTML(p)}</div>
+          <p class="pr-kicker">${esc([p.group, p.brand].filter(Boolean).join(' · '))}</p>
+          <h3 class="pr-name"><a class="js-ficha" ${ver}>${esc(p.name)}</a></h3>
+          <div class="pr-ctas">${PAY ? V.buyButton(p, '¡Lo quiero!') : V.waLink(p, '¡Lo quiero!')}<a class="pr-more js-ficha" ${ver}>Ver detalles</a></div>
+        </div>
+      </article>`;
+  }
+
+  function promoHTML(c, pr) {
+    const V = window.Vidriera;
+    const S = window.Secciones;
+    const n = Number(STORE.extras.cuotas) || 6;
+    const off = FL ? FL.cfg.percent : 0;
+    const cinta = [
+      STORE.financing ? `${n} cuotas con débito` : '', `12 cuotas${sinInteres} con crédito`, 'Envíos a todo el país',
+      `${((window.SITE && window.SITE.story) || {}).warrantyDays || 30} días de garantía`, 'Retiro gratis en sucursal',
+    ].filter(Boolean).map(t => `<span>${esc(t)}</span><i>★</i>`).join('');
+    return `<div class="sx-page pr-page" style="--sx-accent:${esc(c.color)}" data-sx-cat="${esc(c.id)}">
+      <section class="pr-hero">
+        <div class="pr-hero-in">
+          <div class="pr-copy">
+            <p class="pr-tag">${SOL}${esc(pr.tag)}</p>
+            <h1 class="pr-title"><span class="pr-t1">${esc(pr.titulo)}</span><span class="pr-t2">${esc(pr.titulo2)}</span></h1>
+            <p class="pr-grito">${esc(pr.grito)}</p>
+            ${STORE.financing ? `<p class="pr-debito"><span>${pr.debito.replace('{n}', esc(n))}</span><span class="pr-go">${finLogo()}</span></p>` : ''}
+            ${off ? `<p class="pr-reloj fl-only"><b>-${off}% flash</b> termina en <b class="js-flash-reloj">${FL.reloj(FL.restante())}</b></p>` : ''}
+            <div class="pr-ctas-hero">
+              <a class="pr-btn" href="#pr-ofertas" data-sx-go="pr-ofertas">Ver ofertas ${FLECHA}</a>
+              <a class="pr-btn pr-btn-2" href="#sx-envios" data-sx-go="sx-envios">Calculá tu envío</a>
+            </div>
+          </div>
+          <div class="pr-art" aria-hidden="true">
+            <span class="pr-rayos"></span>
+            ${pr.iconos.map((ic, i) => `<span class="pr-fan pr-fan-${i + 1}">${V.icon(ic)}</span>`).join('')}
+            ${STORE.financing ? `<span class="pr-burst pr-burst-1"><b>${esc(n)}</b><small>cuotas<br>débito</small></span>` : ''}
+            ${off ? `<span class="pr-burst pr-burst-2 fl-only"><b>-${off}%</b></span>` : ''}
+          </div>
+        </div>
+      </section>
+      <div class="pr-cinta" aria-hidden="true"><div>${cinta}${cinta}</div></div>
+      <section class="pr-ofertas" id="pr-ofertas">
+        <header class="pr-head"><p class="pr-kicker">Ofertas de ${esc(c.name.toLowerCase())}</p><h2 class="pr-h2">${esc(pr.ofertas)}</h2></header>
+        <div class="pr-grid">${V.byCat(c.id).map(promoCard).join('')}</div>
+      </section>
+      ${S.guia(c)}${S.pasos()}${S.calculadora()}${S.garantia()}${S.faq(c)}${S.otras(c, '/red-social')}
+    </div>`;
+  }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { activate(null); currentSlide = null; return; }
     const slide = shortsOpen && [...track.children].find(s => Math.abs(s.offsetTop - track.scrollTop) < 10);
@@ -1103,7 +1199,11 @@
   $('#hero-debito').hidden = !TEXT.heroDebito || (!STORE.financing && TEXT.heroDebito.includes('{financiera}'));
   // Menú de las 4 vistas (Inicio y la home de cada categoría) y, en una categoría, su home (shared/secciones.js)
   $('#rs-nav').innerHTML = window.Secciones.nav('/red-social', CAT ? CAT.id : '');
-  if (CAT) {
+  if (CAT && PROMO[CAT.id]) {
+    document.body.classList.add('cat-page', 'promo-page');
+    $('main').insertAdjacentHTML('afterbegin', `<div id="cat-home">${promoHTML(CAT, PROMO[CAT.id])}</div>`);
+    window.Secciones.init($('#cat-home'));
+  } else if (CAT) {
     document.body.classList.add('cat-page');
     $('main').insertAdjacentHTML('afterbegin', `<div id="cat-home">${window.Secciones.categoria(CAT, '/red-social')}</div>`);
     window.Secciones.init($('#cat-home'));

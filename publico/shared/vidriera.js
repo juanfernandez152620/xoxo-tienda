@@ -73,8 +73,8 @@
   // (La sección "Mirá cómo funcionan" de shared/secciones.js lo usa en todos los diseños: force)
   const previewHTML = (p, force = false) => ((PREVIEW || force) && p.video
     ? `<video class="x-video x-preview" src="${esc(p.video)}" muted loop playsinline preload="none" tabindex="-1" aria-hidden="true"></video>` : '');
-  // Dónde puede ir ese video escondido: la foto de la tarjeta o la de "Mirá cómo funcionan"
-  const HOSTS = '.xcard-media, .sx-reel-media';
+  // Dónde puede ir ese video escondido: la foto de la tarjeta, la de "Mirá cómo funcionan" o una propia de un diseño (.x-prev-host)
+  const HOSTS = '.xcard-media, .sx-reel-media, .x-prev-host';
 
   /* ---------- Precio y botones ---------- */
   function priceHTML(p) {
@@ -393,7 +393,7 @@
         }
         elegir();
       }, { rootMargin: '-38% 0px -38% 0px' });
-      const mirar = () => $$('.xcard-media:not([data-prev]), .sx-reel-media:not([data-prev])').forEach(m => {
+      const mirar = () => $$('.xcard-media:not([data-prev]), .sx-reel-media:not([data-prev]), .x-prev-host:not([data-prev])').forEach(m => {
         if (!m.querySelector('.x-preview')) return;
         m.dataset.prev = '1';
         io.observe(m);
