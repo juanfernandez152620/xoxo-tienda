@@ -248,10 +248,10 @@
   }
 
   // La home completa de una categoría
-  // o.videos: opciones de la sección de videos de ese diseño (ver videos())
+  // o.videos: opciones de la sección de videos de ese diseño (ver videos()); o.guia = false: sin la guía para elegir
   function categoria(c, base, o = {}) {
     return `<div class="sx-page" style="--sx-accent:${esc(c.color)}" data-sx-cat="${esc(c.id)}">
-      ${hero(c)}${videos(c, o.videos)}${beneficios(c)}${productos(c)}${guia(c)}${pasos()}${calculadora(c.id)}${garantia()}${faq(c)}${otras(c, base)}
+      ${hero(c)}${videos(c, o.videos)}${beneficios(c)}${productos(c)}${o.guia === false ? '' : guia(c)}${pasos()}${calculadora(c.id)}${garantia()}${faq(c)}${otras(c, base)}
     </div>`;
   }
 

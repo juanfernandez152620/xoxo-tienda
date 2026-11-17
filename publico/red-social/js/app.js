@@ -1066,6 +1066,11 @@
   const SOL = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg>';
   const FLECHA = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   const cuotaDe = (precio, n) => Math.ceil(precio / n);
+  // Para la animación: las aspas (y la rejilla punteada) van juntas en un grupo que gira entero. Cada aspa ya
+  // trae su ángulo (0, 120 y 240°) y, si se las gira por separado, el navegador se lo pisa y quedan encimadas.
+  const conAspas = svg => svg
+    .replace(/(<circle[^>]*stroke-dasharray[^>]*\/>)((?:<path transform="rotate\([^"]*\)"[^>]*\/>)+)/, (m, rejilla, aspas) => `<g class="pr-aspas">${rejilla}${aspas}</g>`)
+    .replace(/(<path d="M16\.8 16\.2[^"]*"\/>)/, (m, aspas) => `<g class="pr-aspas-techo">${aspas}</g>`);
 
   function promoCard(p) {
     const V = window.Vidriera;
@@ -1089,7 +1094,7 @@
           <div class="pr-total"><span>Total</span>${V.priceHTML(p)}</div>
           <p class="pr-kicker">${esc([p.group, p.brand].filter(Boolean).join(' · '))}</p>
           <h3 class="pr-name"><a class="js-ficha" ${ver}>${esc(p.name)}</a></h3>
-          <div class="pr-ctas">${PAY ? V.buyButton(p, '¡Lo quiero!') : V.waLink(p, '¡Lo quiero!')}<a class="pr-more js-ficha" ${ver}>Ver detalles</a></div>
+          <div class="pr-ctas">${PAY ? V.buyButton(p, '¡Lo quiero!') : V.waLink(p, '¡Lo quiero!')}</div>
         </div>
       </article>`;
   }
@@ -1119,7 +1124,7 @@
           </div>
           <div class="pr-art" aria-hidden="true">
             <span class="pr-rayos"></span>
-            ${pr.iconos.map((ic, i) => `<span class="pr-fan pr-fan-${i + 1}">${V.icon(ic)}</span>`).join('')}
+            ${pr.iconos.map((ic, i) => `<span class="pr-fan pr-fan-${i + 1}">${conAspas(V.icon(ic) || '')}</span>`).join('')}
             ${STORE.financing ? `<span class="pr-burst pr-burst-1"><b>${esc(n)}</b><small>cuotas<br>débito</small></span>` : ''}
             ${off ? `<span class="pr-burst pr-burst-2 fl-only"><b>-${off}%</b></span>` : ''}
           </div>
@@ -1130,7 +1135,7 @@
         <header class="pr-head"><p class="pr-kicker">Ofertas de ${esc(c.name.toLowerCase())}</p><h2 class="pr-h2">${esc(pr.ofertas)}</h2></header>
         <div class="pr-grid">${V.byCat(c.id).map(promoCard).join('')}</div>
       </section>
-      ${S.guia(c)}${S.pasos()}${S.calculadora()}${S.garantia()}${S.faq(c)}${S.otras(c, '/red-social')}
+      ${S.pasos()}${S.calculadora()}${S.garantia()}${S.faq(c)}${S.otras(c, '/red-social')}
     </div>`;
   }
   document.addEventListener('visibilitychange', () => {
@@ -1205,7 +1210,8 @@
     window.Secciones.init($('#cat-home'));
   } else if (CAT) {
     document.body.classList.add('cat-page');
-    $('main').insertAdjacentHTML('afterbegin', `<div id="cat-home">${window.Secciones.categoria(CAT, '/red-social')}</div>`);
+    // Red social va sin la guía para elegir (17/11/2026)
+    $('main').insertAdjacentHTML('afterbegin', `<div id="cat-home">${window.Secciones.categoria(CAT, '/red-social', { guia: false })}</div>`);
     window.Secciones.init($('#cat-home'));
   } else if (!PRODUCTS.length) {
     // Sin celulares (se dejaron de vender el 17/11/2026): el inicio muestra las 3 categorías (shared/secciones.js)
