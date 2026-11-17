@@ -282,10 +282,10 @@ html.x-lock, html.x-lock body { overflow: hidden; }
 .ficha-thumb-video svg { width: 20px; height: 20px; }
 
 /* Red social: el video de la tarjeta queda escondido detrás de la foto y aparece solo mientras se reproduce */
-.xcard-media .x-preview { z-index: 1; opacity: 0; background: #fff; pointer-events: none; transition: opacity .3s; }
-.xcard-media.vprev .x-preview { opacity: 1; }
-.xcard-media .x-vtag, .xcard-media .x-off { z-index: 2; }
-.xcard-media.vprev .x-vtag { opacity: 0; }
+.x-preview { z-index: 1; opacity: 0; background: #fff; pointer-events: none; transition: opacity .3s; }
+.vprev > .x-preview { opacity: 1; }
+.xcard-media .x-vtag, .xcard-media .x-off, .sx-reel-media .x-vtag { z-index: 2; }
+.vprev > .x-vtag { opacity: 0; }
 
 /* Fondo blanco y parejo detrás de las fotos, en todos los diseños y también en modo oscuro (las fotos de los
    productos vienen con fondo blanco). Va con html:root para ganarle al fondo de color de cada diseño. */

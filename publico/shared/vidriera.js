@@ -69,8 +69,11 @@
   // Red social (<script ... data-preview>): la tarjeta trae el video escondido y arranca al pasar el mouse
   // o cuando queda en el medio de la pantalla del celular (ver "Videos de las tarjetas" más abajo)
   const PREVIEW = Boolean(document.currentScript && document.currentScript.hasAttribute('data-preview'));
-  const previewHTML = p => (PREVIEW && p.video
+  // (La sección "Mirá cómo funcionan" de shared/secciones.js lo usa en todos los diseños: force)
+  const previewHTML = (p, force = false) => ((PREVIEW || force) && p.video
     ? `<video class="x-video x-preview" src="${esc(p.video)}" muted loop playsinline preload="none" tabindex="-1" aria-hidden="true"></video>` : '');
+  // Dónde puede ir ese video escondido: la foto de la tarjeta o la de "Mirá cómo funcionan"
+  const HOSTS = '.xcard-media, .sx-reel-media';
 
   /* ---------- Precio y botones ---------- */
   function priceHTML(p) {
@@ -343,33 +346,41 @@
     const r = v.play();
     if (r && r.catch) r.catch(() => {});
   }
-  if (PREVIEW && !quieto) {
+  if (!quieto) {
     // El video aparece recién cuando arranca, así no se ve un cuadro negro mientras carga
     document.addEventListener('playing', e => { if (e.target === previa) previa.parentElement.classList.add('vprev'); }, true);
     document.addEventListener('pause', e => {
       if (e.target.classList && e.target.classList.contains('x-preview')) e.target.parentElement.classList.remove('vprev');
     }, true);
     if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
-      document.addEventListener('mouseover', e => { const m = e.target.closest && e.target.closest('.xcard-media'); if (m) empezarPrevia(m); });
+      document.addEventListener('mouseover', e => { const m = e.target.closest && e.target.closest(HOSTS); if (m) empezarPrevia(m); });
       document.addEventListener('mouseout', e => {
-        const m = e.target.closest && e.target.closest('.xcard-media');
+        const m = e.target.closest && e.target.closest(HOSTS);
         if (m && !m.contains(e.relatedTarget)) pararPrevia();
       });
     } else if ('IntersectionObserver' in window) {
-      // Celular: la franja del medio de la pantalla; si entran dos tarjetas (grilla de 2), la más centrada
+      // Celular: la franja del medio de la pantalla; si entran varias (grilla de 2 o la fila que se desliza
+      // de costado), la más centrada; en empate, la primera
       const enMedio = new Set();
       const elegir = () => {
-        const mitad = innerHeight / 2;
         let mejor = null;
         let dist = Infinity;
         for (const m of enMedio) {
           const r = m.getBoundingClientRect();
-          const d = Math.abs(r.top + r.height / 2 - mitad) + r.left / 1000;
-          if (d < dist) { dist = d; mejor = m; }
+          if (r.right <= 0 || r.left >= innerWidth) continue;
+          const d = Math.abs(r.top + r.height / 2 - innerHeight / 2) + Math.abs(r.left + r.width / 2 - innerWidth / 2) / 1000;
+          if (d < dist - 0.01) { dist = d; mejor = m; }
         }
         if (mejor) empezarPrevia(mejor);
         else pararPrevia();
       };
+      // Al deslizar de costado la fila de videos también cambia cuál queda en el medio
+      let pendiente = false;
+      document.addEventListener('scroll', () => {
+        if (pendiente || !enMedio.size) return;
+        pendiente = true;
+        requestAnimationFrame(() => { pendiente = false; elegir(); });
+      }, { capture: true, passive: true });
       const io = new IntersectionObserver(entries => {
         for (const e of entries) {
           if (e.isIntersecting) enMedio.add(e.target);
@@ -377,7 +388,7 @@
         }
         elegir();
       }, { rootMargin: '-38% 0px -38% 0px' });
-      const mirar = () => $$('.xcard-media:not([data-prev])').forEach(m => {
+      const mirar = () => $$('.xcard-media:not([data-prev]), .sx-reel-media:not([data-prev])').forEach(m => {
         if (!m.querySelector('.x-preview')) return;
         m.dataset.prev = '1';
         io.observe(m);
@@ -395,6 +406,6 @@
   const byCat = cat => filter('', cat);
   window.Vidriera = {
     title: STORE.extras.title, short: STORE.extras.short, groups, cats: CATS, filter, byCat, gridHTML, shelfHTML,
-    cardHTML, priceHTML, coverHTML, videoHTML, buyButton, waLink, icon: key => ICON[key], open, close,
+    cardHTML, priceHTML, coverHTML, videoHTML, previewHTML: p => previewHTML(p, true), buyButton, waLink, icon: key => ICON[key], open, close,
   };
 })();

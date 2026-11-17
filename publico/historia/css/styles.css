@@ -254,15 +254,18 @@ section { position: relative; }
   gap: clamp(20px, 5vw, 72px); min-height: 86vh; overflow: hidden; padding: 80px var(--gutter);
   --q: clamp(0, calc((var(--p, 0) - .12) * 2.4), 1);
 }
+/* Sin inclinación: el número solo crece y aparece. Interlineado 1 para que el degradé (recortado a la forma
+   de los números) cubra el número entero; con menos se cortaba arriba y abajo. */
 .warranty-num {
   display: grid; justify-items: center; pointer-events: none;
-  transform: scale(calc(.62 + var(--q) * .38)) rotate(calc((1 - var(--q)) * -8deg)); opacity: calc(.15 + var(--q) * .85);
+  transform: scale(calc(.7 + var(--q) * .3)); opacity: calc(.15 + var(--q) * .85);
 }
 .warranty-num b {
-  font: 400 clamp(190px, 30vw, 420px)/.82 var(--display);
+  display: block; padding: 0 .03em;
+  font: 400 clamp(170px, 26vw, 360px)/1 var(--display);
   background: linear-gradient(160deg, var(--menta), var(--cielo) 45%, #8b5cf6); -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.warranty-num span { margin-top: .08em; font: 400 clamp(34px, 5vw, 64px)/1 var(--display); letter-spacing: .12em; text-transform: uppercase; }
+.warranty-num span { margin-top: .12em; font: 400 clamp(30px, 4vw, 52px)/1 var(--display); letter-spacing: .14em; text-transform: uppercase; }
 .warranty-copy { position: relative; }
 .warranty-copy .sec-title { font-size: clamp(32px, 5vw, 56px); }
 @media (max-width: 760px) {

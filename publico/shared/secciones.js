@@ -142,10 +142,9 @@
         <div class="sx-reels">
           ${list.map(p => `
             <article class="sx-reel">
-              <div class="sx-reel-media">
-                ${V.videoHTML(p, false, false)}
-                <button class="sx-play" type="button" aria-label="Ver el video de ${esc(p.name)}">${I.play}</button>
-              </div>
+              <a class="sx-reel-media js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}" aria-label="Ver ${esc(p.name)}">
+                ${V.coverHTML(p)}${V.previewHTML(p)}
+              </a>
               <div class="sx-reel-info">
                 <p class="sx-kicker">${esc(p.group || (c && c.name) || '')}${p.brand ? ` · ${esc(p.brand)}` : ''}</p>
                 <h3><a class="js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}">${esc(p.name)}</a></h3>
@@ -383,32 +382,8 @@
     pintar();
   }
 
-  // Reels: el botón de play arranca el video con sonido y muestra los controles (vidriera pausa los demás)
-  document.addEventListener('click', e => {
-    const b = e.target.closest('.sx-play');
-    if (!b) return;
-    const v = b.parentElement.querySelector('video');
-    v.controls = true;
-    v.muted = false;
-    b.hidden = true;
-    const p = v.play();
-    if (p && p.catch) p.catch(() => { b.hidden = false; });
-    v.addEventListener('ended', () => { b.hidden = false; v.controls = false; }, { once: true });
-  });
-
-  // Sonido de los reels: al activar uno, los demás se callan
-  document.addEventListener('click', e => {
-    const b = e.target.closest('.sx-sound');
-    if (!b) return;
-    const v = b.closest('.sx-reel-media').querySelector('video');
-    const on = v.muted;
-    $$('.sx-reel-media video').forEach(x => { x.muted = true; });
-    $$('.sx-sound').forEach(x => { x.setAttribute('aria-pressed', 'false'); x.innerHTML = I.mute; });
-    v.muted = !on;
-    if (on) { v.dataset.played = '1'; const p = v.play(); if (p && p.catch) p.catch(() => {}); }
-    b.setAttribute('aria-pressed', String(on));
-    b.innerHTML = on ? I.sound : I.mute;
-  });
+  // Videos: tocar el producto abre su ficha (foto y detalles). El video arranca solo y sin sonido al pasar
+  // el mouse o cuando queda en el medio de la pantalla del celular (shared/vidriera.js); con sonido, en la ficha.
 
   // Los botones "Ver los productos" y "Calculá tu envío" bajan sin tocar la dirección (los diseños usan el # para navegar)
   document.addEventListener('click', e => {
