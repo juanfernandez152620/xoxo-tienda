@@ -42,6 +42,8 @@
     pin: line('<path d="M12 21s-6.5-5.7-6.5-11a6.5 6.5 0 0 1 13 0c0 5.3-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>'),
     store: line('<path d="M3.5 9.5h17l-1.2-4.8a1.5 1.5 0 0 0-1.5-1.2H6.2a1.5 1.5 0 0 0-1.5 1.2zM4.5 9.5v10h15v-10M9.5 19.5v-5h5v5"/>'),
     check: line('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
+    sonido: line('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>'),
+    mudo: line('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/>'),
   };
 
   /* ---------- Piezas ---------- */
@@ -361,7 +363,100 @@
       </section>`;
   }
 
-  // 2. Un capítulo por ventilador: la ocasión, la historia, lo que la respalda, el video y la compra
+  /* 2. La historia, después del banner: los socios, el equipo y las sucursales. Cada parte trae una promesa:
+        la garantía, la financiación y los envíos. Los textos de /admin → Historia se usan cuando ya son reales. */
+  const textoReal = (t, porDefecto) => sinRelleno(t) || porDefecto;
+  const nombreReal = n => Boolean(n && !/^(socio \d+|lorem|ipsum|dolor|sit|amet|elit|consectetur)$/i.test(String(n).trim()));
+  const hvPromesa = (ico, titulo, html) => `
+    <div class="hv-promesa" data-reveal style="--i:3"><span class="hv-promesa-ico">${ico}</span>
+      <div><b>${esc(titulo)}</b><p>${html}</p></div></div>`;
+
+
+  // Fotos de ejemplo (marcadas así) hasta que se carguen las reales en /admin → Historia y → Sucursales
+  const SILUETA = {
+    persona: '<svg viewBox="0 0 100 120" aria-hidden="true"><circle cx="50" cy="44" r="19"/><path d="M13 120c2-27 17-41 37-41s35 14 37 41z"/></svg>',
+    grupo: '<svg viewBox="0 0 160 100" aria-hidden="true"><circle cx="40" cy="42" r="13"/><path d="M14 100c2-19 12-29 26-29s24 10 26 29z"/><circle cx="120" cy="42" r="13"/><path d="M94 100c2-19 12-29 26-29s24 10 26 29z"/><circle cx="80" cy="34" r="15"/><path d="M50 100c2-23 14-34 30-34s28 11 30 34z"/></svg>',
+    local: '<svg viewBox="0 0 120 100" aria-hidden="true"><path d="M10 38h100l-8-24H18z"/><rect x="18" y="42" width="84" height="54" rx="2"/><rect x="30" y="56" width="22" height="40" fill-opacity=".5"/><rect x="62" y="56" width="30" height="20" fill-opacity=".5"/></svg>',
+  };
+  const fotoOEjemplo = (src, que, forma, tono) => (src
+    ? `<img class="ph-img" src="${esc(src)}" alt="${esc(que)}" loading="lazy" decoding="async">`
+    : `<div class="ph hv-ph hv-ph-${forma}" style="--h:${tono}" role="img" aria-label="Foto de ejemplo: ${esc(que)}">${SILUETA[forma]}<span class="ph-tag">Foto de ejemplo</span></div>`);
+
+  // Tres fotos como cartas en la mano: llegan apiladas y se abren en abanico al bajar
+  const abanico = cartas => `<div class="hv-abanico">${cartas.map((c, i) => `
+    <figure class="hv-carta" style="--k:${i - (cartas.length - 1) / 2}">${c.foto}${c.nombre ? `<figcaption>${esc(c.nombre)}</figcaption>` : ''}</figure>`).join('')}</div>`;
+
+  // Cada parte de la historia: el texto con su promesa de un lado y la foto (o el abanico) del otro
+  const hvParte = ({ id, invertida, kicker, titulo, texto, promesa, extra = '', visual }) => `
+    <section class="hv-parte${invertida ? ' hv-parte-inv' : ''}" id="${id}" data-scroll>
+      <div class="hv-parte-in wrap">
+        <div class="hv-parte-copy">
+          <p class="kicker" data-reveal>${kicker}</p>
+          <h2 class="sec-title" data-reveal style="--i:1">${titulo}</h2>
+          <p class="sec-text" data-reveal style="--i:2">${texto}</p>
+          ${promesa}${extra}
+        </div>
+        <div class="hv-parte-visual">${visual}</div>
+      </div>
+    </section>`;
+
+  // Los 3 socios, en una sola foto + la garantía
+  function hvSocios() {
+    const n = (STORY.founders || []).length || 3;
+    const d = STORY.warrantyDays || 30;
+    return hvParte({
+      id: 'socios', kicker: `Somos ${esc(STORE.name)}`,
+      titulo: `${esc(n)} socios detrás de cada venta`,
+      texto: esc(textoReal(STORY.foundersText, `Arrancamos ${STORE.name} entre tres y elegimos cada producto que vendemos. Si algo no anda, damos la cara.`)),
+      promesa: hvPromesa(I.shield, `Ofrecemos ${d} días de garantía`, esc(textoReal(STORY.warrantyText, `Si algo falla en los primeros ${d} días, lo resolvemos en la sucursal o por WhatsApp.`))),
+      visual: `<figure class="hv-grupo">${fotoOEjemplo(STORY.foundersPhoto, `los ${n} socios de ${STORE.name}`, 'grupo', '#63a3d1')}</figure>`,
+    });
+  }
+
+  // El equipo, tres fotos en abanico + la financiación
+  function hvEquipo() {
+    const t = STORY.team || [];
+    const n = Number(STORE.extras.cuotas) || 6;
+    const debito = STORE.financing ? ` o en <b>${esc(n)} cuotas${sinInteres} con tu tarjeta de débito</b> en ${goImg()}` : '';
+    const cartas = [0, 1, 2].map(i => {
+      const p = t[i] || {};
+      const nombre = nombreReal(p.name) ? p.name : '';
+      return { foto: fotoOEjemplo(p.photo, nombre || 'alguien del equipo', 'persona', TONOS[(i + 1) % TONOS.length]), nombre };
+    });
+    return hvParte({
+      id: 'equipo', invertida: true, kicker: 'El equipo',
+      titulo: esc(textoReal(STORY.teamTitle, 'Un equipo que te atiende de verdad')),
+      texto: esc(textoReal(STORY.teamText, 'Te asesoramos en el local y por WhatsApp, y armamos cada pedido.')),
+      promesa: hvPromesa(I.card, 'Financiación segura', `Pagás en hasta <b>12 cuotas${sinInteres} con tarjeta de crédito</b> por Mercado Pago${debito}. Los datos de tu tarjeta los manejan ellos: nosotros no los vemos.`),
+      visual: abanico(cartas),
+    });
+  }
+
+  // Las sucursales, tres fotos en abanico + los envíos y el retiro gratis
+  function hvSucursales() {
+    const branches = STORE.branches || [];
+    const provs = [...new Set(branches.map(b => b.province).filter(Boolean))];
+    const conDir = branches.filter(conDireccion);
+    const otras = [...new Set(branches.filter(b => !conDireccion(b)).map(b => b.province).filter(Boolean))];
+    // La sucursal principal queda arriba de la pila (la carta de la derecha)
+    const cartas = [...conDir, ...branches.filter(b => !conDireccion(b))].slice(0, 3).reverse()
+      .map((b, i) => ({ foto: fotoOEjemplo(b.photo, `el local de ${b.name}`, 'local', TONOS[(i + 3) % TONOS.length]), nombre: b.name }));
+    const dirs = conDir.length ? `
+      <ul class="hv-dirs" data-reveal style="--i:4">${conDir.map(b => `
+        <li>${I.pin}<span><b>${esc(b.name)}</b>${esc(b.address)}</span><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">Cómo llegar</a></li>`).join('')}
+        ${otras.length ? `<li class="hv-dirs-mas">${I.pin}<span>También estamos en ${esc(listaY(otras))}</span></li>` : ''}
+      </ul>` : '';
+    return hvParte({
+      id: 'sucursales', kicker: 'Nuestras sucursales',
+      titulo: esc(textoReal(STORY.branchesTitle, `Sucursales en ${listaY(provs)}`)),
+      texto: esc(textoReal(STORY.branchesText, 'Vení a ver los ventiladores funcionando antes de llevarte el tuyo.')),
+      promesa: hvPromesa(I.truck, 'Envíos a todo el país y retiro gratis', 'Mandamos con <b>Andreani</b> y <b>Correo Argentino</b>, a tu casa o a la sucursal del correo. Y si estás cerca, <b>retirás gratis en cualquiera de nuestras sucursales</b>.'),
+      extra: dirs,
+      visual: cartas.length ? abanico(cartas) : '',
+    });
+  }
+
+  // 3. Un capítulo por ventilador: la ocasión, la historia, lo que la respalda, el video y la compra
   function hvCapitulo(k, i, total) {
     const p = k.p;
     const n = Number(STORE.extras.cuotas) || 6;
@@ -371,9 +466,12 @@
         <span class="hv-cap-n" aria-hidden="true">${i + 1}</span>
         <div class="hv-cap-in wrap">
           <div class="hv-cap-media">
-            <a class="hv-media js-ficha" ${ver} aria-label="Ver ${esc(p.name)}">
-              ${p.video ? V.videoHTML(p, false, true) : V.coverHTML(p, false)}
-            </a>
+            <div class="hv-video">
+              <a class="hv-media js-ficha" ${ver} aria-label="Ver ${esc(p.name)}">
+                ${p.video ? V.videoHTML(p, false, true) : V.coverHTML(p, false)}
+              </a>
+              ${p.video ? `<button type="button" class="hv-sonido" aria-pressed="false" aria-label="Activar el sonido del video">${I.mudo}</button>` : ''}
+            </div>
           </div>
           <div class="hv-cap-copy">
             <p class="kicker hv-ocasion" data-reveal style="--i:0">${esc(k.ocasion)}<span>${i + 1} de ${total}</span></p>
@@ -385,7 +483,7 @@
               ${V.priceHTML(p)}
               ${STORE.financing ? `<p class="hv-cuotas"><b>${n} cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, n)}</b> con débito ${goImg()}</p>` : ''}
               <p class="hv-cuotas"><b>12 cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, 12)}</b> con crédito</p>
-              <div class="hv-btns">${PAY ? `${V.buyButton(p, 'Comprar')}${V.waLink(p, 'Consultar', 'ghost')}` : V.waLink(p, 'Pedilo por WhatsApp')}</div>
+              <div class="hv-btns">${PAY ? V.buyButton(p, 'Comprar') : V.waLink(p, 'Pedilo por WhatsApp')}</div>
             </div>
           </div>
         </div>
@@ -403,35 +501,7 @@
       </section>` : '');
   }
 
-  // 3. Por qué comprarnos: corto, después de los ventiladores
-  function hvConfianza() {
-    const d = STORY.warrantyDays || 30;
-    const garantiaTxt = sinRelleno(STORY.warrantyText) || `Si algo falla en los primeros ${d} días, lo resolvemos en la sucursal o por WhatsApp.`;
-    const promesas = [
-      [I.card, `Pagás con Mercado Pago${STORE.financing ? ` o ${STORE.financing}` : ''}`, 'Los datos de tu tarjeta los maneja Mercado Pago: nosotros no los vemos.'],
-      [I.truck, 'Envío con seguimiento', 'Andreani o Correo Argentino, a tu casa o a la sucursal. Te mandamos el seguimiento por mail.'],
-      [I.store, 'Retiro gratis', 'Si estás cerca, lo retirás sin cargo en una de nuestras sucursales.'],
-      [I.shield, `${d} días de garantía`, garantiaTxt],
-    ];
-    const branches = STORE.branches || [];
-    const conDir = branches.filter(conDireccion);
-    const otras = [...new Set(branches.filter(b => !conDireccion(b)).map(b => b.province).filter(Boolean))];
-    return `
-      <section class="hv-confianza wrap" id="confianza">
-        ${sectionHead('Por qué comprarnos', 'Tu compra, cuidada de punta a punta')}
-        <ul class="hv-promesas">${promesas.map(([ico, t, x], i) => `
-          <li data-reveal style="--i:${i}"><span class="hv-p-ico">${ico}</span><b>${esc(t)}</b><span>${esc(x)}</span></li>`).join('')}
-        </ul>
-        ${conDir.length ? `
-        <div class="hv-locales" data-reveal>
-          <p class="hv-locales-t">${I.pin}<b>Vení a verlos funcionando</b></p>
-          <ul>${conDir.map(b => `<li><b>${esc(b.name)}</b><span>${esc(b.address)}</span><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">Cómo llegar</a></li>`).join('')}</ul>
-          ${otras.length ? `<p class="hv-locales-mas">También estamos en ${esc(listaY(otras))}.</p>` : ''}
-        </div>` : ''}
-      </section>`;
-  }
-
-  // 6. Cierre: una persona del otro lado
+  // 4. Cierre: una persona del otro lado
   function hvCierre() {
     return `
       <section class="hv-cierre wrap" data-reveal>
@@ -442,6 +512,29 @@
           <a class="btn ghost" href="#cap-1" data-sx-go="cap-1">Volver a los ventiladores</a>
         </div>
       </section>`;
+  }
+
+  // Sonido de los videos de los capítulos: se prende de a uno (los demás quedan en silencio)
+  function hvSonido() {
+    const pintar = (b, on) => {
+      b.setAttribute('aria-pressed', String(on));
+      b.setAttribute('aria-label', on ? 'Silenciar el video' : 'Activar el sonido del video');
+      b.innerHTML = on ? I.sonido : I.mudo;
+    };
+    document.addEventListener('click', e => {
+      const b = e.target.closest('.hv-sonido');
+      if (!b) return;
+      const v = $('video', b.parentElement);
+      if (!v) return;
+      const prender = v.muted;
+      $$('.hv-sonido').forEach(x => { const o = $('video', x.parentElement); if (o) o.muted = true; pintar(x, false); });
+      if (!prender) return;
+      v.muted = false;
+      v.dataset.played = '1';
+      const r = v.play();
+      if (r && r.catch) r.catch(() => {});
+      pintar(b, true);
+    });
   }
 
   // Celular: abajo, siempre a mano, comprar el ventilador que se está viendo
@@ -502,7 +595,7 @@
     const sx = html => `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${html}</div>`;
     if (CAT && capitulosDe(CAT).length) document.body.classList.add('hv-page');
     main.innerHTML = CAT && capitulosDe(CAT).length
-      ? [hvPortada(CAT), franja(), hvCapitulos(CAT), hvConfianza(), calculadora(), sx(window.Secciones.faq(CAT)), hvCierre(), categorias(CAT)].join('')
+      ? [hvPortada(CAT), hvSocios(), hvEquipo(), hvSucursales(), franja(), hvCapitulos(CAT), calculadora(), sx(window.Secciones.faq(CAT)), hvCierre(), categorias(CAT)].join('')
       : CAT
       ? [CAT.banner ? `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.hero(CAT)}${window.Secciones.videos(CAT)}</div>` : heroCategoria(CAT), franja(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.beneficios(CAT)}</div>`,
         productosCategoria(CAT), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.guia(CAT)}</div>`,
@@ -704,6 +797,7 @@
   if (CAT) chips();
   vistas();
   hvBarra();
+  hvSonido();
   // Producto compartido (#x=…) lo abre la vidriera; el ancla (#envios) baja después de armar la página
   if (/^#[a-z-]+$/.test(location.hash)) {
     const el = document.getElementById(location.hash.slice(1));

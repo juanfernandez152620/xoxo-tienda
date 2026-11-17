@@ -428,6 +428,7 @@
         ${field('Dirección', `${p}.address`, { help: 'Se muestra en la tienda, con el botón "Cómo llegar".' })}
         ${field('Provincia', `${p}.province`, { help: 'Agrupa las sucursales en la página Historia. Ej. Tucumán, Catamarca, Buenos Aires.' })}
       </div>
+      ${mediaField('Foto del local', `${p}.photo`, 'El frente o el interior. Se ve en Historia → Ventilación; sin foto se muestra una de ejemplo.')}
       <div class="row">${check('Recibe mensajes de WhatsApp', `${p}.on`)}<span class="spacer"></span>
         ${len > 1 ? `<button class="btn small" type="button" data-act="del-branch" data-i="${i}">Quitar sucursal</button>` : ''}</div>
     </div>`;
@@ -785,6 +786,7 @@
       ${area('Texto de la portada', 'story.text')}
       <fieldset><legend>Los 3 socios</legend>
         ${field('Título', 'story.foundersTitle')}${area('Texto', 'story.foundersText')}
+        ${mediaField('Foto de los 3 socios juntos', 'story.foundersPhoto', 'Una sola foto horizontal de los tres. Se ve en Historia → Ventilación; sin foto se muestra una de ejemplo.')}
         ${(h.founders || []).map((p, i) => persona('founders', i, 'Socio')).join('')}
       </fieldset>
       <fieldset><legend>El equipo</legend>

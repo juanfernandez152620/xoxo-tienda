@@ -142,7 +142,7 @@ function normalizarSucursales(list) {
     const on = Boolean(b.on);
     // Una sucursal que no recibe mensajes puede no tener WhatsApp (solo se muestra en la página)
     if ((on || phone) && !/^\d{11,15}$/.test(phone)) fallar(`Sucursal ${name}: el WhatsApp tiene que ser la característica y el número, sin 0 ni 15 (ej. 3813629235)`);
-    return { id, name, province: txt(b.province, 40), whatsapp: phone, address: txt(b.address, 150), on };
+    return { id, name, province: txt(b.province, 40), whatsapp: phone, address: txt(b.address, 150), photo: mediaUrl(b.photo, `Sucursal ${name}: foto del local`), on };
   }, 12);
   if (!out.some(b => b.on)) fallar('Dejá al menos una sucursal recibiendo mensajes');
   return out;
@@ -234,6 +234,8 @@ function normalizarHistoria(h) {
     kicker: txt(h.kicker, 60), title: txt(h.title, 120), text: txt(h.text, 600),
     foundersTitle: txt(h.foundersTitle, 90), foundersText: txt(h.foundersText, 600),
     founders: items(h.founders, (p, i) => persona(p, `Socio ${i + 1}`), 3),
+    // Una sola foto de los 3 socios juntos (Historia → Ventilación)
+    foundersPhoto: mediaUrl(h.foundersPhoto, 'Historia: foto de los 3 socios'),
     teamTitle: txt(h.teamTitle, 90), teamText: txt(h.teamText, 400),
     team: items(h.team, (p, i) => persona(p, `Equipo ${i + 1}`), 12),
     branchesTitle: txt(h.branchesTitle, 90), branchesText: txt(h.branchesText, 400),
@@ -516,7 +518,7 @@ function publico() {
   const { closing, financingLogo, ...store } = site.store;
   store.closing = closing.show && closing.title ? { title: closing.title, text: closing.text } : null;
   store.financingLogo = financingLogo.color ? { color: financingLogo.color, icon: financingLogo.icon || financingLogo.color } : null;
-  store.branches = store.branches.map(b => ({ id: b.id, name: b.name, province: b.province, address: b.address }));
+  store.branches = store.branches.map(b => ({ id: b.id, name: b.name, province: b.province, address: b.address, photo: b.photo || '' }));
   const visibles = list => list.filter(p => !p.hidden).map(({ hidden, ...p }) => p);
   return {
     store, products: site.store.phones ? visibles(site.products) : [], extras: visibles(site.extras),
