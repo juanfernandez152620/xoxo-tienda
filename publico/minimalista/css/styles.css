@@ -1176,3 +1176,29 @@ img, svg, video { display: block; max-width: 100%; }
 }
 /* La barra del descuento flash queda siempre arriba: sin la etiqueta flotante de abajo, que tapaba los botones */
 .fl-pill { display: none !important; }
+
+
+/* ============ 22/11/2026: colores de XOXO Tecno (manual de marca en Canva) ============ */
+/* Fondo blanco (los videos y las fotos hablan), títulos y botones en azul #2b4966, crema #f6efe1 detrás de los
+   productos y casi negro #242424 en el texto. Solo en el modo claro. Sin la mascota. */
+:root:not([data-theme="dark"]) {
+  --azul-xoxo: #2b4966;
+  --ink: #242424;
+  --muted: #5d6573;
+  --soft: #f6efe1;
+  --line: #e6dfd0;
+  --acento: #2b4966;
+  --btn: #2b4966;
+  --logo: #2b4966;
+  --overlay: rgba(29, 53, 80, .74);
+}
+:root:not([data-theme="dark"]) .sx-title, :root:not([data-theme="dark"]) .sx-hero-title { color: #2b4966; }
+/* Portada de una categoría sin foto: el ícono en el azul de la marca y el isotipo de XOXO al lado */
+:root:not([data-theme="dark"]) #cat-home .sx-ring { background: radial-gradient(circle at 35% 30%, #f6efe1, #f6efe1 55%, color-mix(in srgb, #f6efe1 40%, transparent) 70%); }
+:root:not([data-theme="dark"]) #cat-home .sx-ico { background: #2b4966; box-shadow: 0 24px 50px -18px #2b4966; }
+#cat-home .sx-hero-art::after {
+  content: ""; position: absolute; right: 6%; bottom: 8%; width: 18%; aspect-ratio: 331 / 404;
+  background: url('/media/marca/xoxo-isotipo-azul.svg') center / contain no-repeat;
+}
+:root[data-theme="dark"] #cat-home .sx-hero-art::after { background-image: url('/media/marca/xoxo-isotipo-blanco.svg'); }
+@media (max-width: 760px) { #cat-home .sx-hero-art { max-width: 130px; } }

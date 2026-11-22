@@ -311,7 +311,7 @@ section { position: relative; }
 .shelf-head .sec-title { font-size: clamp(30px, 4.4vw, 48px); }
 .shelf-head .more { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; text-decoration: none; color: var(--c, var(--accent)); }
 .shelf-head .more svg { width: 16px; height: 16px; }
-.h-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(230px, 44vw), 1fr)); gap: clamp(12px, 2vw, 22px); }
+.h-grid { gap: clamp(18px, 2vw, 22px); } /* las columnas, de shared/vidriera.css: 1, 2 o 4 */
 .h-card { display: flex; }
 .h-card > .xcard { flex: 1; transition: transform .4s var(--ease), box-shadow .4s var(--ease); }
 .h-card > .xcard:hover { transform: translateY(-4px); box-shadow: var(--lift); }
@@ -710,3 +710,55 @@ section { position: relative; }
   .hv-parte .hv-pila-ancha { width: 86%; margin-inline: auto; }
   .hv-parte .hv-pila-nav { margin-top: 10px; }
 }
+
+
+/* ============ 22/11/2026: colores de XOXO Tecno (manual de marca en Canva) ============ */
+/* Azul #2b4966 en títulos y botones, crema #f6efe1 en las secciones de fondo y casi negro #242424 en el texto.
+   Solo en el modo claro; el oscuro sigue igual. Sin la mascota. */
+:root:not([data-theme="dark"]) {
+  --azul-xoxo: #2b4966;
+  --accent: #2b4966;
+  --btn: #2b4966;
+  --ink: #242424;
+  --muted: #5d6573;
+  --bg-2: #f6efe1;
+  --bg-3: #efe5d1;
+  --surface-2: #f6efe1;
+  --line: #e9e1d0;
+}
+:root:not([data-theme="dark"]) .hv-title, :root:not([data-theme="dark"]) .hv-cap-title, :root:not([data-theme="dark"]) .sec-title { color: #2b4966; }
+:root:not([data-theme="dark"]) .hv-hero {
+  background:
+    radial-gradient(70% 60% at 0% 0%, rgba(43, 73, 102, .1), transparent 70%),
+    radial-gradient(60% 60% at 100% 100%, rgba(246, 239, 225, .9), transparent 70%),
+    var(--bg);
+}
+
+/* Portada sin foto: el panel de la marca (el isotipo, la categoría y las cuotas con débito, como en las piezas) */
+.hv-hero-marca {
+  position: relative; display: grid; place-items: center; align-content: center; gap: clamp(18px, 3vw, 30px); margin: 0;
+  aspect-ratio: 4 / 5; max-height: 72vh; overflow: hidden; padding: clamp(24px, 4vw, 48px); border-radius: 28px;
+  background: #2b4966; color: #f6efe1; box-shadow: var(--lift); isolation: isolate;
+}
+.hv-hero-marca::before {
+  content: "CUOTAS CUOTAS CUOTAS CUOTAS CUOTAS CUOTAS CUOTAS CUOTAS CUOTAS CUOTAS CUOTAS CUOTAS"; position: absolute; inset: -20%; z-index: -1;
+  font: 400 clamp(54px, 6vw, 86px)/.95 var(--display); color: transparent; -webkit-text-stroke: 1.2px rgba(246, 239, 225, .13);
+  rotate: -10deg; word-spacing: .2em; pointer-events: none;
+}
+.hv-hero-marca img { width: clamp(110px, 13vw, 170px); height: auto; }
+.hv-hero-marca figcaption { display: grid; justify-items: center; gap: 12px; text-align: center; }
+.hv-hero-marca b { font: 400 clamp(26px, 2.8vw, 38px)/1.05 var(--display); letter-spacing: .02em; text-transform: uppercase; }
+.hv-hero-marca span { padding: 9px 18px; border-radius: 999px; background: #f6efe1; color: #1d3550; font: italic 900 clamp(14px, 1.4vw, 17px)/1.1 var(--font); text-transform: uppercase; }
+@media (max-width: 899px) { .hv-hero-marca { display: none; } }
+
+/* El equipo: las formas de pagar en cuotas, una por renglón */
+.hv-pagos { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
+.hv-pagos li { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line); }
+.hv-pago-n { flex: none; min-width: 52px; color: #2b4966; font: 400 44px/1 var(--display); text-align: center; }
+.hv-pagos b { display: block; color: var(--ink); font-size: 15.5px; line-height: 1.3; }
+.hv-pagos small { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 3px; color: var(--muted); font-size: 13.5px; }
+.hv-pagos .hv-go { display: inline-block; height: 16px; width: auto; vertical-align: -3px; }
+.hv-pago-seguro { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0 0 !important; }
+.hv-pago-seguro svg { flex: none; width: 18px; height: 18px; margin-top: 2px; color: #2b4966; }
+/* En el celular el recuadro es una grilla: las cuotas van a lo ancho, debajo del título */
+.hv-promesa-fin .hv-pagos { grid-column: 1 / -1; }

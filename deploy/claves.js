@@ -19,7 +19,9 @@ const net = require('net');
 const tls = require('tls');
 const { execFileSync } = require('child_process');
 
-const ARCHIVO = path.resolve(process.argv[2] || '/etc/xoxo-tienda.env');
+// "guia": las claves de pago una por una (ssh -t xoxo-vps xoxo-claves guia), en vez del menú
+const MODO_GUIA = process.argv.slice(2).includes('guia');
+const ARCHIVO = path.resolve(process.argv.slice(2).find(a => a !== 'guia') || '/etc/xoxo-tienda.env');
 const EN_SERVIDOR = ARCHIVO === '/etc/xoxo-tienda.env';
 const SERVICIO = 'xoxo-tienda';
 const TTY = Boolean(process.stdin.isTTY);
@@ -517,6 +519,92 @@ async function guardarYReiniciar(lineas, v, cambios) {
   console.log(`no responde. Para volver a las claves anteriores: cp ${ARCHIVO}.anterior ${ARCHIVO} && systemctl restart ${SERVICIO}`);
 }
 
+/* ---------- Modo guiado: las claves de pago una por una ---------- */
+const paso = (n, total, titulo, texto) => console.log(`\n━━ Paso ${n} de ${total} · ${titulo}\n${texto}`);
+
+async function guia(v, set, probado, lineas, cambios) {
+  const T = 6;
+  console.log(`
+Vamos a cargar las claves de pago una por una: Mercado Pago, GO cuotas y el pago simulado.
+Lo que pegues no se ve en pantalla (solo puntitos). Pegá y apretá Enter.
+Enter solo = saltear ese paso y dejar lo que ya está. Ctrl+C = salir sin guardar nada.`);
+
+  // 1. Mercado Pago: Access Token
+  paso(1, T, 'Mercado Pago', `  Ingresá el ACCESS TOKEN DE PRODUCCIÓN de Mercado Pago (empieza con APP_USR-).
+  Dónde está: mercadopago.com.ar/developers → Tus integraciones → tu aplicación → Credenciales de producción → Access Token.${v.MP_ACCESS_TOKEN ? `\n  Ahora hay uno cargado (${enmascarar(v.MP_ACCESS_TOKEN)}).` : ''}`);
+  for (;;) {
+    const t = await preguntar('Access Token de Mercado Pago: ', { oculto: true });
+    if (!t) { console.log('  Salteado.'); break; }
+    if (/\s/.test(t) || t.length < 20) { console.log('  Eso no parece un Access Token. Probá de nuevo (Enter solo = saltear).'); continue; }
+    process.stdout.write('  Probando con Mercado Pago… ');
+    const r = await probarMp(t);
+    if (!r.ok) { console.log(`no anduvo: ${r.error}. Probá de nuevo (Enter solo = saltear).`); continue; }
+    console.log(`anda. Cuenta ${r.cuenta}${r.pais && r.pais !== 'MLA' ? ` (OJO: es de ${r.pais}, no de Argentina)` : ''}.`);
+    console.log(r.prueba ? '  Es una cuenta DE PRUEBA: los pagos no cobran de verdad.' : '  Es una cuenta REAL: los pagos van a cobrar de verdad.');
+    set('MP_ACCESS_TOKEN', t);
+    probado.mp = r;
+    break;
+  }
+
+  // 2. Mercado Pago: clave secreta de los avisos (opcional)
+  paso(2, T, 'Mercado Pago (opcional)', `  Ingresá la CLAVE SECRETA DE WEBHOOKS de Mercado Pago: con ella la tienda comprueba que cada aviso de pago es de verdad.
+  Dónde está: en la misma aplicación → Webhooks → Configurar notificaciones → "Clave secreta".
+  Si no la tenés a mano, apretá Enter: la tienda funciona igual.`);
+  const sec = await preguntar('Clave secreta de webhooks de Mercado Pago: ', { oculto: true });
+  if (sec) set('MP_WEBHOOK_SECRET', sec);
+  else console.log('  Salteado.');
+
+  // 3. GO cuotas: email de la sucursal
+  paso(3, T, 'GO cuotas', `  Ingresá el EMAIL DE LA SUCURSAL de GO cuotas (el de la sucursal con la API Redirect V1).${v.GOCUOTAS_EMAIL ? `\n  Ahora está cargado ${v.GOCUOTAS_EMAIL}: Enter solo = dejar ese.` : ''}`);
+  let email = '';
+  for (;;) {
+    email = (await preguntar('Email de la sucursal de GO cuotas: ')) || v.GOCUOTAS_EMAIL || '';
+    if (!email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) break;
+    console.log('  Ese email no parece válido. Probá de nuevo (Enter solo = saltear).');
+  }
+
+  // 4. GO cuotas: API key (producción o sandbox)
+  if (!email) {
+    paso(4, T, 'GO cuotas', '  Salteado: sin email no se puede cargar la API key.');
+  } else {
+    const real = await siNo('¿Vas a cobrar de verdad con GO cuotas? (s = producción · n = sandbox de prueba)');
+    paso(4, T, 'GO cuotas', `  Ingresá la API KEY DE ${real ? 'PRODUCCIÓN' : 'SANDBOX'} de la sucursal de GO cuotas.
+  Dónde está: panel de GO cuotas → Sucursales → Editar → "Ver ApiKeys de la sucursal" → la de ${real ? 'producción' : 'sandbox'}.`);
+    for (;;) {
+      const key = await preguntar(`API key de ${real ? 'producción' : 'sandbox'} de GO cuotas: `, { oculto: true });
+      if (!key) { console.log('  Salteado.'); break; }
+      process.stdout.write(`  Probando con GO cuotas${real ? '' : ' (sandbox)'}… `);
+      const r = await probarGo(email, key, !real);
+      if (!r.ok) { console.log(`no anduvo: ${r.error}. Probá de nuevo (Enter solo = saltear).`); continue; }
+      console.log(real ? 'anda. Es REAL: los pagos van a cobrar de verdad.' : 'anda. Es de prueba: no cobra de verdad.');
+      set('GOCUOTAS_EMAIL', email);
+      set('GOCUOTAS_PASSWORD', key);
+      set('GOCUOTAS_SANDBOX', real ? 'false' : 'true');
+      break;
+    }
+  }
+
+  // 5. Pago simulado
+  paso(5, T, 'Pago simulado', `  Con las claves cargadas ya no hace falta: si queda prendido, el medio que no tenga clave muestra una
+  pantalla de pago de prueba que no cobra. Antes de abrir la tienda al público conviene apagarlo.`);
+  set('PAGOS_DEMO', (await siNo('¿Apago el pago simulado? (recomendado)')) ? 'false' : 'true');
+
+  // 6. Guardar
+  const lista = [
+    cambios.MP_ACCESS_TOKEN && `Mercado Pago · Access Token ${enmascarar(cambios.MP_ACCESS_TOKEN)}${probado.mp ? (probado.mp.prueba ? ' (de prueba)' : ' (REAL)') : ''}`,
+    cambios.MP_WEBHOOK_SECRET && 'Mercado Pago · clave secreta de webhooks',
+    cambios.GOCUOTAS_PASSWORD && `GO cuotas · ${cambios.GOCUOTAS_EMAIL} (${cambios.GOCUOTAS_SANDBOX === 'true' ? 'sandbox, de prueba' : 'REAL'})`,
+    `Pago simulado · ${v.PAGOS_DEMO === 'true' ? 'prendido' : 'apagado'}`,
+  ].filter(Boolean);
+  paso(6, T, 'Guardar', lista.map(x => `  • ${x}`).join('\n'));
+  if (!(await siNo('¿Guardo y reinicio la tienda?'))) {
+    console.log('\nNo guardé nada.');
+    return;
+  }
+  await guardarYReiniciar(lineas, v, cambios);
+  console.log('\nListo. Probá un pago desde /admin → Pedidos → "Crear link de pago".');
+}
+
 async function main() {
   if (!TTY && !process.env.XOXO_CLAVES_SIN_TERMINAL) {
     console.error('Abrilo desde una terminal, así lo que pegás no queda a la vista:  ssh -t xoxo-vps xoxo-claves');
@@ -531,6 +619,11 @@ async function main() {
   const cambios = {};
   const probado = {};
   const set = (k, val) => { v[k] = val; cambios[k] = val; };
+
+  if (MODO_GUIA) {
+    await guia(v, set, probado, lineas, cambios);
+    return salir(0);
+  }
 
   for (;;) {
     resumen(v, probado, cambios);

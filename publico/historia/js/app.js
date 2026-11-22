@@ -295,13 +295,13 @@
     return `<div class="ribbon" aria-label="Por qué comprar en XOXO"><div class="ribbon-track">${fila}${fila}</div></div>`;
   }
 
-  function productosCategoria(c) {
+  function productosCategoria(c, titulo = '') {
     const list = V.byCat(c.id);
     const grupos = [...new Set(list.map(p => p.group))];
     return `
       <section class="shelf wrap" id="productos" style="--c:${esc(c.color)}">
         <header class="shelf-head" data-reveal>
-          <h2 class="sec-title">${list.length} producto${list.length === 1 ? '' : 's'}</h2>
+          <h2 class="sec-title">${esc(titulo) || `${list.length} producto${list.length === 1 ? '' : 's'}`}</h2>
           ${grupos.length > 1 ? `<div class="chips" role="group" aria-label="Filtrar">${['Todos', ...grupos].map((g, i) => `<button type="button" class="chip" data-g="${i ? esc(g) : ''}" aria-pressed="${i === 0}">${esc(g)}</button>`).join('')}</div>` : ''}
         </header>
         <div class="js-cat-grid">${list.length ? cards(list) : '<p class="empty">Muy pronto vas a ver los productos de esta categoría acá.</p>'}</div>
@@ -322,7 +322,46 @@
       { id: 'ventilador-techo-kanji', ocasion: 'Para tu pieza', color: '#8b5cf6', titulo: 'Para dormir fresco en tu pieza',
         historia: 'Lo manejás con el control desde la cama y el timer lo apaga cuando ya te dormiste. Al apagarlo, las aspas se esconden. Y en invierno, función reversa.' },
     ],
+    // 22/11/2026: uno por tipo de producto (los destacados de la categoría)
+    contenido: [
+      { id: 'luz-led-full-jl80', ocasion: 'Para que se vea bien', color: '#2b4966', titulo: 'La luz que cambia tus videos',
+        historia: 'Grabás de noche, en tu pieza o en el local, y la luz de la cámara del celular no alcanza. Con una luz LED de frente, la cara y el producto se ven claros en cada video y en cada vivo.' },
+      { id: 'tripode-soul-j500', ocasion: 'Para grabar sin manos', color: '#3e6990', titulo: 'El trípode que se arma con un botón',
+        historia: 'Se abre con un solo botón y llega a 1,80 m, así entrás de cuerpo entero. Con el control remoto Bluetooth arrancás y cortás la grabación sin tocar el celular.' },
+      { id: 'microfono-live-xmic400', ocasion: 'Para que se escuche bien', color: '#5b84ab', titulo: 'El micrófono para tus vivos y tu podcast',
+        historia: 'Un buen video con mal sonido se pierde. El XMIC 400 es un micrófono condensador cardioide: toma sobre todo lo que tiene adelante, que es tu voz. Lo conectás por USB-C o por 3,5 mm, y lo silenciás con un toque.' },
+    ],
+    audio: [
+      { id: 'parlante-soundtech-xl900', ocasion: 'Para la juntada', color: '#2b4966', titulo: 'El parlante para que suene toda la juntada',
+        historia: 'El asado, la previa, la noche de fiestas en el patio. El SOUNDTECH XL900 es una torre de sonido: lo conectás al celular y la música llega a todos.' },
+      { id: 'auriculares-dream-flow-bt350', ocasion: 'Para tu música', color: '#3e6990', titulo: 'Auriculares de vincha, sin cables',
+        historia: 'Para estudiar, para el gimnasio o para la casa: se conectan por Bluetooth con hasta 18 m de alcance, así dejás el celular en la mesa y seguís escuchando.' },
+      { id: 'auriculares-tws-1400', ocasion: 'Para llevar a todos lados', color: '#5b84ab', titulo: 'Inalámbricos que entran en el bolsillo',
+        historia: 'Chiquitos, sin cables y con su estuche: el estuche los guarda y los carga, así los llevás en el bolsillo al colectivo, al trabajo o a correr.' },
+    ],
   };
+  // Lo que cambia en el relato según la categoría: el título de la portada, los botones y los porqués
+  const RELATO = {
+    ventilacion: {
+      titulo: 'Los ventiladores que elegimos para estas fiestas', ver: 'Ver los ventiladores', volver: 'Volver a los ventiladores',
+      cuotas: 'Un ventilador lo necesitás cuando aprieta el calor, no cuando cobrás. Y no todos tienen tarjeta de crédito: por eso también aceptamos el débito en cuotas.',
+      local: 'Vení a ver los ventiladores funcionando antes de llevarte el tuyo.',
+      envio: 'El calor no es de una sola provincia, y no todos tienen una sucursal a la vuelta. Queremos que cualquiera pueda tener su ventilador, viva donde viva.',
+    },
+    contenido: {
+      titulo: 'Lo que elegimos para que crees tu contenido', ver: 'Ver los productos', volver: 'Volver a los productos',
+      cuotas: 'Tu kit para grabar lo necesitás cuando arranca el proyecto, no cuando cobrás. Y no todos tienen tarjeta de crédito: por eso también aceptamos el débito en cuotas.',
+      local: 'Vení a probar las luces, los trípodes y los micrófonos antes de llevarte el tuyo.',
+      envio: 'Se crea contenido en todo el país, y no todos tienen una sucursal a la vuelta. Queremos que cualquiera pueda armar su kit, viva donde viva.',
+    },
+    audio: {
+      titulo: 'Lo que elegimos para que suene tu música', ver: 'Ver los productos', volver: 'Volver a los productos',
+      cuotas: 'La música no espera al día de cobro. Y no todos tienen tarjeta de crédito: por eso también aceptamos el débito en cuotas.',
+      local: 'Vení a escuchar los parlantes y a probarte los auriculares antes de llevarte los tuyos.',
+      envio: 'La música no es de una sola provincia, y no todos tienen una sucursal a la vuelta. Queremos que cualquiera pueda llevarse su parlante, viva donde viva.',
+    },
+  };
+  const relato = () => RELATO[CAT && CAT.id] || RELATO.ventilacion;
   const sinRelleno = t => String(t || '').replace(/\s*Lorem ipsum[\s\S]*$/i, '').trim();
   const esReal = p => Boolean(p && p.photo && p.name && !/^Socio \d+$/i.test(p.name));
   const listaY = arr => arr.join(', ').replace(/, ([^,]*)$/, ' y $1');
@@ -344,7 +383,7 @@
         <div class="hv-hero-in wrap">
           <div class="hv-hero-copy">
             <p class="kicker hv-anim" style="--i:0">Somos ${esc(STORE.name)}</p>
-            <h1 class="hv-title hv-anim" style="--i:1">Los ventiladores que elegimos para estas fiestas</h1>
+            <h1 class="hv-title hv-anim" style="--i:1">${esc(relato().titulo)}</h1>
             <ul class="hv-trust hv-anim" style="--i:2">
               <li>${I.store}<span>${esc((STORY.founders || []).length || 3)} socios y sucursales en ${esc(listaY(provs))}</span></li>
               <li>${I.shield}<span>${esc(d)} días de garantía en todo</span></li>
@@ -354,11 +393,15 @@
               <figure class="hv-socio" style="--k:${i}">${retrato(p, i)}<figcaption>${esc(p.name)}</figcaption></figure>`).join('')}</div>` : ''}
             ${flashOn() ? `<p class="hv-flash hv-anim fl-only" style="--i:3"><b>-${FL.cfg.percent}% flash</b> con el cupón <b>${esc(FL.cupon())}</b> · termina en <b class="js-flash-reloj">${FL.reloj(FL.restante())}</b></p>` : ''}
             <div class="hv-ctas hv-anim" style="--i:4">
-              <a class="btn" href="#cap-1" data-sx-go="cap-1">Ver los ventiladores ${I.down}</a>
+              <a class="btn" href="#cap-1" data-sx-go="cap-1">${esc(relato().ver)} ${I.down}</a>
               <a class="btn ghost js-wa js-wa-general" data-donde="portada" target="_blank" rel="noopener">${I.wa}Hablar con nosotros</a>
             </div>
           </div>
-          ${c.banner ? `<figure class="hv-hero-foto" aria-hidden="true"><img src="${esc(c.banner)}" alt="" fetchpriority="high" decoding="async"></figure>` : ''}
+          ${c.banner ? `<figure class="hv-hero-foto" aria-hidden="true"><img src="${esc(c.banner)}" alt="" fetchpriority="high" decoding="async"></figure>` : `
+          <figure class="hv-hero-marca hv-anim" style="--i:2" aria-hidden="true">
+            <img src="/media/marca/xoxo-isotipo-blanco.svg" alt="">
+            <figcaption><b>${esc(c.name)}</b>${STORE.financing ? `<span>${esc(Number(STORE.extras.cuotas) || 6)} cuotas${sinInteres} con débito</span>` : ''}</figcaption>
+          </figure>`}
         </div>
       </section>`;
   }
@@ -412,7 +455,7 @@
           ${parrafos.filter(Boolean).map((t, i) => `<p class="hv-cap-story" data-reveal style="--i:${i + 2}">${t}</p>`).join('')}
           <div class="hv-compra hv-promesa-fin" data-reveal style="--i:4">
             <span class="hv-pf-ico">${promesa.ico}</span>
-            <div><b class="hv-pf-t">${promesa.titulo}</b><p>${promesa.texto}</p>${promesa.extra || ''}</div>
+            <div><b class="hv-pf-t">${promesa.titulo}</b>${promesa.texto ? `<p>${promesa.texto}</p>` : ''}${promesa.extra || ''}</div>
           </div>
         </div>
       </div>
@@ -441,7 +484,6 @@
   function hvEquipo() {
     const t = (STORY.team || []).slice(0, 8);
     const n = Number(STORE.extras.cuotas) || 6;
-    const debito = STORE.financing ? `, o <b>${esc(n)} cuotas${sinInteres} con tu tarjeta de débito</b> en ${goImg()}` : '';
     // Solo las caras, en círculos chicos (fotos de perfil)
     const gente = t.length ? t : [{}, {}, {}];
     const caras = `
@@ -450,17 +492,21 @@
         return `<figure class="hv-cara" data-reveal style="--i:${i}">${fotoOEjemplo(p.photo, nombre || 'alguien del equipo', 'persona', TONOS[(i + 1) % TONOS.length])}${nombre ? `<figcaption>${esc(nombre)}</figcaption>` : ''}</figure>`;
       }).join('')}</div>
       ${gente.some(p => !p.photo) ? '<p class="hv-caras-nota">Fotos de ejemplo</p>' : ''}`;
+    // Las formas de pagar en cuotas, una por renglón (22/11/2026: el equipo es la primera parte, sin los socios)
+    const pagos = `
+      <ul class="hv-pagos">
+        <li><span class="hv-pago-n">12</span><div><b>cuotas${sinInteres} con tarjeta de crédito</b><small>Por Mercado Pago</small></div></li>
+        ${STORE.financing ? `<li><span class="hv-pago-n">${esc(n)}</span><div><b>cuotas${sinInteres} con tu tarjeta de débito</b><small>Con ${goImg()} · sin tarjeta de crédito</small></div></li>` : ''}
+      </ul>
+      <p class="hv-pago-seguro">${I.shield}<span>Pagás en sus plataformas: los datos de tu tarjeta nunca pasan por nosotros.</span></p>`;
     return hvParte({
-      id: 'equipo', alt: true, color: '#ec4899', etiqueta: 'El equipo',
+      id: 'equipo', color: '#2b4966', etiqueta: 'El equipo',
       titulo: esc(textoReal(STORY.teamTitle, 'Un equipo que te atiende de verdad')),
       parrafos: [
         esc(textoReal(STORY.teamText, 'Te asesoramos en el local y por WhatsApp, y armamos cada pedido.')),
-        'Un ventilador lo necesitás cuando aprieta el calor, no cuando cobrás. Y no todos tienen tarjeta de crédito: por eso también aceptamos el débito en cuotas.',
+        esc(relato().cuotas),
       ],
-      promesa: {
-        ico: I.card, titulo: 'Por eso te damos cuotas, y con pago seguro',
-        texto: `Hasta <b>12 cuotas${sinInteres} con tarjeta de crédito</b> por Mercado Pago${debito}. Pagás en sus plataformas: los datos de tu tarjeta nunca pasan por nosotros.`,
-      },
+      promesa: { ico: I.card, titulo: 'Por eso te damos cuotas, y con pago seguro', texto: '', extra: pagos },
       visual: caras,
     });
   }
@@ -480,11 +526,11 @@
       };
     });
     return hvParte({
-      id: 'sucursales', color: '#8b5cf6', etiqueta: 'Las sucursales',
+      id: 'sucursales', alt: true, color: '#2b4966', etiqueta: 'Las sucursales',
       titulo: esc(textoReal(STORY.branchesTitle, `Sucursales en ${listaY(provs)}`)),
       parrafos: [
-        esc(textoReal(STORY.branchesText, 'Vení a ver los ventiladores funcionando antes de llevarte el tuyo.')),
-        'El calor no es de una sola provincia, y no todos tienen una sucursal a la vuelta. Queremos que cualquiera pueda tener su ventilador, viva donde viva.',
+        esc(textoReal(STORY.branchesText, relato().local)),
+        esc(relato().envio),
       ],
       promesa: {
         ico: I.truck, titulo: 'Por eso enviamos a todo el país, y retirar es gratis',
@@ -626,11 +672,7 @@
     const caps = capitulosDe(c);
     // Los productos de la categoría que todavía no tienen capítulo se ven igual, para no esconder ninguno
     const resto = V.byCat(c.id).filter(p => !caps.some(k => k.p === p));
-    return caps.map((k, i) => hvCapitulo(k, i, caps.length)).join('') + (resto.length ? `
-      <section class="shelf wrap" id="productos" style="--c:${esc(c.color)}">
-        <header class="shelf-head" data-reveal><h2 class="sec-title">También tenemos</h2></header>
-        ${cards(resto)}
-      </section>` : '');
+    return caps.map((k, i) => hvCapitulo(k, i, caps.length)).join('') + (resto.length ? productosCategoria(c, 'Todos los productos') : '');
   }
 
   // 4. Cierre: una persona del otro lado
@@ -641,7 +683,7 @@
         <p class="sec-text">Escribinos por WhatsApp y alguien del equipo te ayuda a elegir el tuyo.</p>
         <div class="hv-ctas">
           <a class="btn js-wa js-wa-general" data-donde="cierre" target="_blank" rel="noopener">${I.wa}Escribinos</a>
-          <a class="btn ghost" href="#cap-1" data-sx-go="cap-1">Volver a los ventiladores</a>
+          <a class="btn ghost" href="#cap-1" data-sx-go="cap-1">${esc(relato().volver)}</a>
         </div>
       </section>`;
   }
@@ -727,7 +769,7 @@
     const sx = html => `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${html}</div>`;
     if (CAT && capitulosDe(CAT).length) document.body.classList.add('hv-page');
     main.innerHTML = CAT && capitulosDe(CAT).length
-      ? [hvPortada(CAT), hvSocios(), hvEquipo(), hvSucursales(), franja(), hvCapitulos(CAT), calculadora(), sx(window.Secciones.faq(CAT)), hvCierre(), categorias(CAT)].join('')
+      ? [hvPortada(CAT), hvEquipo(), hvSucursales(), franja(), hvCapitulos(CAT), calculadora(), sx(window.Secciones.faq(CAT)), hvCierre(), categorias(CAT)].join('')
       : CAT
       ? [CAT.banner ? `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.hero(CAT)}${window.Secciones.videos(CAT)}</div>` : heroCategoria(CAT), franja(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.beneficios(CAT)}</div>`,
         productosCategoria(CAT), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.guia(CAT)}</div>`,

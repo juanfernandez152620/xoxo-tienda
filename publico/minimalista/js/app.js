@@ -526,7 +526,7 @@
     document.body.classList.add('cat-page');
     $$('.js-favs').forEach(b => { b.hidden = !PRODUCTS.length; });
     // Los productos con video van como "Productos destacados": en el celular uno debajo del otro
-    const o = { videos: { title: 'Productos destacados', lista: true } };
+    const o = { videos: { title: 'Productos destacados', lista: true, destacados: true } };
     $('#home').insertAdjacentHTML('afterbegin', `<div id="cat-home">${CAT ? window.Secciones.categoria(CAT, '/minimalista', o) : window.Secciones.inicio('/minimalista', o)}</div>`);
   }
 

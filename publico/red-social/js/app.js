@@ -1062,7 +1062,29 @@
       ofertas: 'Elegí el tuyo y llevalo en cuotas',
       iconos: ['ventilador-pie', 'ventilador-piso', 'ventilador-techo'],
     },
+    // 22/11/2026: los 21 productos SOUL. Arriba los 3 destacados (uno por tipo) y abajo todos, con filtro
+    contenido: {
+      tag: 'Regalá contenido estas fiestas',
+      titulo: 'Tu kit',
+      titulo2: 'de creador',
+      grito: '¡Grabá hoy!',
+      debito: '¡Armá tu kit en <b>{n} cuotas</b> con tu tarjeta de <b>débito</b> hoy!',
+      ofertas: 'Luz, trípode y micrófono',
+      iconos: ['luz', 'tripode', 'mic'],
+    },
+    audio: {
+      tag: 'La juntada suena mejor',
+      titulo: 'Subí',
+      titulo2: 'el volumen',
+      grito: '¡Que suene!',
+      debito: '¡Llevate tu parlante o tus auriculares en <b>{n} cuotas</b> con tu <b>débito</b> hoy!',
+      ofertas: 'Parlantes y auriculares',
+      iconos: ['parlante', 'auricular', 'tws'],
+    },
   };
+  // Auriculares inalámbricos (dos auriculares de los que van adentro del oído), para el banner de audio
+  const TWS = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4a3.5 3.5 0 0 1 3.5 3.5V9a3 3 0 0 1-3 3h-.5A3.5 3.5 0 0 1 4 8.5v-1A3.5 3.5 0 0 1 7.5 4z"/><path d="M8.5 12v7a1.5 1.5 0 0 1-3 0v-6"/><path d="M16.5 4A3.5 3.5 0 0 0 13 7.5V9a3 3 0 0 0 3 3h.5A3.5 3.5 0 0 0 20 8.5v-1A3.5 3.5 0 0 0 16.5 4z"/><path d="M15.5 12v7a1.5 1.5 0 0 0 3 0v-6"/></svg>';
+  const iconoPromo = ic => (ic === 'tws' ? TWS : conAspas(window.Vidriera.icon(ic) || ''));
   const SOL = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg>';
   const FLECHA = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   const cuotaDe = (precio, n) => Math.ceil(precio / n);
@@ -1072,15 +1094,17 @@
     .replace(/(<circle[^>]*stroke-dasharray[^>]*\/>)((?:<path transform="rotate\([^"]*\)"[^>]*\/>)+)/, (m, rejilla, aspas) => `<g class="pr-aspas">${rejilla}${aspas}</g>`)
     .replace(/(<path d="M16\.8 16\.2[^"]*"\/>)/, (m, aspas) => `<g class="pr-aspas-techo">${aspas}</g>`);
 
-  function promoCard(p) {
+  // tipo: cartelito arriba de la foto ("Parlante grande"); mini: para la grilla de todos los productos (de a 4)
+  function promoCard(p, tipo = '', mini = false) {
     const V = window.Vidriera;
     const n = Number(STORE.extras.cuotas) || 6;
     const off = FL ? FL.cfg.percent : 0;
     const ver = `href="#x=${esc(p.id)}" data-x="${esc(p.id)}"`;
     return `
-      <article class="pr-card">
+      <article class="pr-card${mini ? ' pr-card-mini' : ''}" data-g="${esc(p.group || '')}">
         <a class="pr-media x-prev-host js-ficha" ${ver} aria-label="Ver ${esc(p.name)}">
           ${V.coverHTML(p, false)}${V.previewHTML(p)}
+          ${tipo ? `<span class="pr-tipo">${esc(tipo)}</span>` : ''}
           ${off ? `<span class="pr-off fl-only"><b>-${off}%</b><small>off</small></span>` : ''}
         </a>
         <div class="pr-body">
@@ -1108,8 +1132,13 @@
       STORE.financing ? `${n} cuotas con débito` : '', `12 cuotas${sinInteres} con crédito`, 'Envíos a todo el país',
       `${((window.SITE && window.SITE.story) || {}).warrantyDays || 30} días de garantía`, 'Retiro gratis en sucursal',
     ].filter(Boolean).map(t => `<span>${esc(t)}</span><i>★</i>`).join('');
+    const dest = S.destacados(c);
+    const todos = V.byCat(c.id);
+    const grupos = [...new Set(todos.map(p => p.group).filter(Boolean))];
     return `<div class="sx-page pr-page" style="--sx-accent:${esc(c.color)}" data-sx-cat="${esc(c.id)}">
       <section class="pr-hero">
+        <span class="pr-muro" aria-hidden="true">${'<b>PROMO</b><b>CUOTAS</b>'.repeat(10)}</span>
+        <img class="pr-xo" src="/media/marca/xoxo-isotipo-blanco.svg" alt="" aria-hidden="true">
         <div class="pr-hero-in">
           <div class="pr-copy">
             <p class="pr-tag">${SOL}${esc(pr.tag)}</p>
@@ -1124,7 +1153,7 @@
           </div>
           <div class="pr-art" aria-hidden="true">
             <span class="pr-rayos"></span>
-            ${pr.iconos.map((ic, i) => `<span class="pr-fan pr-fan-${i + 1}">${conAspas(V.icon(ic) || '')}</span>`).join('')}
+            ${pr.iconos.map((ic, i) => `<span class="pr-fan pr-fan-${i + 1} pr-ico-${esc(ic)}">${iconoPromo(ic)}</span>`).join('')}
             ${STORE.financing ? `<span class="pr-burst pr-burst-1"><b>${esc(n)}</b><small>cuotas<br>débito</small></span>` : ''}
             ${off ? `<span class="pr-burst pr-burst-2 fl-only"><b>-${off}%</b></span>` : ''}
           </div>
@@ -1132,9 +1161,17 @@
       </section>
       <div class="pr-cinta" aria-hidden="true"><div>${cinta}${cinta}</div></div>
       <section class="pr-ofertas" id="pr-ofertas">
-        <header class="pr-head"><p class="pr-kicker">Ofertas de ${esc(c.name.toLowerCase())}</p><h2 class="pr-h2">${esc(pr.ofertas)}</h2></header>
-        <div class="pr-grid">${V.byCat(c.id).map(promoCard).join('')}</div>
+        <header class="pr-head"><p class="pr-kicker">${dest.length ? 'Los destacados' : 'Ofertas'} de ${esc(c.name.toLowerCase())}</p><h2 class="pr-h2">${esc(pr.ofertas)}</h2></header>
+        <div class="pr-grid${dest.length ? ' pr-grid-3' : ''}">${(dest.length ? dest : todos).map(p => promoCard(p, dest.length ? S.tipo(p) : '')).join('')}</div>
       </section>
+      ${dest.length && todos.length > dest.length ? `
+      <section class="pr-todos" id="pr-todos">
+        <header class="pr-head pr-head-fila">
+          <div><p class="pr-kicker">${todos.length} productos SOUL</p><h2 class="pr-h2">Todos los productos</h2></div>
+          ${grupos.length > 1 ? `<div class="pr-chips" role="group" aria-label="Filtrar por tipo">${['', ...grupos].map(g => `<button type="button" class="pr-chip" data-g="${esc(g)}" aria-pressed="${!g}">${esc(g || 'Todos')}</button>`).join('')}</div>` : ''}
+        </header>
+        <div class="pr-grid pr-grid-4">${todos.map(p => promoCard(p, '', true)).join('')}</div>
+      </section>` : ''}
       ${S.pasos()}${S.calculadora()}${S.garantia()}${S.faq(c)}${S.otras(c, '/red-social')}
     </div>`;
   }
@@ -1208,6 +1245,12 @@
     document.body.classList.add('cat-page', 'promo-page');
     $('main').insertAdjacentHTML('afterbegin', `<div id="cat-home">${promoHTML(CAT, PROMO[CAT.id])}</div>`);
     window.Secciones.init($('#cat-home'));
+    $('#cat-home').addEventListener('click', e => {
+      const b = e.target.closest('.pr-chip');
+      if (!b) return;
+      $$('.pr-chip').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      $$('.pr-grid-4 .pr-card').forEach(card => { card.hidden = Boolean(b.dataset.g) && card.dataset.g !== b.dataset.g; });
+    });
   } else if (CAT) {
     document.body.classList.add('cat-page');
     // Red social va sin la guía para elegir (17/11/2026)

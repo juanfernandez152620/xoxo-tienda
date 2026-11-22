@@ -177,6 +177,8 @@ function normalizarCategorias(list) {
       guideTitle: txt(c.guideTitle, 90),
       guide: pares(c.guide, 6),
       faq: pares(c.faq, 8),
+      // Los 3 productos destacados de la categoría (códigos), en el orden en que se muestran
+      destacados: items(c.destacados, x => txt(x, 60), 3).filter(Boolean),
     };
   });
 }
@@ -295,6 +297,27 @@ function migrarEnvioParejo(s) {
   return { ...s, shipping: { ...s.shipping, rates }, migraciones: [...hechas, 'envio-parejo'] };
 }
 
+// 22/11/2026: los 21 productos SOUL (con video) reemplazan a los de creación de contenido y audio, y cada
+// categoría suma sus 3 destacados. Pasa una sola vez (queda anotada en "migraciones").
+function migrarSoul(s) {
+  const hechas = Array.isArray(s.migraciones) ? s.migraciones : [];
+  if (hechas.includes('soul-21')) return s;
+  const semilla = leerJson(SEMILLA) || {};
+  const nuevos = (semilla.extras || []).filter(p => ['contenido', 'audio'].includes(p.cat));
+  if (!nuevos.length) return s;
+  const fab = Object.fromEntries((semilla.categories || []).map(c => [c.id, c]));
+  const extras = [...(Array.isArray(s.extras) ? s.extras : []).filter(p => !p || !['contenido', 'audio'].includes(p.cat)), ...nuevos];
+  // Los textos de contenido y audio que todavía son de ejemplo (lorem ipsum o vacíos) pasan a los de fábrica
+  const relleno = v => (Array.isArray(v) ? !v.length || v.every(x => /lorem ipsum/i.test(String(x))) : !v || /^\s*lorem ipsum/i.test(String(v)));
+  const textos = (c, f) => Object.fromEntries(['title', 'text', 'benefits', 'guideTitle', 'guide', 'faq']
+    .filter(k => f[k] && (relleno(c[k]) || (k === 'title' && c.title === 'Todo para crear y grabar'))).map(k => [k, f[k]]));
+  // (migrar() pudo haber copiado ya los destacados de fábrica: se respetan los que haya)
+  const categories = Array.isArray(s.categories) ? s.categories.map(c => (c && fab[c.id] && fab[c.id].destacados
+    ? { ...c, ...textos(c, fab[c.id]), destacados: Array.isArray(c.destacados) && c.destacados.length ? c.destacados : fab[c.id].destacados }
+    : c)) : s.categories;
+  return { ...s, extras, categories, migraciones: [...hechas, 'soul-21'] };
+}
+
 function migrarSinCelulares(s) {
   const t = s.texts || {};
   const viejo = {
@@ -338,7 +361,7 @@ function normalizar(s) {
   if (!s || typeof s !== 'object' || !s.store || typeof s.store !== 'object' || !Array.isArray(s.products)) {
     fallar('El contenido no tiene el formato esperado');
   }
-  s = migrarEnvioParejo(migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s)))));
+  s = migrarSoul(migrarEnvioParejo(migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s))))));
   const st = s.store;
   const logo = obj(st.financingLogo);
   const closing = st.closing && typeof st.closing === 'object' ? st.closing : null;

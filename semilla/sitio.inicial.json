@@ -775,62 +775,72 @@
       "video": "/media/ventiladores/kanji-techo/video.mp4"
     },
     {
-      "id": "microfono-aitech",
-      "hidden": false,
-      "group": "Micrófonos",
-      "brand": "AITECH",
-      "name": "Micrófono AITECH Accesories",
-      "icon": "mic",
-      "price": 24999,
-      "listPrice": 32000,
-      "pitch": "Para que tus videos se escuchen claro.",
-      "details": [],
-      "gallery": [
-        "/media/productos/microfono-aitech-1.png",
-        "/media/productos/microfono-aitech-2.png"
-      ],
+      "id": "luz-led-magnetica-jl70",
       "cat": "contenido",
-      "weight": 0.3
+      "group": "Luces",
+      "brand": "SOUL",
+      "name": "Luz LED magnética JL70",
+      "icon": "luz",
+      "price": 67999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Luz LED magnética para grabar con el celular.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/contenido/luz-led-magnetica-jl70/video.mp4"
     },
     {
-      "id": "microfono-soul-furry-tc",
-      "hidden": false,
-      "group": "Micrófonos",
-      "brand": "Soul",
-      "name": "Micrófono Soul Furry TC",
-      "icon": "mic",
-      "price": 22000,
-      "listPrice": 28000,
-      "pitch": "Corbatero inalámbrico con protector antiviento para que tu voz se escuche clara.",
-      "details": [
-        "Conexión inalámbrica 2.4 GHz",
-        "Plug & Play: lo conectás y funciona",
-        "Receptor USB-C incluido",
-        "Batería recargable",
-        "Protector antiviento"
-      ],
-      "gallery": [
-        "/media/productos/microfono-soul-furry-tc-1.png",
-        "/media/productos/microfono-soul-furry-tc-2.png"
-      ],
+      "id": "luz-led-rgb-jl60",
       "cat": "contenido",
-      "weight": 0.3
+      "group": "Luces",
+      "brand": "SOUL",
+      "name": "Luz LED RGB JL60",
+      "icon": "luz",
+      "price": 64999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Luz LED RGB: elegí el color de la luz de tus videos.",
+      "details": [],
+      "gallery": [
+        "/media/productos/luz-led-rgb-jl60-1.png",
+        "/media/productos/luz-led-rgb-jl60-2.png"
+      ],
+      "video": "/media/contenido/luz-led-rgb-jl60/video.mp4"
+    },
+    {
+      "id": "luz-led-full-jl80",
+      "cat": "contenido",
+      "group": "Luces",
+      "brand": "SOUL",
+      "name": "Luz LED Full JL80",
+      "icon": "luz",
+      "price": 72999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Luz LED para que tus videos y vivos se vean bien.",
+      "details": [],
+      "gallery": [
+        "/media/productos/luz-led-full-jl80-1.png",
+        "/media/productos/luz-led-full-jl80-2.png"
+      ],
+      "video": "/media/contenido/luz-led-full-jl80/video.mp4"
     },
     {
       "id": "tripode-soul-j500",
-      "hidden": false,
+      "cat": "contenido",
       "group": "Trípodes",
-      "brand": "Soul",
-      "name": "Trípode Soul J500",
+      "brand": "SOUL",
+      "name": "Trípode magnético J500",
       "icon": "tripode",
-      "price": 78500,
-      "listPrice": 95000,
-      "pitch": "Selfie y trípode magnético: se abre solo y graba con control remoto.",
+      "price": 99999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Se abre con un botón, llega a 1,80 m y trae control remoto Bluetooth.",
       "details": [
-        "Apertura automática: se despliega al presionar el botón contra una superficie",
-        "Llega a 1,80 m y cerrado mide 33,5 cm",
-        "Control remoto Bluetooth con sujeción magnética",
-        "Rota 360°",
+        "Apertura automática con un botón",
+        "Extendido 1,80 m y plegado 33,5 cm",
+        "Control remoto Bluetooth y magnético",
+        "Rotación de 360°",
         "Sujeción con pinza y magnética"
       ],
       "gallery": [
@@ -838,136 +848,278 @@
         "/media/productos/tripode-soul-j500-2.png",
         "/media/productos/tripode-soul-j500-3.png"
       ],
-      "cat": "contenido",
-      "weight": 1
+      "video": "/media/contenido/tripode-soul-j500/video.mp4"
     },
     {
-      "id": "luz-led-rgb-jl60",
-      "hidden": false,
-      "group": "Luces",
-      "brand": "Soul",
-      "name": "Luz LED RGB JL60",
-      "icon": "luz",
-      "price": 57000,
-      "listPrice": 68000,
-      "pitch": "Luz de colores para darles otro clima a tus videos y fotos.",
-      "details": [
-        "22 modos de efectos de iluminación",
-        "Pantalla y control de intensidad",
-        "Sujeción con clip y rosca, para celular o cámara",
-        "Batería recargable de 2.000 mAh",
-        "Carga por USB-C"
-      ],
-      "gallery": [
-        "/media/productos/luz-led-rgb-jl60-1.png",
-        "/media/productos/luz-led-rgb-jl60-2.png"
-      ],
+      "id": "soporte-de-mesa-sop-q400",
       "cat": "contenido",
-      "weight": 0.4
-    },
-    {
-      "id": "luz-led-full-jl80",
-      "hidden": false,
-      "group": "Luces",
-      "brand": "Soul",
-      "name": "Luz LED Full JL80",
-      "icon": "luz",
-      "price": 63000,
-      "listPrice": 80000,
-      "pitch": "Luz cálida y fría para iluminar tus videos y fotos.",
-      "details": [
-        "Intensidad regulable, de tono cálido a frío",
-        "Sujeción magnética",
-        "Incluye anillo magnético y anillo adhesivo",
-        "Batería recargable",
-        "Carga por USB-C"
-      ],
-      "gallery": [
-        "/media/productos/luz-led-full-jl80-1.png",
-        "/media/productos/luz-led-full-jl80-2.png"
-      ],
-      "cat": "contenido",
-      "weight": 0.4
-    },
-    {
-      "id": "parlante-bluetooth",
-      "hidden": false,
-      "example": true,
-      "cat": "audio",
-      "group": "Parlantes",
-      "brand": "",
-      "name": "Parlante Bluetooth portátil",
-      "icon": "parlante",
-      "weight": 0.8,
-      "price": 39999,
+      "group": "Trípodes",
+      "brand": "SOUL",
+      "name": "Soporte de mesa SOP-Q400",
+      "icon": "tripode",
+      "price": 13499,
       "listPrice": 0,
-      "pitch": "Lorem ipsum dolor sit amet, sonido fuerte en un tamaño chico.",
-      "details": [
-        "Lorem ipsum dolor sit amet",
-        "Consectetur adipiscing elit",
-        "Sed do eiusmod tempor"
-      ],
-      "gallery": []
+      "weight": 0,
+      "pitch": "Soporte de mesa para el celular: grabá con las manos libres.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/contenido/soporte-de-mesa-sop-q400/video.mp4"
     },
     {
-      "id": "torre-de-sonido",
-      "hidden": false,
-      "example": true,
-      "cat": "audio",
-      "group": "Parlantes",
-      "brand": "",
-      "name": "Torre de sonido con luces",
-      "icon": "parlante",
-      "weight": 9,
-      "price": 159999,
+      "id": "tripode-automatico-j450",
+      "cat": "contenido",
+      "group": "Trípodes",
+      "brand": "SOUL",
+      "name": "Trípode automático J450",
+      "icon": "tripode",
+      "price": 84000,
       "listPrice": 0,
-      "pitch": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-      "details": [
-        "Lorem ipsum dolor sit amet",
-        "Consectetur adipiscing elit",
-        "Sed do eiusmod tempor"
-      ],
-      "gallery": []
+      "weight": 0,
+      "pitch": "Trípode automático para grabar con el celular.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/contenido/tripode-automatico-j450/video.mp4"
     },
     {
-      "id": "auriculares-tws",
-      "hidden": false,
-      "example": true,
+      "id": "microfono-corbatero-furry-simple",
+      "cat": "contenido",
+      "group": "Micrófonos",
+      "brand": "SOUL",
+      "name": "Micrófono corbatero Furry Simple",
+      "icon": "mic",
+      "price": 26999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Un micrófono corbatero con protector furry.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/contenido/microfono-corbatero-furry-simple/video.mp4"
+    },
+    {
+      "id": "microfono-corbatero-furry-dual",
+      "cat": "contenido",
+      "group": "Micrófonos",
+      "brand": "SOUL",
+      "name": "Micrófono corbatero Furry Dual",
+      "icon": "mic",
+      "price": 32999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Dos micrófonos corbateros con protector furry: para grabar de a dos.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/contenido/microfono-corbatero-furry-dual/video.mp4"
+    },
+    {
+      "id": "microfono-corbatero-dual",
+      "cat": "contenido",
+      "group": "Micrófonos",
+      "brand": "SOUL",
+      "name": "Micrófono corbatero Dual",
+      "icon": "mic",
+      "price": 42999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Dos micrófonos corbateros para entrevistas y videos de a dos.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/contenido/microfono-corbatero-dual/video.mp4"
+    },
+    {
+      "id": "microfono-live-xmic400",
+      "cat": "contenido",
+      "group": "Micrófonos",
+      "brand": "SOUL",
+      "name": "Micrófono Live XMIC 400",
+      "icon": "mic",
+      "price": 149999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Micrófono condensador con luz RGB, para vivos, podcasts y streaming.",
+      "details": [
+        "Condensador con patrón cardioide",
+        "Conexión AUX 3,5 mm y USB-C",
+        "Control de volumen y mute táctil",
+        "Luz LED RGB",
+        "Salida para auriculares",
+        "Pedestal de mesa incluido"
+      ],
+      "gallery": [],
+      "video": "/media/contenido/microfono-live-xmic400/video.mp4"
+    },
+    {
+      "id": "auriculares-dream-flow-bt350",
       "cat": "audio",
       "group": "Auriculares",
-      "brand": "",
-      "name": "Auriculares inalámbricos",
+      "brand": "SOUL",
+      "name": "Auriculares Dream Flow BT350",
       "icon": "auricular",
-      "weight": 0.2,
-      "price": 24999,
+      "price": 56999,
       "listPrice": 0,
-      "pitch": "Lorem ipsum dolor sit amet, estuche de carga incluido.",
+      "weight": 0,
+      "pitch": "Inalámbricos, con 18 m de alcance.",
       "details": [
-        "Lorem ipsum dolor sit amet",
-        "Consectetur adipiscing elit",
-        "Sed do eiusmod tempor"
+        "Alcance de 18 m",
+        "Batería de 300 mAh"
       ],
-      "gallery": []
+      "gallery": [],
+      "video": "/media/audio/auriculares-dream-flow-bt350/video.mp4"
     },
     {
-      "id": "auriculares-vincha",
-      "hidden": false,
-      "example": true,
+      "id": "auriculares-neox-bt250",
       "cat": "audio",
       "group": "Auriculares",
-      "brand": "",
-      "name": "Auriculares de vincha Bluetooth",
+      "brand": "SOUL",
+      "name": "Auriculares NEOX BT250",
       "icon": "auricular",
-      "weight": 0.4,
-      "price": 34999,
+      "price": 49999,
       "listPrice": 0,
-      "pitch": "Lorem ipsum dolor sit amet, cómodos para todo el día.",
+      "weight": 0,
+      "pitch": "Inalámbricos, con 12 m de alcance.",
       "details": [
-        "Lorem ipsum dolor sit amet",
-        "Consectetur adipiscing elit",
-        "Sed do eiusmod tempor"
+        "Alcance de 12 m",
+        "Batería de 200 mAh"
       ],
-      "gallery": []
+      "gallery": [],
+      "video": "/media/audio/auriculares-neox-bt250/video.mp4"
+    },
+    {
+      "id": "auriculares-tws-40",
+      "cat": "audio",
+      "group": "Auriculares",
+      "brand": "SOUL",
+      "name": "Auriculares TWS 40",
+      "icon": "auricular",
+      "price": 36999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Auriculares inalámbricos con estuche de carga.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/audio/auriculares-tws-40/video.mp4"
+    },
+    {
+      "id": "auriculares-tws-30",
+      "cat": "audio",
+      "group": "Auriculares",
+      "brand": "SOUL",
+      "name": "Auriculares TWS 30",
+      "icon": "auricular",
+      "price": 36999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Auriculares inalámbricos con estuche de carga.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/audio/auriculares-tws-30/video.mp4"
+    },
+    {
+      "id": "auriculares-tws-1300",
+      "cat": "audio",
+      "group": "Auriculares",
+      "brand": "SOUL",
+      "name": "Auriculares TWS 1300",
+      "icon": "auricular",
+      "price": 76999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Auriculares inalámbricos con estuche de carga.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/audio/auriculares-tws-1300/video.mp4"
+    },
+    {
+      "id": "auriculares-tws-1400",
+      "cat": "audio",
+      "group": "Auriculares",
+      "brand": "SOUL",
+      "name": "Auriculares TWS 1400",
+      "icon": "auricular",
+      "price": 72000,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Auriculares inalámbricos con estuche de carga.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/audio/auriculares-tws-1400/video.mp4"
+    },
+    {
+      "id": "parlante-thunderbolt-xl600",
+      "cat": "audio",
+      "group": "Parlantes",
+      "brand": "SOUL",
+      "name": "Parlante Thunderbolt XL600",
+      "icon": "parlante",
+      "price": 1,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Parlante SOUL para que la música llegue a toda la juntada.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/audio/parlante-thunderbolt-xl600/video.mp4",
+      "hidden": true
+    },
+    {
+      "id": "parlante-evo-sound-xl550",
+      "cat": "audio",
+      "group": "Parlantes",
+      "brand": "SOUL",
+      "name": "Parlante EVO SOUND XL550",
+      "icon": "parlante",
+      "price": 1,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Parlante SOUL para llevar la música a donde vayas.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/audio/parlante-evo-sound-xl550/video.mp4",
+      "hidden": true
+    },
+    {
+      "id": "parlante-boxbeat-xl50",
+      "cat": "audio",
+      "group": "Parlantes",
+      "brand": "SOUL",
+      "name": "Parlante BOXBEAT XL50",
+      "icon": "parlante",
+      "price": 1,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Parlante SOUL para llevar la música a donde vayas.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/audio/parlante-boxbeat-xl50/video.mp4",
+      "hidden": true
+    },
+    {
+      "id": "parlante-soundtech-xl900",
+      "cat": "audio",
+      "group": "Parlantes",
+      "brand": "SOUL",
+      "name": "Parlante SOUNDTECH XL900",
+      "icon": "parlante",
+      "price": 274999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Parlante SOUL para que la música llegue a toda la juntada.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/audio/parlante-soundtech-xl900/video.mp4"
+    },
+    {
+      "id": "microfono-pop-m100",
+      "cat": "audio",
+      "group": "Micrófonos",
+      "brand": "SOUL",
+      "name": "Micrófono Pop M100",
+      "icon": "mic",
+      "price": 37999,
+      "listPrice": 0,
+      "weight": 0,
+      "pitch": "Micrófono SOUL Pop M100.",
+      "details": [],
+      "gallery": [],
+      "video": "/media/audio/microfono-pop-m100/video.mp4"
     }
   ],
   "categories": [
@@ -1003,27 +1155,32 @@
       "id": "contenido",
       "name": "Creación de contenido",
       "short": "Contenido",
-      "title": "Todo para crear y grabar",
-      "text": "Micrófonos, luces y trípodes para que tus videos se vean y se escuchen como los de los que más saben. Armá tu kit y pagalo en cuotas.",
+      "title": "Todo lo que te hace falta para impulsar tu marca",
+      "text": "Luces, trípodes y micrófonos SOUL para que tus videos, tus vivos y tu podcast se vean y se escuchen bien. Armá tu kit y pagalo en cuotas.",
       "color": "#ec4899",
       "benefits": [
-        "Audio claro | Micrófonos inalámbricos con protector antiviento.",
-        "Luz pareja | Luces LED de tono cálido a frío, o de colores.",
-        "Estabilidad | Trípodes con control remoto para grabarte solo.",
+        "Audio claro | Micrófonos corbateros con protector furry, y uno de mesa para vivos y podcast.",
+        "Luz pareja | Luces LED para tus videos, y una RGB para jugar con los colores.",
+        "Manos libres | Trípodes y soporte de mesa; el J500 trae control remoto Bluetooth.",
         "30 días de garantía | Si algo falla, lo resolvemos."
       ],
       "guideTitle": "Armá tu kit",
       "guide": [
         "Kit para empezar | Un micrófono corbatero y un trípode: lo justo para tus primeros videos.",
         "Kit de streaming | Micrófono, luz LED y trípode para vivos y videos con buena imagen.",
-        "Kit para fotos | Luz de colores y trípode con control remoto.",
+        "Kit para fotos | Luz RGB y trípode con control remoto.",
         "¿No sabés qué elegir? | Escribinos por WhatsApp y te armamos el kit."
       ],
       "faq": [
-        "¿Los micrófonos funcionan con cualquier celular? | Los inalámbricos traen receptor USB-C; lorem ipsum dolor sit amet.",
-        "¿Las luces son recargables? | Sí, se cargan por USB-C.",
+        "¿El micrófono XMIC 400 sirve para la compu? | Sí: se conecta por USB-C o por AUX de 3,5 mm.",
+        "¿Cómo pago en cuotas? | Hasta 12 cuotas con crédito por Mercado Pago, o con tu tarjeta de débito en GO cuotas.",
         "¿Hacen envíos? | Sí, a todo el país con Andreani o Correo Argentino.",
         "¿Tienen garantía? | Todos los productos tienen 30 días de garantía."
+      ],
+      "destacados": [
+        "luz-led-full-jl80",
+        "tripode-soul-j500",
+        "microfono-live-xmic400"
       ]
     },
     {
@@ -1031,26 +1188,31 @@
       "name": "Audio",
       "short": "Audio",
       "title": "Tu música, más fuerte",
-      "text": "Parlantes portátiles, torres de sonido y auriculares inalámbricos. Para la juntada, el gimnasio o el colectivo, pagalo en cuotas con Mercado Pago.",
+      "text": "Parlantes SOUL para la juntada y auriculares de vincha o inalámbricos para tu música de todos los días. Pagalo en cuotas.",
       "color": "#8b5cf6",
       "benefits": [
         "Bluetooth | Se conectan al celular en segundos.",
-        "Batería que dura | Horas de música sin cargar.",
-        "Sonido potente | Del auricular a la torre con luces.",
+        "Para cada momento | De la juntada al colectivo: parlantes y auriculares de vincha o inalámbricos.",
+        "Sonido para todos | Del auricular al parlante grande para la juntada.",
         "30 días de garantía | Si algo falla, lo resolvemos."
       ],
       "guideTitle": "¿Cómo escuchás tu música?",
       "guide": [
-        "En la juntada | Una torre de sonido con luces llena cualquier ambiente.",
-        "Para llevar | Un parlante portátil entra en la mochila.",
+        "En la juntada | Un parlante grande llena cualquier ambiente.",
+        "Para llevar | Un parlante más chico entra en la mochila.",
         "Solo para vos | Auriculares inalámbricos con estuche de carga.",
-        "Para todo el día | Auriculares de vincha, cómodos y con buena batería."
+        "Para todo el día | Auriculares de vincha, sin cables."
       ],
       "faq": [
         "¿Se conectan a cualquier celular? | Sí, por Bluetooth, con Android y iPhone.",
-        "¿Cuánto dura la batería? | Depende del modelo: lorem ipsum dolor sit amet.",
+        "¿Cuánto dura la batería? | Depende del modelo.",
         "¿Hacen envíos? | Sí, a todo el país con Andreani o Correo Argentino.",
         "¿Tienen garantía? | Todos los productos tienen 30 días de garantía."
+      ],
+      "destacados": [
+        "parlante-soundtech-xl900",
+        "auriculares-dream-flow-bt350",
+        "auriculares-tws-1400"
       ]
     }
   ],
@@ -1199,6 +1361,7 @@
   "migraciones": [
     "ventiladores-reales",
     "ventiladores-v2",
-    "envio-parejo"
+    "envio-parejo",
+    "soul-21"
   ]
 }

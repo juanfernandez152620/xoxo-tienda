@@ -865,7 +865,7 @@
       <section class="card"><div class="card-head"><h2>Financiación</h2></div>
         <div class="grid-2">
           ${field('Financiera', 'store.financing', { help: 'Se muestra como "Financiá con …". Vacío para no mostrarla.' })}
-          <div class="field" style="align-self:center">${check('Las cuotas de los celulares son sin interés', 'store.sinInteres')}</div>
+          <div class="field" style="align-self:center">${check('Las cuotas son sin interés (12 con crédito por Mercado Pago y las de débito en GO cuotas)', 'store.sinInteres')}</div>
           ${field('Las 12 cuotas se pagan con', 'store.plans.12')}
           ${field('Las 9 cuotas se pagan con', 'store.plans.9', { help: 'Se lee "9 cuotas de $… con …".' })}
           ${field('Cuotas de los otros productos', 'store.extras.cuotas', { type: 'number', help: 'Se muestra "6 cuotas con" y la financiera.' })}

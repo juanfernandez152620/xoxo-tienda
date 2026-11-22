@@ -1531,3 +1531,183 @@ a.story-btn { text-decoration: none; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .pr-rayos, .pr-aspas, .pr-aspas-techo, .pr-burst-1, .pr-cinta > div { animation: none !important; }
 }
+
+
+/* ============ 22/11/2026: toda la Red social con los colores de XOXO Tecno (manual de marca en Canva) ============ */
+/* Azul marino #2b4966 (y uno más oscuro #1d3550 para bordes y sombras), crema #f6efe1, blanco y casi negro
+   #242424, más un celeste que es el mismo azul aclarado. Sin el rosa, el violeta ni el amarillo de antes, y sin la
+   mascota. Este bloque pisa los colores de Soul y los de la promo de más arriba; para volver a esos, borrarlo. */
+html:root {
+  --xo-azul: #2b4966;
+  --xo-azul-2: #1d3550;
+  --xo-azul-3: #3e6990;
+  --xo-celeste: #8fb0cf;
+  --xo-crema: #f6efe1;
+  --xo-crema-2: #efe5d1;
+  --xo-negro: #242424;
+
+  --soul-negro: #1d3550;
+  --soul-violeta: #2b4966;
+  --soul-morado: #2b4966;
+  --soul-magenta: #2b4966;
+  --soul-grad: linear-gradient(100deg, #1d3550 0%, #2b4966 62%, #3e6990 100%);
+  --soul-grad-2: linear-gradient(100deg, #1d3550 0%, #2b4966 100%);
+  --azul-xoxo: #2b4966;
+  --marino: #1d3550;
+  --profundo: #2b4966;
+  --acero: #5b6f86;
+  --cielo: #8fb0cf;
+  --menta: #f6efe1;
+  --plata: #c9d3de;
+
+  --bg: #f6efe1;
+  --grid: rgba(43, 73, 102, .05);
+  --glow-1: rgba(43, 73, 102, .08);
+  --glow-2: rgba(43, 73, 102, .12);
+  --surface: #ffffff;
+  --surface-2: #fbf7ef;
+  --ink: #242424;
+  --muted: #5b6676;
+  --line: #e6ddca;
+  --acento: #2b4966;
+  --sobre-acento: #ffffff;
+  --acento-texto: #2b4966;
+  --deal: #2b4966;
+  --on-bg: #2b4966;
+  --on-fg: #f6efe1;
+  --boton: #2b4966;
+  --sobre-boton: #ffffff;
+  --logo: #2b4966;
+  --ring: conic-gradient(from 200deg, #2b4966, #8fb0cf, #f6efe1, #2b4966);
+  --shadow: 0 1px 2px rgba(29, 53, 80, .06), 0 12px 30px rgba(29, 53, 80, .12);
+  --x-stage: radial-gradient(75% 60% at 50% 42%, #4b7aa3 0%, #2b4966 50%, #1d3550 100%);
+
+  /* La barra del descuento flash */
+  --fl-bg: #1d3550;
+  --fl-fg: #f6efe1;
+  --fl-tag-bg: #f6efe1;
+  --fl-tag-fg: #1d3550;
+  --fl-pill-bg: #2b4966;
+  --fl-pill-fg: #f6efe1;
+}
+.fl-pill svg, .fl-pill b { color: #f6efe1; }
+.media { background: radial-gradient(75% 60% at 50% 42%, #4b7aa3 0%, #2b4966 50%, #1d3550 100%); }
+@media (hover: hover) and (pointer: fine) {
+  .card.is-active { --c-2: #1d3550; --c-line: #3e6990; --c-pink: #f6efe1; --c-deal: #f6efe1; --c-muted: #c9d3de; }
+}
+.slide-info { --c-pink: #f6efe1; --c-deal: #f6efe1; }
+
+/* Las secciones compartidas (pasos, calculadora, garantía, preguntas…) y el menú, sin el color de cada categoría */
+body [style*="--sx-accent"] { --sx-accent: #2b4966 !important; }
+.rs-nav .sx-nav a i { background: #8fb0cf; }
+.rs-nav .sx-nav a[aria-current="page"] i { background: #f6efe1; }
+.sx-banner-inicio { background: radial-gradient(60% 80% at 85% 20%, rgba(143, 176, 207, .35), transparent 60%), radial-gradient(50% 70% at 70% 90%, rgba(246, 239, 225, .12), transparent 60%), #1d3550; }
+
+/* Pie */
+.rs-foot { background: #1d3550; color: #f6efe1; border-image: linear-gradient(90deg, #2b4966, #8fb0cf) 1; }
+.rs-foot h3 { color: #8fb0cf; }
+.rsf-brand p, .rsf-grid > div p span { color: #c9d3de; }
+.rsf-legal { color: #a9b8c8; }
+
+/* ---------- La promo de cada categoría ---------- */
+.promo-page {
+  --pr-ink: #1d3550;
+  --pr-amarillo: #f6efe1;
+  --pr-rosa: #2b4966;
+  --pr-violeta: #2b4966;
+  --pr-celeste: #8fb0cf;
+  --pr-celeste-2: #eef3f8;
+  --pr-lima: #f6efe1;
+}
+/* Banner: fondo azul, como las piezas de la marca, con las palabras de fondo ("PROMO", "CUOTAS") */
+.pr-hero {
+  color: #f6efe1; box-shadow: 8px 8px 0 #8fb0cf;
+  background:
+    radial-gradient(circle at 8% 10%, rgba(143, 176, 207, .28), transparent 38%),
+    radial-gradient(circle at 96% 92%, rgba(29, 53, 80, .9), transparent 46%),
+    #2b4966;
+}
+.pr-hero::before { opacity: .16; }
+.pr-muro {
+  position: absolute; inset: -10% -5%; z-index: -1; display: flex; flex-wrap: wrap; align-content: center; gap: 0 .3em;
+  rotate: -8deg; pointer-events: none; user-select: none;
+  font: 400 clamp(64px, 9vw, 120px)/.95 var(--display); color: transparent; -webkit-text-stroke: 1.5px rgba(246, 239, 225, .1);
+}
+.pr-muro b { font-weight: 400; }
+.pr-xo { position: absolute; z-index: 2; right: clamp(14px, 2vw, 24px); bottom: clamp(14px, 2vw, 22px); width: clamp(30px, 3vw, 40px); height: auto; opacity: .9; }
+.pr-tag { background: #f6efe1; color: #1d3550; }
+.pr-tag svg { color: #2b4966; }
+.pr-t1 { color: #f6efe1; text-shadow: 5px 5px 0 #1d3550, 10px 10px 0 #8fb0cf; }
+.pr-t2 { color: #ffffff; }
+.pr-grito { background: #f6efe1; color: #1d3550; }
+.pr-debito { background: #f6efe1; color: #1d3550; box-shadow: 6px 6px 0 #1d3550; }
+.pr-debito b { padding: 0 .16em; border-radius: 6px; background: #2b4966; color: #f6efe1; }
+.pr-reloj { background: #1d3550; color: #f6efe1; box-shadow: inset 0 0 0 1.5px rgba(246, 239, 225, .35); }
+.pr-reloj b, .pr-reloj b:first-child { color: #f6efe1; }
+.pr-reloj b:first-child { color: #8fb0cf; }
+.pr-btn { background: #f6efe1; color: #1d3550; }
+.pr-btn-2 { background: transparent; color: #f6efe1; border-color: #f6efe1; box-shadow: 0 5px 0 #1d3550; }
+.pr-rayos { background: repeating-conic-gradient(rgba(246, 239, 225, .16) 0 9deg, transparent 9deg 18deg); }
+.pr-fan { --c: #1d3550; background: #f6efe1; color: #2b4966; }
+.pr-fan-1, .pr-fan-2, .pr-fan-3 { --c: #1d3550; }
+.pr-burst-1 { background: #f6efe1; color: #1d3550; }
+.pr-burst-2 { background: #ffffff; color: #1d3550; }
+.pr-fan svg { overflow: visible; }
+/* Los íconos del banner que no son ventiladores también se mueven */
+.pr-ico-parlante svg { animation: pr-latir .6s ease-in-out infinite; }
+.pr-ico-luz svg { animation: pr-brillo 1.8s ease-in-out infinite; }
+.pr-ico-tripode svg, .pr-ico-mic svg, .pr-ico-auricular svg, .pr-ico-tws svg { animation: pr-flotar 2.8s ease-in-out infinite; }
+.pr-ico-mic svg, .pr-ico-tws svg { animation-delay: -1.2s; }
+@keyframes pr-flotar { 50% { translate: 0 -7%; rotate: -4deg; } }
+@keyframes pr-brillo { 50% { filter: drop-shadow(0 0 10px #8fb0cf) drop-shadow(0 0 3px #8fb0cf); } }
+
+/* Cinta de beneficios */
+.pr-cinta { background: #1d3550; border-color: #1d3550; }
+.pr-cinta span { color: #f6efe1; }
+.pr-cinta i { color: #8fb0cf; }
+
+/* Tarjetas: blancas con borde y sombra azules; las cuotas con débito en un recuadro azul */
+.pr-head .pr-kicker { color: #3e6990; }
+.pr-card, .pr-card:nth-child(3n + 2), .pr-card:nth-child(3n + 3) { --c: #2b4966; }
+.pr-deb { background: #2b4966; color: #ffffff; }
+.pr-deb-l b { color: #f6efe1; }
+.pr-cred { border-color: #b9cbdc; background: #eef3f8; }
+.pr-card .pr-kicker { color: #3e6990; }
+.pr-card .x-btn { background: #2b4966; color: #ffffff; border-color: #1d3550; box-shadow: 0 4px 0 #1d3550; }
+.pr-off { background: #f6efe1; color: #1d3550; }
+
+/* Los 3 destacados: uno por tipo, con su cartelito */
+.pr-grid-3 { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) { .pr-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.pr-tipo {
+  position: absolute; z-index: 2; right: 10px; bottom: 10px; padding: 7px 13px; border: 2.5px solid #1d3550; border-radius: 999px;
+  background: #f6efe1; color: #1d3550; font: 900 13px/1 var(--font); letter-spacing: .02em; text-transform: uppercase;
+  box-shadow: 3px 3px 0 #1d3550; rotate: -2deg;
+}
+
+/* Todos los productos: de a 1 en el celular, de a 2 en la tablet y de a 4 en la compu */
+.sx-page > .pr-todos { border-top: 0; }
+.pr-head-fila { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; }
+.pr-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pr-chip {
+  min-height: 42px; padding: 0 18px; border: 2.5px solid #1d3550; border-radius: 999px; background: #fff; color: #1d3550;
+  font: 800 14px/1 var(--font); cursor: pointer; box-shadow: 0 3px 0 #1d3550; transition: transform .15s;
+}
+.pr-chip:hover { transform: translateY(-1px); }
+.pr-chip[aria-pressed="true"] { background: #2b4966; color: #fff; }
+.pr-grid-4 { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+@media (min-width: 640px) { .pr-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .pr-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; } }
+.pr-card[hidden] { display: none; }
+.pr-card-mini { border-radius: 20px; box-shadow: 5px 5px 0 var(--c); }
+.pr-card-mini .pr-body { gap: 8px; padding: 14px 14px 16px; }
+.pr-card-mini .pr-deb { padding: 10px 12px; }
+.pr-card-mini .pr-deb-l { font-size: 12.5px; }
+.pr-card-mini .pr-deb-amt { font-size: clamp(40px, 3.6vw, 48px); }
+.pr-card-mini .pr-cred { font-size: 13.5px; }
+.pr-card-mini .pr-name { font-size: 17px; }
+.pr-card-mini .x-btn { min-height: 48px; font-size: 15px; }
+@media (prefers-reduced-motion: reduce) { .pr-fan svg { animation: none !important; } }
+.fl-toast { background: #1d3550; color: #f6efe1; }
+/* En las tarjetas chicas el logo de GO cuotas va abajo de la cuota, para que no tape el "c/u" */
+.pr-card-mini .pr-deb .pr-go { position: static; width: fit-content; margin-top: 8px; }

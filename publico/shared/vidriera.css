@@ -100,10 +100,10 @@ html.x-lock, html.x-lock body { overflow: hidden; }
 .x-btn.ghost:hover { opacity: 1; box-shadow: inset 0 0 0 1.5px var(--x-ink); }
 
 /* ---------- Grilla y estante ---------- */
-.xgrid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-@media (min-width: 780px) { .xgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; } }
-@media (min-width: 1120px) { .xgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-@media (max-width: 420px) { .x-name { font-size: 14.5px; } .x-price b { font-size: 19px; } .xcard-info { padding: 10px 11px 12px; } }
+/* 22/11/2026: de a 1 en el celular, de a 2 en la tablet y de a 4 en la compu (en los 3 diseños) */
+.xgrid { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+@media (min-width: 640px) { .xgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .xgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; } }
 
 .xshelf { grid-column: 1 / -1; display: grid; gap: 12px; min-width: 0; }
 .xshelf-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }

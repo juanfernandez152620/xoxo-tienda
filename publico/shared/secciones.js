@@ -67,6 +67,13 @@
   // "Ventiladores de pie" → "De pie": el nombre corto del tipo de producto
   const corto = p => { const g = String(p.group || p.name).replace(/^(ventiladores|parlantes|auriculares|micrófonos|luces|trípodes)\s+/i, ''); return g.charAt(0).toUpperCase() + g.slice(1); };
 
+  // Los destacados de la categoría (/admin → Categorías), en su orden. Sin destacados: lista vacía
+  const destacados = c => (c && V ? (c.destacados || []).map(id => V.byCat(c.id).find(p => p.id === id)).filter(Boolean) : []);
+  // El tipo de producto en pocas palabras, para el cartelito de cada destacado
+  const TIPO = { Luces: 'Luz LED', Trípodes: 'Trípode', Micrófonos: 'Micrófono', Parlantes: 'Parlante' };
+  const tipo = p => (p.group === 'Auriculares' ? (/\bTWS\b/i.test(p.name) ? 'Auriculares inalámbricos' : 'Auriculares de vincha')
+    : p.group === 'Parlantes' && /XL\s?(600|900)/i.test(p.name) ? 'Parlante grande' : TIPO[p.group] || p.group || '');
+
   // Banner con foto de fondo (gente usando los productos), la marca, el título y los productos en círculos
   function banner(c) {
     const list = V ? V.byCat(c.id) : [];
@@ -136,8 +143,14 @@
 
   // Videos de cada producto, como reels: arrancan solos y sin sonido; el botón activa el sonido
   // o.title cambia el título; o.lista: en el celular van uno debajo del otro en vez de deslizarse de costado
+  // o.destacados: en una categoría con destacados, solo esos 3. En el inicio van los destacados de cada categoría
+  // (o los 3 primeros con video, si una no tiene), para no apilar los videos de todos los productos
   function videos(c, o = {}) {
-    const list = (V ? (c ? V.byCat(c.id) : EXTRAS) : []).filter(p => p.video);
+    const conVideo = list => list.filter(p => p.video);
+    const dest = c && o.destacados ? conVideo(destacados(c)) : [];
+    const list = !V ? [] : c ? (dest.length ? dest : conVideo(V.byCat(c.id)))
+      : CATS.length ? CATS.flatMap(k => (conVideo(destacados(k)).length ? conVideo(destacados(k)) : conVideo(V.byCat(k.id)).slice(0, 3)))
+      : conVideo(EXTRAS);
     if (!list.length) return '';
     return `
       <section class="sx-videos${o.lista ? ' sx-videos-lista' : ''}" id="sx-videos" style="--sx-accent:${esc(c ? c.color : 'var(--sx-accent)')}">
@@ -149,7 +162,7 @@
                 ${V.coverHTML(p)}${V.previewHTML(p)}
               </a>
               <div class="sx-reel-info">
-                <p class="sx-kicker">${esc(p.group || (c && c.name) || '')}${p.brand ? ` · ${esc(p.brand)}` : ''}</p>
+                <p class="sx-kicker">${esc((dest.length && tipo(p)) || p.group || (c && c.name) || '')}${p.brand ? ` · ${esc(p.brand)}` : ''}</p>
                 <h3><a class="js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}">${esc(p.name)}</a></h3>
                 ${V.priceHTML(p)}
                 <div class="sx-reel-ctas">${PAY ? V.buyButton(p, 'Comprar') : V.waLink(p, 'Pedilo')}
@@ -413,5 +426,5 @@
     });
   }
 
-  window.Secciones = { nav, categoria, info, inicio, sucursales, hero, banner, videos, beneficios, productos, guia, pasos, garantia, calculadora, faq, otras, init, icon: k => I[k], catIcon, cats: CATS };
+  window.Secciones = { destacados, tipo, nav, categoria, info, inicio, sucursales, hero, banner, videos, beneficios, productos, guia, pasos, garantia, calculadora, faq, otras, init, icon: k => I[k], catIcon, cats: CATS };
 })();
