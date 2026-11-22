@@ -160,6 +160,11 @@ function whatsapp(req, res, url) {
     console.error('[reparto]', err.message);
     branch = { ...reparto.activas()[0], nuevo: false };
   }
+  // Ninguna sucursal tiene WhatsApp cargado: vuelve a la tienda en vez de abrir un WhatsApp sin número
+  if (!branch || !branch.whatsapp) {
+    res.writeHead(302, { Location: '/', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' });
+    return res.end();
+  }
   if (real) {
     try {
       const ev = estadisticas.limpiarEvento({

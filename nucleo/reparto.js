@@ -19,7 +19,13 @@ const REPARTO = ruta('reparto.json');
 const MAX_PERSONAS = 20000;
 
 const vacio = () => ({ dia: diaLocal(), hoy: {}, total: {}, personas: {} });
-const activas = () => sitio.cargar().store.branches.filter(b => b.on);
+// Reciben mensajes las que tienen WhatsApp y la casilla prendida. Si ninguna la tiene prendida,
+// cualquiera con WhatsApp (el botón de WhatsApp siempre tiene que llevar a alguien).
+const activas = () => {
+  const conNumero = sitio.cargar().store.branches.filter(b => b.whatsapp);
+  const prendidas = conNumero.filter(b => b.on);
+  return prendidas.length ? prendidas : conNumero;
+};
 
 // Vuelve a contar desde el registro (respeta "Empezar de cero")
 function contar() {
@@ -82,6 +88,7 @@ function mejor(lista, r) {
 // contar = false: no suma (robots o demasiados clicks).
 function elegir(actual, vid, contarla = true) {
   const lista = activas();
+  if (!lista.length) return null; // ninguna sucursal tiene WhatsApp
   const r = cargar();
   const recordada = vid && r.personas[vid] ? r.personas[vid][0] : '';
   const conocida = lista.find(b => b.id === actual) || lista.find(b => b.id === recordada);
@@ -112,7 +119,7 @@ function resumen(stats) {
   const r = cargar();
   const branches = (stats && stats.branches) || {};
   const sucursales = sitio.cargar().store.branches.map(b => ({
-    id: b.id, name: b.name, on: b.on, hoy: r.hoy[b.id] || 0, total: r.total[b.id] || 0, clicks: branches[b.id] || 0,
+    id: b.id, name: b.name, on: Boolean(b.on && b.whatsapp), hoy: r.hoy[b.id] || 0, total: r.total[b.id] || 0, clicks: branches[b.id] || 0,
   }));
   const siguiente = mejor(activas(), r);
   return { sucursales, siguiente: siguiente ? siguiente.name : '' };

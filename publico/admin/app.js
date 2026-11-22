@@ -412,7 +412,8 @@
           <td class="num">${n(b.hoy)}</td><td class="num">${n(b.total)}</td><td class="num">${percent(share(b))}</td><td class="num">${n(b.clicks)}</td>
         </tr>`).join('')}</tbody>
       </table></div>
-      <p class="muted">La próxima persona nueva va a <b>${esc(r.siguiente)}</b>.</p>
+      <p class="muted">${r.siguiente ? `La próxima persona nueva va a <b>${esc(r.siguiente)}</b>.`
+        : 'Ninguna sucursal tiene WhatsApp cargado: el botón de WhatsApp de las páginas lleva al inicio de la tienda.'}</p>
     </section>`;
   }
 
@@ -424,7 +425,7 @@
         ${field('Nombre', `${p}.name`)}
         <label class="field">WhatsApp
           <input type="text" ${attrs(`${p}.whatsapp`)} value="${esc(b.whatsapp)}" inputmode="numeric" placeholder="3813629235">
-          <small>Característica y número, sin 0 ni 15. Si la sucursal no recibe mensajes, puede quedar vacío.
+          <small>Opcional. Característica y número, sin 0 ni 15. Sin número, esta sucursal no recibe mensajes de WhatsApp.
             ${wa ? `<a href="https://wa.me/${esc(wa.length === 10 ? `549${wa}` : wa)}" target="_blank" rel="noopener">Probar este número</a>` : ''}</small></label>
       </div>
       <div class="grid-2">
@@ -433,10 +434,10 @@
       </div>
       <div class="grid-2">
         ${field('Horarios', `${p}.hours`, { ph: 'Lunes a sábado de 9 a 13 y de 16 a 21', help: 'Se ven en el seguimiento, el comprobante y el mail de "listo para retirar".' })}
-        ${field('Teléfono fijo (opcional)', `${p}.phone`, { ph: '381 4211234' })}
+        ${field('Teléfono fijo', `${p}.phone`, { ph: '381 4211234' })}
       </div>
       ${mediaField('Foto del local', `${p}.photo`, 'El frente o el interior. Se ve en Historia; sin foto se muestra una de ejemplo.')}
-      <div class="row">${check('Recibe mensajes de WhatsApp', `${p}.on`)}<span class="spacer"></span>
+      <div class="row">${check('Recibe mensajes de WhatsApp', `${p}.on`)}${b.on && !wa ? '<span class="muted">(cuando le cargues el WhatsApp)</span>' : ''}<span class="spacer"></span>
         ${len > 1 ? `<button class="btn small" type="button" data-act="del-branch" data-i="${i}">Quitar sucursal</button>` : ''}</div>
     </div>`;
   }
@@ -860,7 +861,10 @@
   /* ----- Correos de la tienda (en Pedidos) ----- */
   function correoCard(c) {
     const ESTADOS = { enviado: 'Enviado', vista: 'Guardado (sin SMTP)', fallido: 'No salió' };
-    const TIPOS = { compra: 'Compra al cliente', venta: 'Aviso de venta', prueba: 'Prueba' };
+    const TIPOS = {
+      compra: 'Compra al cliente', venta: 'Aviso de venta', prueba: 'Prueba',
+      despachado: 'Pedido despachado', listo: 'Listo para retirar', cuenta: 'Confirmá tu email', clave: 'Contraseña nueva',
+    };
     const api = q => `${apiUrl(q.split('&')[0])}${q.includes('&') ? `&${q.split('&').slice(1).join('&')}` : ''}`;
     return `<section class="card"><div class="card-head"><h2>Correos</h2>
         <span class="chip${c.modo === 'smtp' ? '' : ' off'}">${c.modo === 'smtp' ? `Manda como ${esc(c.de)}` : 'Sin servidor de correo'}</span></div>
@@ -1438,7 +1442,7 @@
       <div class="page-head"><h1>Sucursales</h1><button class="btn small primary" type="button" data-act="add-branch">Agregar sucursal</button></div>
       <p class="muted">${n(S.draft.store.branches.length)} sucursales${provs.length ? ` en ${esc(provs.join(', '))}` : ''}. Se ven en las páginas, en "Retiro en sucursal" al pagar y en el reparto de WhatsApp.</p>
       <section class="card">
-        <div class="card-head"><h2>Locales</h2><p>Los mensajes de WhatsApp se reparten en partes iguales entre las que reciben mensajes.</p></div>
+        <div class="card-head"><h2>Locales</h2><p>Ningún dato es obligatorio: completá lo que tengas. Los mensajes de WhatsApp se reparten en partes iguales entre las que tienen WhatsApp y reciben mensajes.</p></div>
         <div class="branches">${S.draft.store.branches.map((b, i, all) => branchEditor(b, i, all.length)).join('')}</div>
       </section>
       ${repartoCard(S.reparto)}

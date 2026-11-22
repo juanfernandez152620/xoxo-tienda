@@ -136,28 +136,33 @@ function normalizarOtro(p, i, ids) {
   };
 }
 
-// Sucursales: nombre, WhatsApp, dirección y si reciben mensajes
+// Sucursales: nombre, WhatsApp, dirección y si reciben mensajes.
+// 22/11/2026: ningún dato es obligatorio. Sin nombre se llama "Sucursal N", el código se arma solo y, sin WhatsApp,
+// la sucursal no entra en el reparto de mensajes. Una sucursal agregada y dejada del todo vacía no se guarda.
+const CAMPOS_SUCURSAL = ['name', 'whatsapp', 'address', 'province', 'hours', 'phone', 'photo'];
+const codigoDe = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '');
 function normalizarSucursales(list) {
   const ids = new Set();
-  const out = items(list, (b, i) => {
-    b = obj(b);
-    const name = txt(b.name, 40) || fallar(`Sucursal ${i + 1}: falta el nombre`);
-    const id = txt(b.id, 40);
-    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) fallar(`Sucursal ${name}: el código solo puede tener letras, números y guiones`);
-    if (ids.has(id)) fallar(`Sucursal ${name}: el código "${id}" está repetido`);
+  const cargadas = items(list, b => obj(b), 30).filter(b => CAMPOS_SUCURSAL.some(k => txt(b[k], 200)));
+  if (!cargadas.length) fallar('Tiene que quedar al menos una sucursal (con el nombre alcanza)');
+  const out = cargadas.map((b, i) => {
+    const name = txt(b.name, 40) || `Sucursal ${i + 1}`;
+    const base = (/^[a-z0-9]+(-[a-z0-9]+)*$/.test(txt(b.id, 40)) ? txt(b.id, 40) : codigoDe(b.id || name)) || `sucursal-${i + 1}`;
+    let id = base;
+    for (let k = 2; ids.has(id); k++) id = `${base}-${k}`;
     ids.add(id);
     let phone = txt(b.whatsapp, 30).replace(/\D/g, '');
     if (phone.length === 10) phone = `549${phone}`; // característica + número
     const on = Boolean(b.on);
-    // Una sucursal que no recibe mensajes puede no tener WhatsApp (solo se muestra en la página)
-    if ((on || phone) && !/^\d{11,15}$/.test(phone)) fallar(`Sucursal ${name}: el WhatsApp tiene que ser la característica y el número, sin 0 ni 15 (ej. 3813629235)`);
+    // El WhatsApp puede quedar vacío; si lo cargan, tiene que ser un número que WhatsApp entienda
+    if (phone && !/^\d{11,15}$/.test(phone)) fallar(`Sucursal ${name}: el WhatsApp tiene que ser la característica y el número, sin 0 ni 15 (ej. 3813629235). También puede quedar vacío.`);
     return {
       id, name, province: txt(b.province, 40), whatsapp: phone, address: txt(b.address, 150), photo: mediaUrl(b.photo, `Sucursal ${name}: foto del local`), on,
       // 22/11/2026: horarios y teléfono fijo (se ven en el seguimiento, el comprobante y el mail de "listo para retirar")
       hours: txt(b.hours, 120), phone: txt(b.phone, 30),
     };
-  }, 30);
-  if (!out.some(b => b.on)) fallar('Dejá al menos una sucursal recibiendo mensajes');
+  });
   return out;
 }
 
