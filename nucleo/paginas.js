@@ -1,5 +1,5 @@
 'use strict';
-/* Páginas: la entrada que reparte a los visitantes entre los diseños (/ y /anuncio/), los dos diseños y el panel.
+/* Páginas: la principal (Historia en /), la entrada que reparte a los visitantes entre los diseños (/anuncio/), los diseños y el panel.
    Las plantillas (plantillas/*.html) tienen marcas {{...}} que se completan con el contenido de la tienda. */
 
 const fs = require('fs');
@@ -48,9 +48,10 @@ function sucursales(site) {
 }
 
 // Los datos de la tienda para las páginas. cat: la categoría de la página (/historia/audio/), o vacío en el inicio.
-function datos(pago, cat) {
+function datos(pago, cat, diseno) {
   const d = sitio.publico();
   return `<script>window.TB_BASE = "";
+    window.TB_DISENO = ${js(diseno || '')};
     window.STORE = ${js(d.store)};
     window.PRODUCTS = ${js(d.products)};
     window.EXTRAS = ${js(d.extras)};
@@ -77,7 +78,7 @@ function render(nombre, cat = '') {
       case 'og_image': return esc(sitio.ogImage());
       case 'hero_logo': return heroLogo(site);
       case 'sucursales': return sucursales(site);
-      case 'datos': return datos(pago, cat);
+      case 'datos': return datos(pago, cat, nombre.replace(/\.html$/, ''));
       case 'pago': return pago ? `<script src="${asset('/shared/checkout.js')}"></script>` : '';
       case 'cat': return esc(cat);
       default: return marca;
@@ -95,7 +96,10 @@ function diseno(variant, url, esAdmin, cat = '') {
   return { html: render(`${variant}.html`, cat) };
 }
 
-// Entrada (/, /anuncio/ y /anuncio/<categoría>/): elige el diseño en el navegador, lo guarda en localStorage y
+// La página principal: el diseño de sitio.PRINCIPAL (Historia) en / y en /<categoría>/, sin redirigir
+const principal = (cat = '') => render(`${sitio.PRINCIPAL}.html`, cat);
+
+// Entrada (/anuncio/ y /anuncio/<categoría>/): elige el diseño en el navegador, lo guarda en localStorage y
 // redirige. El mismo visitante ve siempre el mismo diseño, salvo que en /admin se cambie la ronda o el modo.
 function entrada(url, origen, cat = '') {
   const site = sitio.cargar();
@@ -138,11 +142,11 @@ function entrada(url, origen, cat = '') {
 })(${js(cfg)});
 </script>
 </head>
-<body><noscript><p><a href="/historia/${cat ? `${esc(cat)}/` : ''}">Entrar a la tienda</a></p></noscript></body>
+<body><noscript><p><a href="/${cat ? `${esc(cat)}/` : ''}">Entrar a la tienda</a></p></noscript></body>
 </html>
 `;
 }
 
 const admin = () => render('admin.html');
 
-module.exports = { diseno, entrada, admin, esc };
+module.exports = { diseno, entrada, principal, admin, esc };

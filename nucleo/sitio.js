@@ -13,6 +13,8 @@ const COPIAS = ruta('backups', 'sitio');
 const VARIANTS = ['red-social', 'minimalista', 'historia', 'profesional'];
 // Las 3 categorías de la tienda (1, 2 y 3): cada diseño tiene una página para cada una (/historia/audio/…)
 const CATS = ['ventilacion', 'contenido', 'audio'];
+// El diseño de la página principal (xoxotecno.com.ar/ y /ventilacion/, /contenido/, /audio/), sin /historia/ en la dirección
+const PRINCIPAL = 'historia';
 const SPEC_ICONS = ['pantalla', 'camara', 'bateria', 'memoria', 'ram', 'parlante', 'update', 'carga'];
 const EXTRA_ICONS = ['mic', 'tripode', 'luz', 'ventilador', 'ventilador-pie', 'ventilador-piso', 'ventilador-techo', 'parlante', 'auricular'];
 // Categoría que corresponde a cada ícono, para los productos guardados antes de que existieran las categorías
@@ -560,4 +562,4 @@ function publico() {
   };
 }
 
-module.exports = { VARIANTS, CATS, EMPRESAS, SITIO, COPIAS, txt, normalizar, cargar, guardar, copiar, publico, ogImage, absoluta };
+module.exports = { VARIANTS, CATS, PRINCIPAL, EMPRESAS, SITIO, COPIAS, txt, normalizar, cargar, guardar, copiar, publico, ogImage, absoluta };

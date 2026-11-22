@@ -23,7 +23,9 @@
   let entry = null;
   try { entry = JSON.parse(store.get('sessionStorage', 'tb:entrada') || 'null'); } catch {}
   try { sessionStorage.removeItem('tb:entrada'); } catch {}
-  const src = (entry && entry.src) || store.get('sessionStorage', 'tb:src') ||
+  const qs = new URLSearchParams(location.search);
+  const deUrl = [qs.get('src'), qs.get('utm_source')].find(v => typeof v === 'string' && /^[\w.-]{1,40}$/.test(v));
+  const src = (entry && entry.src) || deUrl || store.get('sessionStorage', 'tb:src') ||
     (/^#[pvx]=/.test(location.hash) ? 'link-producto' : 'directo');
   store.set('sessionStorage', 'tb:src', src);
 

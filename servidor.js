@@ -186,6 +186,8 @@ function whatsapp(req, res, url) {
 
 /* ---------- Rutas ---------- */
 const DISENOS = Object.fromEntries(sitio.VARIANTS.map(v => [`/${v}/`, v]));
+// Categorías de la página principal (/audio/), de cada diseño (/historia/audio/) y links de anuncio (/anuncio/audio/)
+const CATEGORIA_PRINCIPAL = new RegExp(`^/(${sitio.CATS.join('|')})(/?)$`);
 // Páginas de categoría de cada diseño (/historia/audio/) y links de anuncio por categoría (/anuncio/audio/)
 const CATEGORIA = new RegExp(`^/(${sitio.VARIANTS.join('|')}|anuncio)/(${sitio.CATS.join('|')})(/?)$`);
 
@@ -196,8 +198,11 @@ const server = http.createServer(async (req, res) => {
   const route = `${req.method} ${p}`;
   const get = req.method === 'GET' || req.method === 'HEAD';
   try {
-    // Entrada y link de anuncio: reparten a cada visitante en un diseño
-    if (get && p === '/') return html(res, 200, paginas.entrada(url, 'directo'), { 'Cache-Control': 'no-store' });
+    // La página principal muestra Historia ahí mismo (sin /historia/ en la dirección); el link de anuncio
+    // reparte a cada visitante en un diseño, según /admin → Anuncio
+    if (get && p === '/') return html(res, 200, paginas.principal());
+    const catPrincipal = get && p.match(CATEGORIA_PRINCIPAL);
+    if (catPrincipal) return catPrincipal[2] ? html(res, 200, paginas.principal(catPrincipal[1])) : redirigir(res, `${p}/${url.search}`, 301);
     if (get && p === '/anuncio/') return html(res, 200, paginas.entrada(url, 'anuncio'), { 'Cache-Control': 'no-store' });
     if (get && ['/anuncio', '/admin', ...sitio.VARIANTS.map(v => `/${v}`)].includes(p)) return redirigir(res, `${p}/${url.search}`, 301);
     if (get && DISENOS[p]) {

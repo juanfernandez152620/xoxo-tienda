@@ -1,7 +1,7 @@
 /* XOXO Tecno · diseño C "Historia": una página que se cuenta con el scroll.
- * Inicio (/historia/): quiénes somos, el equipo, las sucursales, la garantía, cómo comprar
+ * Inicio (xoxotecno.com.ar/ y /historia/): quiénes somos, el equipo, las sucursales, la garantía, cómo comprar
  * (Mercado Pago → envío → mail de confirmación), la calculadora de envíos y las 3 categorías con sus productos.
- * Categoría (/historia/ventilacion/, /contenido/, /audio/): la categoría primero y después lo mismo, más corto.
+ * Categoría (/ventilacion/, /contenido/, /audio/, y lo mismo con /historia/ adelante): la categoría primero y después lo mismo, más corto.
  * Los textos vienen de /admin (window.SITE.story); los productos, de la vidriera (shared/vidriera.js).
  * Las animaciones siguen al scroll con dos piezas: [data-reveal] aparece al entrar en pantalla y [data-scroll]
  * recibe --p (de 0 a 1) mientras cruza la pantalla. Con "reducir movimiento" todo queda quieto.
@@ -25,7 +25,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmt = new Intl.NumberFormat('es-AR');
   const money = n => '$' + fmt.format(n);
-  const catUrl = c => `/historia/${c.id}/`;
+  const catUrl = c => `/${c.id}/`;
   const emailTienda = (SITE.footer && SITE.footer.email) || 'ventas@xoxotecno.com.ar';
 
   const line = d => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -239,7 +239,7 @@
       <section class="hero hero-cat" style="--c:${esc(c.color)}" data-scroll>
         <div class="hero-bg" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span></div>
         <div class="hero-inner">
-          <p class="kicker hero-kicker"><a href="/historia/">${esc(STORE.name)}</a></p>
+          <p class="kicker hero-kicker"><a href="/">${esc(STORE.name)}</a></p>
           <div class="cat-hero-art" aria-hidden="true"><span class="cat-hero-ico">${V.icon(ico) || ''}</span></div>
           <h1 class="hero-title">${esc(c.name)}</h1>
           <p class="hero-sub">${esc(c.title)}</p>
@@ -682,7 +682,7 @@
   /* ---------- Encabezado, pie y armado ---------- */
   // Menú de las 4 vistas: Inicio y la home de cada categoría (shared/secciones.js), más el atajo a Envíos
   function nav() {
-    $('#nav').innerHTML = window.Secciones.nav('/historia', CAT ? CAT.id : '') + '<a href="#envios" class="nav-ship" data-sx-go="envios">Envíos</a>';
+    $('#nav').innerHTML = window.Secciones.nav('', CAT ? CAT.id : '') + '<a href="#envios" class="nav-ship" data-sx-go="envios">Envíos</a>';
   }
 
 

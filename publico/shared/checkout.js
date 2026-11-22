@@ -14,7 +14,8 @@
   const Flash = window.Flash || null;
   const CATALOG = [...PRODUCTS, ...EXTRAS]; // EXTRAS: productos que no son celulares, con un solo precio
   const byId = Object.fromEntries(CATALOG.map(p => [p.id, p]));
-  const VERSION = location.pathname.split('/').filter(Boolean)[0] || '';
+  // El diseño de la página (lo pone el servidor): en la página principal la dirección no lo dice
+  const VERSION = window.TB_DISENO || location.pathname.split('/').filter(Boolean)[0] || '';
   const fmt = new Intl.NumberFormat('es-AR');
   const money = n => '$' + fmt.format(n);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

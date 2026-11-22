@@ -64,7 +64,7 @@ function actualizar(id, patch) {
   return order;
 }
 const tienda = () => sitio.cargar().store.name;
-const volver = (order, result) => `${BASE_URL}/${order.version}/?pago=${result}&pedido=${order.id}`;
+const volver = (order, result) => `${BASE_URL}/${order.version === sitio.PRINCIPAL ? '' : `${order.version}/`}?pago=${result}&pedido=${order.id}`;
 const pedidoPublico = o => ({
   id: o.id, ref: o.ref, status: o.status, method: o.method, product: o.product.name,
   amount: o.amount, plan: o.plan, demo: Boolean(o.gateway && o.gateway.demo),
