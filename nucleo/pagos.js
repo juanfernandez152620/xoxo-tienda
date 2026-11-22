@@ -13,6 +13,8 @@ const sitio = require('./sitio');
 const envios = require('./envios');
 const correo = require('./correo');
 const flash = require('../publico/shared/flash');
+const calcEnvios = require('../publico/shared/envios');
+const { diaLocal } = require('./archivos');
 
 const PEDIDOS = ruta('pedidos.json');
 
@@ -58,6 +60,8 @@ function actualizar(id, patch) {
   // Pago aprobado por primera vez: se manda el correo de la compra (y el aviso de venta a la tienda)
   const avisar = patch.status === 'approved' && antes !== 'approved' && !(order.emails && order.emails.compra);
   if (avisar) order.emails = { ...(order.emails || {}), compra: new Date().toISOString() };
+  // Cuándo se pagó (para la historia del pedido en el panel y en el seguimiento)
+  if (patch.status === 'approved' && antes !== 'approved' && !order.paidAt) order.paidAt = new Date().toISOString();
   guardarPedidos(list);
   if (patch.status) console.log(`[pedido ${order.ref}] ${order.method}: ${patch.status}`);
   if (avisar) correo.compraAprobada(order);
@@ -105,20 +109,22 @@ function validar(body) {
 }
 
 /* ---------- Mercado Pago (Checkout Pro) ---------- */
-async function mpCrear(order, product) {
+async function mpCrear(order, lines) {
   const [first, ...rest] = order.buyer.name.split(' ');
-  const photo = product.gallery && product.gallery[0];
+  const foto = p => (p.gallery && p.gallery[0] && HTTPS ? { picture_url: sitio.absoluta(p.gallery[0]) } : {});
+  // Con un código de descuento va un solo renglón con el total (Mercado Pago no acepta precios negativos)
+  const renglones = order.discount
+    ? [{
+      id: `pedido-${order.ref}`, title: `Pedido ${order.ref}: ${order.product.name}`,
+      description: `Con el código ${order.discount.code} (${order.discount.percent}% off) · ${tienda()}`,
+      category_id: 'electronics', quantity: 1, currency_id: 'ARS', unit_price: order.productAmount, ...foto(lines[0].p),
+    }]
+    : lines.map(l => ({
+      id: l.p.id, title: fullName(l.p), description: `${fullName(l.p)} · ${tienda()}`,
+      category_id: l.p.cuotas ? 'phones' : 'electronics', quantity: l.n, currency_id: 'ARS', unit_price: priceOf(l.p), ...foto(l.p),
+    }));
   const body = {
-    items: [{
-      id: product.id,
-      title: fullName(product),
-      description: `${fullName(product)} · ${tienda()}`,
-      category_id: product.cuotas ? 'phones' : 'electronics',
-      quantity: 1,
-      currency_id: 'ARS',
-      unit_price: order.productAmount ?? order.amount,
-      ...(photo && HTTPS ? { picture_url: sitio.absoluta(photo) } : {}),
-    },
+    items: [...renglones,
     // El envío va como un ítem aparte, así se ve claro en el resumen de Mercado Pago
     ...(order.envio && order.envio.costo ? [{
       id: `envio-${order.envio.tipo}`, title: order.envio.nombre, description: `Envío del pedido ${order.ref}`,
@@ -133,8 +139,8 @@ async function mpCrear(order, product) {
     },
     external_reference: order.id,
     back_urls: { success: volver(order, 'ok'), failure: volver(order, 'error'), pending: volver(order, 'pendiente') },
-    // Mercado Pago es el medio principal: hasta 12 cuotas para todo (el interés depende de la cuenta de MP)
-    payment_methods: { installments: 12 },
+    // Hasta las cuotas que permiten todos los productos del pedido en /admin. El interés depende de la cuenta de MP
+    payment_methods: { installments: order.credito || 12 },
     statement_descriptor: tienda().toUpperCase().slice(0, 22),
     metadata: { pedido: order.ref },
   };
@@ -268,8 +274,122 @@ function demoPagina(order) {
 </main></body></html>`;
 }
 
+/* ---------- Seguimiento de la entrega (/admin → Pedidos) ---------- */
+// Después de pagado: Preparando → Despachado (con empresa y número) o Listo para retirar → Entregado.
+// Cancelado, con el motivo, en cualquier momento. Cada paso queda en la historia con fecha y hora.
+const PASOS = { preparando: 'Preparando', despachado: 'Despachado', listo: 'Listo para retirar', entregado: 'Entregado', cancelado: 'Cancelado' };
+const EMPRESAS = { andreani: 'Andreani', correo: 'Correo Argentino', otra: 'Otra' };
+const corto = (v, max) => String(v || '').trim().replace(/\s+/g, ' ').slice(0, max);
+function seguir(id, body = {}) {
+  const o = buscar(String(id || ''));
+  if (!o) return [404, { error: 'No encontré ese pedido.' }];
+  const seg = o.seguimiento || { estado: '', historial: [] };
+  const historial = seg.historial || [];
+  let nuevo;
+  if (body.paso === 'deshacer') {
+    if (!historial.length) return [400, { error: 'No hay pasos para deshacer.' }];
+    const quedan = historial.slice(0, -1);
+    const ultimo = quedan[quedan.length - 1];
+    const envio = [...quedan].reverse().find(h => h.paso === 'despachado');
+    nuevo = { estado: ultimo ? ultimo.paso : '', historial: quedan, ...(envio ? { empresa: envio.empresa, numero: envio.numero } : {}) };
+  } else {
+    const paso = String(body.paso || '');
+    if (!PASOS[paso]) return [400, { error: 'Paso desconocido.' }];
+    if (paso !== 'cancelado' && o.status !== 'approved') return [400, { error: 'Ese pedido todavía no está pagado.' }];
+    if (seg.estado === 'cancelado') return [400, { error: 'El pedido está cancelado. Deshacé la cancelación primero.' }];
+    const retiro = !o.envio || o.envio.tipo === 'retiro';
+    if (paso === 'listo' && !retiro) return [400, { error: 'Este pedido va por envío: marcalo como Despachado.' }];
+    if (paso === 'despachado' && retiro) return [400, { error: 'Este pedido se retira en la sucursal: marcalo como Listo para retirar.' }];
+    const h = { paso, at: new Date().toISOString() };
+    if (paso === 'despachado') {
+      h.empresa = EMPRESAS[body.empresa] ? body.empresa : (o.envio && o.envio.empresa) || 'otra';
+      h.numero = corto(body.numero, 40);
+      if (h.numero.length < 4) return [400, { error: 'Escribí el número de seguimiento del envío.' }];
+    }
+    if (paso === 'cancelado') {
+      h.motivo = corto(body.motivo, 200);
+      if (h.motivo.length < 3) return [400, { error: 'Escribí el motivo de la cancelación.' }];
+    }
+    nuevo = { estado: paso, historial: [...historial, h], ...(paso === 'despachado' ? { empresa: h.empresa, numero: h.numero } : seg.numero ? { empresa: seg.empresa, numero: seg.numero } : {}) };
+  }
+  const order = actualizar(o.id, { seguimiento: nuevo });
+  console.log(`[pedido ${order.ref}] seguimiento: ${nuevo.estado || 'sin pasos'}`);
+  // Mail al cliente: cuando se despacha y cuando queda listo para retirar (una vez por paso)
+  if (['despachado', 'listo'].includes(nuevo.estado) && body.paso !== 'deshacer' && !(order.emails && order.emails[nuevo.estado])) {
+    actualizar(o.id, { emails: { ...(order.emails || {}), [nuevo.estado]: new Date().toISOString() } });
+    correo.avisoEntrega(order, nuevo.estado);
+  }
+  return [200, { ok: true, seguimiento: nuevo }];
+}
+// La nota interna de un pedido (solo la ven en el panel)
+function anotar(id, nota) {
+  const o = actualizar(String(id || ''), { nota: corto(nota, 500) });
+  return o ? [200, { ok: true }] : [404, { error: 'No encontré ese pedido.' }];
+}
+
+/* ---------- Consulta pública del pedido (/seguimiento) ---------- */
+// Se pide el código y el email de la compra: con solo el código nadie ve un pedido ajeno
+function porRefYEmail(ref, email) {
+  const r = String(ref || '').trim().replace(/^#/, '').toUpperCase();
+  const e = String(email || '').trim().toLowerCase();
+  if (!/^[A-F0-9]{6}$/.test(r) || !e) return null;
+  return leerPedidos().find(o => o.ref === r && String(o.buyer.email).toLowerCase() === e) || null;
+}
+function seguimientoPublico(o) {
+  const site = sitio.cargar();
+  const seg = o.seguimiento || {};
+  const retiro = !o.envio || o.envio.tipo === 'retiro';
+  const suc = retiro ? site.store.branches.find(b => b.id === (o.envio && o.envio.sucursal)) || null : null;
+  const d = o.delivery || {};
+  return {
+    ref: o.ref,
+    nombre: String(o.buyer.name || '').split(' ')[0],
+    fecha: o.createdAt,
+    pagadoEl: o.status === 'approved' ? o.paidAt || o.createdAt : null,
+    pago: o.status,
+    items: (o.items || [{ name: o.product.name, n: 1, price: o.productAmount ?? o.amount }]).map(x => ({ name: x.name, n: x.n, price: x.price })),
+    descuento: o.discount ? { code: o.discount.code, percent: o.discount.percent, amount: o.discount.amount } : null,
+    envio: o.envio ? { nombre: o.envio.nombre, costo: o.envio.costo, tipo: o.envio.tipo, dias: o.envio.dias || null } : null,
+    total: o.amount,
+    medio: METHODS[o.method] ? METHODS[o.method].name : o.method,
+    cuotas: o.method === 'gocuotas' ? o.plan : (o.gateway && o.gateway.installments) || null,
+    sucursal: suc ? { name: suc.name, address: suc.address, hours: suc.hours || '' } : null,
+    direccion: retiro ? '' : [d.address, d.city, o.envio.provincia, d.cp && `CP ${d.cp}`].filter(Boolean).join(', '),
+    seguimiento: { estado: seg.estado || '', historial: (seg.historial || []).map(h => ({ paso: h.paso, at: h.at, empresa: h.empresa, numero: h.numero, motivo: h.motivo })), empresa: seg.empresa || '', numero: seg.numero || '' },
+    demo: Boolean(o.gateway && o.gateway.demo),
+  };
+}
+function consultarSeguimiento(q) {
+  const o = porRefYEmail(q.pedido, q.email);
+  if (!o) return [404, { error: 'No encontramos una compra con ese código y ese email. Revisá los dos (el código está en el mail de la compra).' }];
+  return [200, seguimientoPublico(o)];
+}
+
+/* ---------- Códigos de descuento propios (/admin → Tienda y textos) ---------- */
+// Vale si está activo, no venció y no se usó en más pedidos pagados que los permitidos
+function codigoValido(texto, site = sitio.cargar()) {
+  const code = String(texto || '').trim().toLowerCase();
+  if (!code) return null;
+  const c = (site.codes || []).find(x => x.code === code);
+  // Un código que no existe (o el del flash, o uno de otro mes) no frena la compra: se ignora, como antes
+  if (!c) return null;
+  if (!c.on) return { error: 'Ese código ya no está activo.' };
+  if (c.until && c.until < diaLocal()) return { error: 'Ese código ya venció.' };
+  if (c.max && leerPedidos().filter(o => o.status === 'approved' && o.discount && o.discount.code === code).length >= c.max) {
+    return { error: 'Ese código ya se usó todas las veces que se podía.' };
+  }
+  return { code, percent: c.percent };
+}
+// Para el carrito: /api/codigo { code } → { code, percent } (el pedido lo vuelve a revisar al crearse)
+function consultarCodigo(body) {
+  const r = codigoValido(body && body.code);
+  if (!r) return [404, { error: 'Ese código no existe. Revisá cómo lo escribiste.' }];
+  if (r.error) return [400, { error: r.error }];
+  return [200, r];
+}
+
 /* ---------- Rutas (/api/checkout, /api/pedidos/…, webhooks y pago simulado) ---------- */
-async function crear(body) {
+async function crear(body, extra = {}) {
   const method = body.method;
   if (!METHODS[method]) return [400, { error: 'Elegí cómo querés pagar.' }];
   const state = estadoMedio(method);
@@ -277,31 +397,59 @@ async function crear(body) {
   if (!sitio.VARIANTS.includes(body.version)) return [400, { error: 'Versión de la tienda desconocida.' }];
 
   const site = sitio.cargar();
-  const product = [...(site.store.phones ? site.products : []), ...site.extras].find(p => !p.hidden && p.id === body.productId);
-  if (!product) return [404, { error: 'Ese producto ya no está en el catálogo.' }];
+  // Los productos: el carrito (items: [{id, n}]) o, como antes, uno solo (productId)
+  const pedido = Array.isArray(body.items) && body.items.length ? body.items : [{ id: body.productId, n: 1 }];
+  if (pedido.length > 20) return [400, { error: 'El carrito tiene demasiados productos.' }];
+  const catalogo = [...(site.store.phones ? site.products : []), ...site.extras].filter(p => !p.hidden);
+  const lines = [];
+  for (const it of pedido) {
+    const p = catalogo.find(x => x.id === String((it && it.id) || ''));
+    if (!p) return [404, { error: 'Uno de los productos ya no está en el catálogo. Sacalo del carrito y probá de nuevo.' }];
+    const n = Math.min(10, Math.max(1, Math.floor(Number(it.n) || 1)));
+    const ya = lines.find(l => l.p === p);
+    if (ya) ya.n = Math.min(10, ya.n + n); else lines.push({ p, n });
+  }
+  // Cuotas: Mercado Pago, hasta las que permitan todos; GO cuotas, solo si todos aceptan débito
+  if (method === 'gocuotas' && lines.some(l => l.p.debito === false)) {
+    const no = lines.find(l => l.p.debito === false).p;
+    return [400, { error: `${fullName(no)} no se puede pagar con débito en GO cuotas. Elegí Mercado Pago o sacalo del carrito.` }];
+  }
+  const credito = Math.min(...lines.map(l => (l.p.cuotas ? 12 : Number(l.p.credito) || 12)));
   const check = validar(body);
   if (check.error) return [400, { error: check.error }];
-  // El envío lo cotiza el servidor con la tabla de /admin → Envíos
+  const subtotal = lines.reduce((s, l) => s + priceOf(l.p) * l.n, 0);
+  // El envío lo cotiza el servidor con la tabla de /admin → Envíos: un envío por pedido, con el peso de todo
   const d = check.delivery;
-  const env = envios.precio(product, { tipo: d.type, provincia: d.province, cp: d.cp, sucursal: d.branch });
+  const paquete = { weight: lines.reduce((s, l) => s + calcEnvios.peso(l.p) * l.n, 0), price: subtotal, cat: lines[0].p.cat };
+  const env = envios.precio(paquete, { tipo: d.type, provincia: d.province, cp: d.cp, sucursal: d.branch });
   if (env.error) return [400, { error: env.error }];
-  // Cupón del descuento flash: se anota en el pedido. El precio cobrado es el de la página.
-  const coupon = flash.cuponValido(body.coupon, site.flash) ? flash.cupon() : '';
+  // Un solo código por pedido: uno propio (baja el precio) o, si no, el del descuento flash (se anota; el precio
+  // de la página ya es el del flash)
+  const propio = body.coupon ? codigoValido(body.coupon, site) : null;
+  if (propio && propio.error) return [400, { error: propio.error }];
+  const discount = propio ? { code: propio.code, percent: propio.percent, amount: Math.round(subtotal * propio.percent / 100) } : null;
+  const coupon = !discount && flash.cuponValido(body.coupon, site.flash) ? flash.cupon() : '';
 
   const id = crypto.randomBytes(5).toString('hex');
-  const productAmount = priceOf(product);
+  const productAmount = subtotal - (discount ? discount.amount : 0);
+  const nombres = lines.map(l => `${l.n > 1 ? `${l.n} × ` : ''}${fullName(l.p)}`);
   const order = {
     id,
     ref: id.slice(0, 6).toUpperCase(),
     createdAt: new Date().toISOString(),
     version: body.version,
     method,
-    product: { id: product.id, name: fullName(product) },
-    plan: [1, 3, 6, 9, 12].includes(Number(body.plan)) ? Number(body.plan) : 12,
+    // product: el resumen (lo usan el panel y los mails de antes); items: cada producto con su cantidad y precio
+    product: { id: lines[0].p.id, name: nombres.length > 2 ? `${nombres.slice(0, 2).join(', ')} y ${nombres.length - 2} más` : nombres.join(' y ') },
+    items: lines.map(l => ({ id: l.p.id, name: fullName(l.p), n: l.n, price: priceOf(l.p) })),
+    plan: method === 'gocuotas' ? (lines[0].p.cuotas ? 9 : Number(site.store.extras.cuotas) || 6) : 1,
+    credito,
     productAmount,
+    ...(discount ? { discount } : {}),
     amount: productAmount + env.envio.costo,
     envio: env.envio,
     ...(coupon ? { coupon } : {}),
+    ...(extra.clienteId ? { clienteId: extra.clienteId } : {}),
     buyer: check.buyer,
     delivery: d,
     status: 'created',
@@ -310,7 +458,7 @@ async function crear(body) {
   guardarPedidos([...leerPedidos(), order]);
 
   try {
-    const result = state.demo ? demoCrear(order) : method === 'mercadopago' ? await mpCrear(order, product) : await gcCrear(order);
+    const result = state.demo ? demoCrear(order) : method === 'mercadopago' ? await mpCrear(order, lines) : await gcCrear(order);
     actualizar(id, { status: 'pending', gateway: result.gateway });
     return [200, { url: result.url, pedido: id }];
   } catch (err) {
@@ -463,5 +611,6 @@ async function probar() {
 
 module.exports = {
   estadoAdmin, probar, linkPrueba,
-  METHODS, activo, configPublica, leerPedidos, crear, estado, avisoMercadoPago, avisoGoCuotas, demo, lineaArranque,
+  METHODS, activo, configPublica, leerPedidos, crear, estado, avisoMercadoPago, avisoGoCuotas, demo, lineaArranque, consultarCodigo,
+  PASOS, EMPRESAS, seguir, anotar, porRefYEmail, seguimientoPublico, consultarSeguimiento, buscarPedido: buscar,
 };

@@ -580,7 +580,8 @@
   // 3. Un capítulo por ventilador: la ocasión, la historia, lo que la respalda, el video y la compra
   function hvCapitulo(k, i, total) {
     const p = k.p;
-    const n = Number(STORE.extras.cuotas) || 6;
+    const cu = V.cuotasDe(p);
+    const n = cu.debito;
     const ver = `href="#x=${esc(p.id)}" data-x="${esc(p.id)}"`;
     return `
       <section class="hv-cap${i % 2 ? ' hv-cap-alt' : ''}" id="cap-${i + 1}" data-cap="${esc(p.id)}" data-scroll style="--c:${esc(k.color)}">
@@ -602,8 +603,8 @@
             <div class="hv-compra" data-reveal style="--i:4">
               <p class="hv-name"><a class="js-ficha" ${ver}>${esc(p.name)}</a></p>
               ${V.priceHTML(p)}
-              ${STORE.financing ? `<p class="hv-cuotas"><b>${n} cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, n)}</b> con débito ${goImg()}</p>` : ''}
-              <p class="hv-cuotas"><b>12 cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, 12)}</b> con crédito</p>
+              ${n ? `<p class="hv-cuotas"><b>${n} cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, n)}</b> con débito ${goImg()}</p>` : ''}
+              <p class="hv-cuotas">${cu.credito > 1 ? `<b>${cu.credito} cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, cu.credito)}</b> con crédito` : '<b>En 1 pago</b> con crédito o débito'}</p>
               <div class="hv-btns">${PAY ? V.buyButton(p, 'Comprar') : V.waLink(p, 'Pedilo por WhatsApp')}</div>
             </div>
           </div>
@@ -695,7 +696,7 @@
           <span class="foot-logo">${$('.logo-svg').outerHTML}</span>
           <p>${esc(sinRelleno(f.about || STORY.text) || 'Ventilación, creación de contenido y audio en cuotas.')}</p>
         </div>
-        <nav aria-label="Categorías"><h3>Categorías</h3>${CATS.map(c => `<a href="${catUrl(c)}">${esc(c.name)}</a>`).join('')}</nav>
+        <nav aria-label="Categorías"><h3>Categorías</h3>${CATS.map(c => `<a href="${catUrl(c)}">${esc(c.name)}</a>`).join('')}<a href="/seguimiento">Seguí tu compra</a></nav>
         <div><h3>Sucursales</h3>${provs.map(p => `<p>${esc(p)}</p>`).join('') || `<p>${esc(STORE.city)}</p>`}</div>
         <div><h3>Contacto</h3>
           <a class="js-wa js-wa-general" data-donde="pie" target="_blank" rel="noopener">WhatsApp</a>

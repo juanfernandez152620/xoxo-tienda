@@ -174,6 +174,20 @@ async function api(req, res, url, h) {
       return h.json(200, { ok: true });
     }
 
+    // Seguimiento de un pedido: { id, paso: preparando | despachado | listo | entregado | cancelado | deshacer }
+    case 'POST /pedidos/seguir': {
+      const [status, data] = pagos.seguir(...(b => [b.id, b])(await h.leerJson(4000)));
+      return h.json(status, data);
+    }
+    case 'POST /pedidos/nota': {
+      const body = await h.leerJson(4000);
+      const [status, data] = pagos.anotar(body.id, body.nota);
+      return h.json(status, data);
+    }
+
+    case 'GET /clientes':
+      return h.json(200, { clientes: require('./clientes').lista() });
+
     case 'GET /pedidos':
       return h.json(200, { pedidos: pagos.leerPedidos().slice().reverse(), config: pagos.configPublica(), pasarelas: pagos.estadoAdmin(), correo: correo.estado() });
 

@@ -79,7 +79,7 @@ function render(nombre, cat = '') {
       case 'hero_logo': return heroLogo(site);
       case 'sucursales': return sucursales(site);
       case 'datos': return datos(pago, cat, nombre.replace(/\.html$/, ''));
-      case 'pago': return pago ? `<script src="${asset('/shared/checkout.js')}"></script>` : '';
+      case 'pago': return pago ? `<script src="${asset('/shared/checkout.js')}"></script>\n  <script src="${asset('/shared/carrito.js')}" defer></script>` : '';
       case 'cat': return esc(cat);
       default: return marca;
     }
@@ -148,5 +148,9 @@ function entrada(url, origen, cat = '') {
 }
 
 const admin = () => render('admin.html');
+// Seguí tu compra (/seguimiento): código + email → estado, entrega y comprobante
+const seguimiento = () => render('seguimiento.html');
+// La cuenta del cliente (/cuenta): ingresar o registrarse, Mis compras y Mis datos
+const cuenta = () => render('cuenta.html');
 
-module.exports = { diseno, entrada, principal, admin, esc };
+module.exports = { diseno, entrada, principal, admin, seguimiento, cuenta, esc };

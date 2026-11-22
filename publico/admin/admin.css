@@ -331,3 +331,44 @@ legend { padding: 0; margin-bottom: 4px; font-weight: 700; font-size: 14px; }
 .pay-link { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line, #ddd); }
 .pay-link h3 { margin: 0 0 6px; font-size: 16px; }
 .pay-link .field input { min-width: 120px; padding: 8px 10px; border: 1px solid var(--line-2, #ccc); border-radius: 8px; background: transparent; color: inherit; font: inherit; }
+
+/* ============ 22/11/2026: Pedidos = registro de compras con el seguimiento de la entrega ============ */
+.order-tools { display: grid; gap: 12px; margin-bottom: 8px; }
+.otabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.otab { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 999px; background: none; color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.otab .count { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--wash, rgba(0, 0, 0, .05)); font-size: 12px; text-align: center; }
+.otab.on { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.otab.on .count { background: rgba(255, 255, 255, .2); }
+.order-search { width: 100%; min-height: 42px; padding: 0 14px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; }
+.order { margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.order.is-off { opacity: .65; }
+.order-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 12px; }
+.order-ref { font-size: 17px; letter-spacing: .02em; }
+.order-total { margin-left: auto; font-size: 17px; }
+.chip.seg { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good); }
+.chip.warn { background: color-mix(in srgb, #d97706 16%, transparent); color: #b45309; }
+.order-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 900px) { .order-grid { grid-template-columns: minmax(0, 1fr); } }
+.order h3 { margin: 0 0 6px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.order h3 + p, .order p { margin: 0 0 8px; }
+.order .sub { display: block; color: var(--ink-2); font-size: 13px; }
+.order-items { display: grid; gap: 4px; margin: 0 0 8px; padding: 0; list-style: none; }
+.order-items li { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.order-items li.save b { color: var(--good); }
+.order-steps { display: grid; gap: 6px; margin: 0 0 10px; padding-left: 18px; font-size: 14px; }
+.order-steps .sub { font-size: 12.5px; }
+.order textarea { width: 100%; }
+.order-actions { flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+
+/* ============ 22/11/2026: Inicio (el día) y Páginas ============ */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { display: grid; gap: 4px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--ink); font: inherit; text-align: left; }
+button.tile { cursor: pointer; }
+button.tile:hover { border-color: var(--line-2); }
+.tile-t { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.tile-v { font-size: 26px; line-height: 1.1; }
+.tile-s { color: var(--ink-2); font-size: 13px; }
+.paginas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.pagina-col { display: grid; align-content: start; gap: 6px; }
+.pagina-col b { margin-bottom: 4px; }
+.pagina-col a { color: var(--ink); }

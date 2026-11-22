@@ -84,32 +84,41 @@
     return `<p class="x-price"><b>${money(p.price)}</b>${off ? `<s aria-label="Precio normal ${money(p.listPrice)}">${money(p.listPrice)}</s>` : ''}</p>`;
   }
 
-  // Mercado Pago es el medio principal; abajo, siempre, que también se puede pagar con débito en GO cuotas
-  const cuotasText = () => `Hasta 12 cuotas con Mercado Pago${STORE.financing ? ` o ${STORE.extras.cuotas} con tu débito en ${STORE.financing}` : ''}`;
+  // Las cuotas de un producto (/admin → Otros productos → Cuotas): con crédito, hasta cuántas (1 = un solo pago);
+  // con débito en GO cuotas, cuántas (0 = no se acepta). Los celulares de antes: 12 y 9
+  const cuotasDe = p => ({
+    credito: [1, 3, 6, 9, 12].includes(Number(p && p.credito)) ? Number(p.credito) : 12,
+    debito: STORE.financing && !(p && p.debito === false) ? (p && p.cuotas ? 9 : Number(STORE.extras.cuotas) || 0) : 0,
+  });
+  const credTxt = n => (n > 1 ? `${n} cuotas` : '1 pago');
+  // Mercado Pago es el medio principal; abajo, si el producto lo acepta, el débito en GO cuotas
+  const cuotasText = p => { const c = cuotasDe(p); return `${c.credito > 1 ? `Hasta ${c.credito} cuotas` : 'En 1 pago'} con Mercado Pago${c.debito ? ` o ${c.debito} con tu débito en ${STORE.financing}` : ''}`; };
   const goLogo = () => (STORE.financingLogo && STORE.financingLogo.color
     ? `<img class="x-go" src="${esc(STORE.financingLogo.color)}" alt="${esc(STORE.financing)}">` : esc(STORE.financing));
   // corto: en la tarjeta (angosta en el celular) dos renglones cortos; el texto completo va en la ficha
-  const cuotasHTML = (corto = false) => (corto
-    ? `<p class="x-cuotas"><b>12 cuotas</b> con crédito</p>${STORE.financing
-      ? `<p class="x-cuotas x-debito"><b>${esc(STORE.extras.cuotas)} cuotas</b> con débito ${goLogo()}</p>` : ''}`
-    : `<p class="x-cuotas">Hasta 12 cuotas con Mercado Pago</p>${STORE.financing
-      ? `<p class="x-cuotas x-debito">o <b>${esc(STORE.extras.cuotas)} cuotas</b> con tu <b>débito</b> en ${goLogo()}</p>` : ''}`);
+  const cuotasHTML = (p, corto = false) => { const c = cuotasDe(p); return corto
+    ? `<p class="x-cuotas"><b>${credTxt(c.credito)}</b> con crédito</p>${c.debito
+      ? `<p class="x-cuotas x-debito"><b>${esc(c.debito)} cuotas</b> con débito ${goLogo()}</p>` : ''}`
+    : `<p class="x-cuotas">${c.credito > 1 ? `Hasta ${c.credito} cuotas` : 'En 1 pago'} con Mercado Pago</p>${c.debito
+      ? `<p class="x-cuotas x-debito">o <b>${esc(c.debito)} cuotas</b> con tu <b>débito</b> en ${goLogo()}</p>` : ''}`; };
 
   // Ficha: el precio desglosado en cuotas. Crédito por Mercado Pago en 1, 3, 6, 9 y 12 (los planes que acepta el
   // checkout) y débito en GO cuotas. Cada cuota se redondea para arriba, igual que en las tarjetas de cada diseño
   function desgloseHTML(p) {
     const precio = p.price || (p.cuotas ? p.cuotas[12] * 12 : 0);
-    if (!precio) return cuotasHTML();
+    if (!precio) return cuotasHTML(p);
     const cuota = n => money(p.cuotas && p.cuotas[n] ? p.cuotas[n] : Math.ceil(precio / n));
+    const c = cuotasDe(p);
+    const planes = [1, 3, 6, 9, 12].filter(n => n <= c.credito);
     const sin = STORE.sinInteres ? ' sin interés' : '';
     const fila = (n, dest = false) => `<li${dest ? ' class="fc-dest"' : ''}><span>${n === 1 ? '1 pago' : `${n} cuotas${sin}`}</span><b>${n === 1 ? money(precio) : `${cuota(n)}`}</b></li>`;
-    const deb = p.cuotas ? 9 : Number(STORE.extras.cuotas) || 0;
+    const deb = c.debito;
     return `
       <div class="ficha-cuotas">
         <p class="fc-t">Pagalo en cuotas</p>
         <div class="fc-grupo">
           <p class="fc-medio"><b>Con tarjeta de crédito</b><span>por Mercado Pago</span></p>
-          <ul class="fc-lista">${[1, 3, 6, 9].map(n => fila(n)).join('')}${fila(12, true)}</ul>
+          <ul class="fc-lista">${planes.map(n => fila(n, n === c.credito)).join('')}</ul>
         </div>
         ${STORE.financing && deb > 1 ? `
         <div class="fc-grupo">
@@ -122,7 +131,7 @@
   }
 
   function buyMessage(p) {
-    const lines = ['¡Hola! Vi este producto en la web y me interesa:', `🛒 ${p.name}`, `💵 ${money(p.price)}`, `💳 ${cuotasText()}`, '¿Sigue disponible?'];
+    const lines = ['¡Hola! Vi este producto en la web y me interesa:', `🛒 ${p.name}`, `💵 ${money(p.price)}`, `💳 ${cuotasText(p)}`, '¿Sigue disponible?'];
     if (isWeb) lines.push(productUrl(p));
     return lines.join('\n');
   }
@@ -143,7 +152,7 @@
           <p class="x-kicker">${esc(kicker(p))}</p>
           <h3 class="x-name"><a class="js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}">${esc(p.name)}</a></h3>
           ${priceHTML(p)}
-          ${cuotasHTML(true)}
+          ${cuotasHTML(p, true)}
           ${PAY ? buyButton(p, 'Comprar') : waLink(p, 'Pedilo')}
         </div>
       </article>`;
@@ -231,7 +240,7 @@
         ${p.pitch ? `<p class="ficha-pitch">${esc(p.pitch)}</p>` : ''}
         ${(p.details || []).length ? `<ul class="ficha-details">${p.details.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : ''}
         <div class="ficha-ctas">
-          ${PAY ? `${buyButton(p, 'Comprar ahora')}${waLink(p, 'Consultar por WhatsApp', 'ghost')}` : waLink(p, 'Pedilo por WhatsApp')}
+          ${PAY ? `<button class="x-btn js-x-ahora" type="button" data-x="${esc(p.id)}">Comprar ahora</button><button class="x-btn ghost js-x-buy" type="button" data-x="${esc(p.id)}">${ICON.cart}Agregar al carrito</button>${waLink(p, 'Consultar por WhatsApp', 'ghost')}` : waLink(p, 'Pedilo por WhatsApp')}
           <button class="x-btn ghost js-x-share" type="button">${ICON.share}Compartir</button>
         </div>
         <p class="ficha-note">¿Tenés dudas de medidas o compatibilidad? Preguntanos por WhatsApp.</p>
@@ -316,9 +325,11 @@
       e.preventDefault();
       return open(el.dataset.x);
     }
-    if ((el = t.closest('.js-x-buy'))) {
+    if ((el = t.closest('.js-x-buy, .js-x-ahora'))) {
       if (window.TB_TRACK) window.TB_TRACK('checkout', el.dataset.x);
-      return window.Checkout.open(el.dataset.x);
+      const ahora = el.classList.contains('js-x-ahora');
+      if (ahora || root && root.contains(el)) close();
+      return window.Carrito ? window.Carrito.comprar(el.dataset.x, ahora) : window.Checkout.open(el.dataset.x);
     }
     if (t.closest('.js-x-share')) return share(current);
     if ((el = t.closest('.ficha-arrow'))) return goSlide(slideIndex() + Number(el.dataset.d));
@@ -436,6 +447,7 @@
 
   const byCat = cat => filter('', cat);
   window.Vidriera = {
+    cuotasDe,
     title: STORE.extras.title, short: STORE.extras.short, groups, cats: CATS, filter, byCat, gridHTML, shelfHTML,
     cardHTML, priceHTML, coverHTML, videoHTML, previewHTML: p => previewHTML(p, true), buyButton, waLink, icon: key => ICON[key], open, close,
   };

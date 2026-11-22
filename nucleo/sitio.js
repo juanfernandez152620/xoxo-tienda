@@ -15,6 +15,8 @@ const VARIANTS = ['red-social', 'minimalista', 'historia', 'profesional'];
 const CATS = ['ventilacion', 'contenido', 'audio'];
 // El diseño de la página principal (xoxotecno.com.ar/ y /ventilacion/, /contenido/, /audio/), sin /historia/ en la dirección
 const PRINCIPAL = 'historia';
+// Los diseños de la prueba del anuncio (22/11/2026: Profesional se dejó de lado)
+const EN_PRUEBA = ['red-social', 'minimalista', 'historia'];
 const SPEC_ICONS = ['pantalla', 'camara', 'bateria', 'memoria', 'ram', 'parlante', 'update', 'carga'];
 const EXTRA_ICONS = ['mic', 'tripode', 'luz', 'ventilador', 'ventilador-pie', 'ventilador-piso', 'ventilador-techo', 'parlante', 'auricular'];
 // Categoría que corresponde a cada ícono, para los productos guardados antes de que existieran las categorías
@@ -100,6 +102,8 @@ function normalizarCelular(p, i, ids) {
 }
 
 // Productos que no son celulares: tienen un solo precio y se ven en la vidriera
+// Cuotas con crédito que puede ofrecer un producto (Mercado Pago): el máximo, elegido en /admin
+const CUOTAS_CREDITO = [1, 3, 6, 9, 12];
 function normalizarOtro(p, i, ids) {
   if (!p || typeof p !== 'object') fallar(`Otro producto ${i + 1}: formato inválido`);
   const label = `Otro producto ${i + 1}${p.name ? ` (${txt(p.name, 60)})` : ''}`;
@@ -126,6 +130,9 @@ function normalizarOtro(p, i, ids) {
     gallery: items(p.gallery, (g, k) => mediaUrl(g, `${label}: foto ${k + 1}`), 12).filter(Boolean),
     // Video del producto (.mp4): se ve en la tarjeta y es lo primero de la ficha
     video: mediaUrl(p.video, `${label}: video`),
+    // Cuotas de este producto (22/11/2026): con crédito, hasta cuántas; con débito en GO cuotas, si se acepta
+    credito: CUOTAS_CREDITO.includes(Number(p.credito)) ? Number(p.credito) : 12,
+    debito: p.debito !== false,
   };
 }
 
@@ -144,8 +151,12 @@ function normalizarSucursales(list) {
     const on = Boolean(b.on);
     // Una sucursal que no recibe mensajes puede no tener WhatsApp (solo se muestra en la página)
     if ((on || phone) && !/^\d{11,15}$/.test(phone)) fallar(`Sucursal ${name}: el WhatsApp tiene que ser la característica y el número, sin 0 ni 15 (ej. 3813629235)`);
-    return { id, name, province: txt(b.province, 40), whatsapp: phone, address: txt(b.address, 150), photo: mediaUrl(b.photo, `Sucursal ${name}: foto del local`), on };
-  }, 12);
+    return {
+      id, name, province: txt(b.province, 40), whatsapp: phone, address: txt(b.address, 150), photo: mediaUrl(b.photo, `Sucursal ${name}: foto del local`), on,
+      // 22/11/2026: horarios y teléfono fijo (se ven en el seguimiento, el comprobante y el mail de "listo para retirar")
+      hours: txt(b.hours, 120), phone: txt(b.phone, 30),
+    };
+  }, 30);
   if (!out.some(b => b.on)) fallar('Dejá al menos una sucursal recibiendo mensajes');
   return out;
 }
@@ -159,6 +170,30 @@ function pasos(list, nombre) {
       bg: hexColor(h.bg, `${nombre}, paso ${n}: fondo`), fg: hexColor(h.fg, `${nombre}, paso ${n}: letra`),
     };
   }, 6);
+}
+
+// Códigos de descuento propios (/admin → Tienda y textos): los que reparten por redes o WhatsApp.
+// code: minúsculas, números y guiones · percent: 1 a 90 · until: hasta qué día vale (vacío = sin fecha)
+// max: cuántos pedidos pagados pueden usarlo (0 = sin límite) · on: activo. No van a la página: se validan acá.
+function normalizarCodigos(list) {
+  const vistos = new Set();
+  return items(list, (c, i) => {
+    c = obj(c);
+    const label = `Código de descuento ${i + 1}`;
+    const code = String(c.code || '').trim().toLowerCase();
+    if (!code && !c.percent) return null;
+    if (!/^[a-z0-9][a-z0-9-]{2,29}$/.test(code)) fallar(`${label}: el código va con letras, números y guiones (de 3 a 30)`);
+    if (/^xoxo-(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)$/.test(code)) fallar(`${label}: ese es el código del descuento flash`);
+    if (vistos.has(code)) fallar(`${label}: el código "${code}" está repetido`);
+    vistos.add(code);
+    const until = String(c.until || '').trim();
+    if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) fallar(`${label}: la fecha va como 2026-12-31`);
+    return {
+      code, percent: Math.round(num(c.percent, `${label}: porcentaje`, 1, 90)), until,
+      max: Math.round(num(c.max === '' || c.max === undefined || c.max === null ? 0 : c.max, `${label}: usos`, 0, 100000)),
+      on: c.on !== false, note: txt(c.note, 80),
+    };
+  }, 50).filter(Boolean);
 }
 
 // Las 3 categorías, siempre en el mismo orden (1 ventilación, 2 contenido, 3 audio)
@@ -438,14 +473,18 @@ function normalizar(s) {
   };
   if (footer.email && !/^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(footer.email)) fallar('El email del pie de página no es válido');
   const a = obj(s.ab);
-  if (!['split', ...VARIANTS].includes(a.mode)) fallar('Anuncio: elegí qué diseño mostrar');
+  // "Solo Profesional" de antes vuelve a la prueba entre los 3
+  if (a.mode === 'profesional') a.mode = 'split';
+  if (!['split', ...EN_PRUEBA].includes(a.mode)) fallar('Anuncio: elegí qué diseño mostrar');
   // Reparto entre los 3 diseños, en partes (no hace falta que sumen 100). Antes había solo un porcentaje para A.
   const w = obj(a.weights);
   const viejo = a.weights === undefined && a.redSocialPercent !== undefined;
-  const weights = Object.fromEntries(VARIANTS.map(v => [v, Math.round(num(
+  const weights = Object.fromEntries(VARIANTS.map(v => [v, v === 'profesional' ? 0 : Math.round(num(
     // Contenido de antes: A y B como estaban y la parte de C dividida entre C1 y C2
     w[v] ?? (viejo || a.weights ? { 'red-social': 34, minimalista: 33, historia: 17, profesional: 16 }[v] ?? 16 : 1),
     `Anuncio: parte de ${v}`, 0, 100))]));
+  // El reparto de fábrica de antes (Historia 17 y Profesional 16) pasa a partes iguales entre los 3
+  if (w.historia === 17 && w.profesional === 16) weights.historia = 33;
   if (a.mode === 'split' && !Object.values(weights).some(Boolean)) fallar('Anuncio: poné al menos un diseño con más de 0');
   const ab = {
     mode: a.mode,
@@ -458,6 +497,7 @@ function normalizar(s) {
     store, texts, footer, ab, products, extras,
     migraciones: items(s.migraciones, m => txt(m, 40), 20).filter(Boolean),
     categories: normalizarCategorias(s.categories),
+    codes: normalizarCodigos(s.codes),
     flash: normalizarFlash(s.flash),
     shipping: normalizarEnvios(s.shipping),
     story: normalizarHistoria(s.story),
@@ -551,7 +591,7 @@ function publico() {
   const { closing, financingLogo, ...store } = site.store;
   store.closing = closing.show && closing.title ? { title: closing.title, text: closing.text } : null;
   store.financingLogo = financingLogo.color ? { color: financingLogo.color, icon: financingLogo.icon || financingLogo.color } : null;
-  store.branches = store.branches.map(b => ({ id: b.id, name: b.name, province: b.province, address: b.address, photo: b.photo || '' }));
+  store.branches = store.branches.map(b => ({ id: b.id, name: b.name, province: b.province, address: b.address, photo: b.photo || '', hours: b.hours || '', phone: b.phone || '' }));
   const visibles = list => list.filter(p => !p.hidden).map(({ hidden, ...p }) => p);
   return {
     store, products: site.store.phones ? visibles(site.products) : [], extras: visibles(site.extras),
@@ -562,4 +602,4 @@ function publico() {
   };
 }
 
-module.exports = { VARIANTS, CATS, PRINCIPAL, EMPRESAS, SITIO, COPIAS, txt, normalizar, cargar, guardar, copiar, publico, ogImage, absoluta };
+module.exports = { CUOTAS_CREDITO, VARIANTS, EN_PRUEBA, CATS, PRINCIPAL, EMPRESAS, SITIO, COPIAS, txt, normalizar, cargar, guardar, copiar, publico, ogImage, absoluta };

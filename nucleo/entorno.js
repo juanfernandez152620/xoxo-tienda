@@ -67,6 +67,11 @@ module.exports = {
     avisos: env('CORREO_AVISOS').split(',').map(s => s.trim()).filter(s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)),
   },
   // Claude contesta solo el chat "Cambios por IA" del panel (Claude API). Sin clave, contesta Claude a mano.
+  // Ingreso de clientes con Google (console.cloud.google.com → Credenciales → ID de cliente de OAuth). Ver xoxo-claves.
+  GOOGLE: {
+    clientId: env('GOOGLE_CLIENT_ID'),
+    secret: env('GOOGLE_CLIENT_SECRET'),
+  },
   IA: {
     key: env('ANTHROPIC_API_KEY'),
     modelo: env('CLAUDE_MODELO', 'claude-opus-5-5'),

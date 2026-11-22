@@ -1097,7 +1097,8 @@
   // tipo: cartelito arriba de la foto ("Parlante grande"); mini: para la grilla de todos los productos (de a 4)
   function promoCard(p, tipo = '', mini = false) {
     const V = window.Vidriera;
-    const n = Number(STORE.extras.cuotas) || 6;
+    const cu = V.cuotasDe(p);
+    const n = cu.debito;
     const off = FL ? FL.cfg.percent : 0;
     const ver = `href="#x=${esc(p.id)}" data-x="${esc(p.id)}"`;
     return `
@@ -1108,13 +1109,13 @@
           ${off ? `<span class="pr-off fl-only"><b>-${off}%</b><small>off</small></span>` : ''}
         </a>
         <div class="pr-body">
-          ${STORE.financing ? `
+          ${n ? `
           <div class="pr-deb">
             <p class="pr-deb-l"><b>${n} cuotas${sinInteres}</b> con tu <b>débito</b></p>
             <p class="pr-deb-amt"><small>$</small>${fmt.format(cuotaDe(p.price, n))}<span>c/u</span></p>
             <span class="pr-go">${finLogo()}</span>
           </div>` : ''}
-          <p class="pr-cred"><b>12 cuotas${sinInteres}</b> de <b>${money(cuotaDe(p.price, 12))}</b> con crédito</p>
+          <p class="pr-cred">${cu.credito > 1 ? `<b>${cu.credito} cuotas${sinInteres}</b> de <b>${money(cuotaDe(p.price, cu.credito))}</b> con crédito` : '<b>En 1 pago</b> con crédito o débito'}</p>
           <div class="pr-total"><span>Total</span>${V.priceHTML(p)}</div>
           <p class="pr-kicker">${esc([p.group, p.brand].filter(Boolean).join(' · '))}</p>
           <h3 class="pr-name"><a class="js-ficha" ${ver}>${esc(p.name)}</a></h3>
@@ -1202,7 +1203,7 @@
             <li>💳 Mercado Pago${STORE.financing ? ` y ${esc(STORE.financing)} (débito)` : ''}</li>
           </ul>
         </div>
-        <nav aria-label="Secciones"><h3>Tienda</h3><a href="/red-social/">Inicio</a>${CATS.map(c => `<a href="/red-social/${c.id}/">${esc(c.name)}</a>`).join('')}</nav>
+        <nav aria-label="Secciones"><h3>Tienda</h3><a href="/red-social/">Inicio</a>${CATS.map(c => `<a href="/red-social/${c.id}/">${esc(c.name)}</a>`).join('')}<a href="/seguimiento">Seguí tu compra</a></nav>
         <div><h3>Sucursales</h3>${Object.entries(porProv).map(([p, list]) => `<p><b>${esc(p)}</b>${list.map(b => `<span>${esc(b.name)}${b.address && !/a confirmar/i.test(b.address) ? ` · ${esc(b.address.split(',')[0])}` : ''}</span>`).join('')}</p>`).join('')}</div>
         <div><h3>Contacto</h3>
           <a class="js-wa js-wa-general" target="_blank" rel="noopener" href="${esc(waHref(STORE.greeting))}">WhatsApp</a>

@@ -287,7 +287,9 @@ function detalle(o) {
   const producto = o.productAmount ?? o.amount - (envio.costo || 0);
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="linea" style="border-top:1px solid #ebe5f7;border-bottom:1px solid #ebe5f7;margin:18px 0">
-    ${fila(`${esc(o.product.name)}${o.plan > 1 ? `<br><span class="suave" style="color:#7a7194;font-size:13px">${o.plan} cuotas con ${esc(METODOS[o.method] || o.method)}</span>` : ''}`, money(producto))}
+    ${(o.items || [{ name: o.product.name, n: 1, price: o.discount ? producto + o.discount.amount : producto }]).map(x => fila(esc(`${x.n > 1 ? `${x.n} × ` : ''}${x.name}`), money(x.price * x.n))).join('')}
+    ${o.discount ? fila(`<span class="suave" style="color:#7a7194">Código ${esc(o.discount.code)} (${o.discount.percent}% off)</span>`, `<span style="color:#16a34a">−${money(o.discount.amount)}</span>`) : ''}
+    ${o.plan > 1 ? fila(`<span class="suave" style="color:#7a7194;font-size:13px">${o.plan} cuotas con ${esc(METODOS[o.method] || o.method)}</span>`, '') : ''}
     ${o.coupon ? fila(`<span class="suave" style="color:#7a7194">Descuento flash (cupón ${esc(o.coupon)})</span>`, '<span style="color:#16a34a">aplicado</span>') : ''}
     ${fila(esc(envio.nombre), envio.costo ? money(envio.costo) : 'Gratis')}
     ${fila('Total pagado', money(o.amount), true)}
@@ -323,6 +325,8 @@ function compra(o) {
       <h2 style="margin:0 0 8px;font:800 17px Arial,Helvetica,sans-serif">Entrega</h2>
       ${entrega(o, site)}
       ${dias ? `<p style="margin:18px 0 0;padding:12px 14px;border-radius:12px;background:#f3edff;color:#4c1d95" class="caja">🛡️ Tu compra tiene <b>${dias} días de garantía</b>. Si algo no anda, escribinos.</p>` : ''}
+      ${boton(`${BASE_URL}/api/pedidos/${o.id}/comprobante.pdf`, 'Descargar el comprobante (PDF)')}
+      <p style="margin:6px 0 0">Seguí tu pedido cuando quieras en <a href="${esc(`${BASE_URL}/seguimiento?pedido=${o.ref}&email=${encodeURIComponent(o.buyer.email)}`)}">${esc(BASE_URL.replace(/^https?:\/\//, ''))}/seguimiento</a> con el código <b>#${esc(o.ref)}</b>.</p>
       ${boton(wa, 'Escribinos por WhatsApp')}`,
     pie: 'Recibiste este correo porque compraste en nuestra tienda online.<br>',
   });
@@ -365,6 +369,53 @@ function prueba(para) {
       <p style="margin:12px 0 0" class="suave">Mandado el ${esc(new Date().toLocaleString('es-AR'))}.</p>`,
   });
   return { para, asunto: 'Prueba de correo de la tienda', html, texto: 'Si te llegó este correo, la tienda ya puede mandar mails.', tipo: 'prueba' };
+}
+
+// Avisos de la entrega: el pedido salió (con el número de seguimiento) o está listo para retirar
+const SITIOS_ENVIO = { andreani: ['Andreani', 'https://www.andreani.com/'], correo: ['Correo Argentino', 'https://www.correoargentino.com.ar/'] };
+function entregaAviso(o, paso) {
+  const site = sitio.cargar();
+  const nombre = o.buyer.name.split(' ')[0];
+  const seg = o.seguimiento || {};
+  const link = `${BASE_URL}/seguimiento?pedido=${encodeURIComponent(o.ref)}&email=${encodeURIComponent(o.buyer.email)}`;
+  let titulo, previa, cuerpo, texto;
+  if (paso === 'despachado') {
+    const [empresa, web] = SITIOS_ENVIO[seg.empresa] || ['la empresa de envíos', ''];
+    titulo = `¡Tu pedido ya salió, ${nombre}!`;
+    previa = `El pedido #${o.ref} va en camino con ${empresa}.`;
+    cuerpo = `<p style="margin:0">Despachamos tu pedido <b>#${esc(o.ref)}</b> con <b>${esc(empresa)}</b>.</p>
+      <p style="margin:14px 0 0;padding:12px 14px;border-radius:12px;background:#f3edff;color:#4c1d95" class="caja">Número de seguimiento: <b>${esc(seg.numero || '')}</b>${web ? `<br>Buscalo en <a href="${esc(web)}">${esc(web.replace(/^https:\/\/(www\.)?|\/$/g, ''))}</a>` : ''}</p>`;
+    texto = `Despachamos tu pedido #${o.ref} con ${empresa}. Número de seguimiento: ${seg.numero || ''}${web ? ` (buscalo en ${web})` : ''}.`;
+  } else {
+    const suc = site.store.branches.find(b => b.id === (o.envio && o.envio.sucursal)) || site.store.branches[0] || {};
+    titulo = `¡Tu pedido está listo, ${nombre}!`;
+    previa = `El pedido #${o.ref} ya se puede retirar.`;
+    cuerpo = `<p style="margin:0">Tu pedido <b>#${esc(o.ref)}</b> está listo para retirar en la sucursal <b>${esc(suc.name || '')}</b>.</p>
+      <p style="margin:14px 0 0" class="suave">${esc(suc.address || '')}${suc.hours ? `<br>${esc(suc.hours)}` : ''}</p>
+      <p style="margin:14px 0 0">Llevá el código <b>#${esc(o.ref)}</b> (o el comprobante) y tu DNI.</p>`;
+    texto = `Tu pedido #${o.ref} está listo para retirar en la sucursal ${suc.name || ''}: ${suc.address || ''}. Llevá el código #${o.ref} y tu DNI.`;
+  }
+  const html = marco({ previa, titulo, cuerpo: `${cuerpo}${boton(link, 'Ver el estado de mi pedido')}`, pie: 'Recibiste este correo porque compraste en nuestra tienda online.<br>' });
+  return { para: o.buyer.email, asunto: `${paso === 'despachado' ? 'Tu pedido salió' : 'Tu pedido está listo para retirar'} · #${o.ref}`, html, texto: `${titulo}\n\n${texto}\n\nSeguí tu pedido: ${link}\n\n${site.store.name}`, tipo: paso, ref: o.ref };
+}
+function avisoEntrega(o, paso) {
+  try { encolar(entregaAviso(o, paso)); } catch (err) { console.error('[correo]', err.message); }
+}
+
+// Mails de la cuenta del cliente: confirmar el email y crear una contraseña nueva
+function cuentaMail(c, tipo, link) {
+  const nombre = String(c.nombre || '').split(' ')[0];
+  const site = sitio.cargar();
+  const confirmar = tipo === 'confirmar';
+  const titulo = confirmar ? `¡Hola, ${nombre}! Confirmá tu email` : 'Creá una contraseña nueva';
+  const cuerpo = confirmar
+    ? `<p style="margin:0">Creaste tu cuenta en ${esc(site.store.name)}. Confirmá que este email es tuyo y en "Mis compras" vas a ver también las compras que hiciste antes con él.</p>`
+    : '<p style="margin:0">Pediste cambiar la contraseña de tu cuenta. El link vale por una hora. Si no fuiste vos, ignorá este mail: tu contraseña sigue igual.</p>';
+  const html = marco({ previa: titulo, titulo, cuerpo: `${cuerpo}${boton(link, confirmar ? 'Confirmar mi email' : 'Crear una contraseña nueva')}`, pie: 'Recibiste este correo por tu cuenta en nuestra tienda online.<br>' });
+  return { para: c.email, asunto: confirmar ? `Confirmá tu email · ${site.store.name}` : `Tu contraseña · ${site.store.name}`, html, texto: `${titulo}\n\n${link}\n\n${site.store.name}`, tipo: confirmar ? 'cuenta' : 'clave' };
+}
+function cuenta(c, tipo, link) {
+  try { encolar(cuentaMail(c, tipo, link)); } catch (err) { console.error('[correo]', err.message); }
 }
 
 /* ---------- Lo que usan el resto de la tienda y el panel ---------- */
@@ -437,4 +488,4 @@ function lineaArranque() {
 setInterval(() => procesar().catch(err => console.error('[correo]', err.message)), 60e3).unref();
 setTimeout(() => procesar().catch(err => console.error('[correo]', err.message)), 5e3).unref();
 
-module.exports = { configurado, compraAprobada, encolar, procesar, probar, estado, ejemplo, vista, lineaArranque, armar, smtp, verificar, emailValido };
+module.exports = { configurado, compraAprobada, avisoEntrega, cuenta, encolar, procesar, probar, estado, ejemplo, vista, lineaArranque, armar, smtp, verificar, emailValido };

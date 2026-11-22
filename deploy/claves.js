@@ -34,6 +34,7 @@ const GRUPOS = [
   { claves: ['PAGOS_DEMO'], titulo: '# true = los medios sin clave muestran un pago simulado que no cobra' },
   { claves: ['WA_PHONE_ID', 'WA_TOKEN', 'WA_APP_SECRET', 'WA_VERIFY_TOKEN', 'SOCIO_NUMEROS'], titulo: '# WhatsApp del socio: API de WhatsApp Business de Meta (lo carga xoxo-claves)' },
   { claves: ['ANTHROPIC_API_KEY', 'CLAUDE_MODELO'], titulo: '# Claude: contesta solo el chat "Cambios por IA" del panel (lo carga xoxo-claves)' },
+  { claves: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'], titulo: '# Ingreso de clientes con Google (lo carga xoxo-claves)' },
   { claves: ['SMTP_HOST', 'SMTP_PUERTO', 'SMTP_SEGURO', 'SMTP_USUARIO', 'SMTP_CLAVE', 'CORREO_DE', 'CORREO_RESPONDER', 'CORREO_AVISOS'], titulo: '# Correo de la tienda por SMTP: aviso de compra y de venta (lo carga xoxo-claves, ver deploy/CORREO.md)' },
 ];
 
@@ -276,6 +277,7 @@ Claves de la tienda XOXO Tecno · ${ARCHIVO}
   5) Claude (chat)    ${ia}
   6) Correo (SMTP)    ${mail}
   7) Probar todo lo cargado
+  8) Google (clientes) ${v.GOOGLE_CLIENT_ID ? `cargado (${enmascarar(v.GOOGLE_CLIENT_ID)})` : 'sin cargar: se entra solo con email y contraseña'}
 
   g) Guardar${EN_SERVIDOR ? ' y reiniciar la tienda' : ''}    s) Salir sin guardar${n ? `\n\n  Hay ${n} ${n === 1 ? 'cambio' : 'cambios'} sin guardar.` : ''}
 `);
@@ -426,6 +428,26 @@ Claude · contesta solo el chat "Cambios por IA" del panel
   set('ANTHROPIC_API_KEY', k);
   if (!v.CLAUDE_MODELO) set('CLAUDE_MODELO', 'claude-opus-5-5');
   console.log('Lista. Se prueba al guardar: cuando la tienda arranca, dice si Claude quedó conectado.');
+}
+
+// El botón "Continuar con Google" de /cuenta: hace falta un ID de cliente de OAuth de Google Cloud
+async function seccionGoogle(v, set) {
+  console.log(`
+Google: ingreso de clientes en /cuenta. Se crea gratis en console.cloud.google.com:
+  APIs y servicios → Pantalla de consentimiento (externa, con el nombre de la tienda) → Credenciales →
+  Crear credenciales → ID de cliente de OAuth → Aplicación web.
+  URI de redireccionamiento autorizado: https://xoxotecno.com.ar/api/cuenta/google/vuelta
+${AYUDA_VACIO}`);
+  const id = await preguntar(`ID de cliente (termina en .apps.googleusercontent.com)${v.GOOGLE_CLIENT_ID ? ` [${enmascarar(v.GOOGLE_CLIENT_ID)}]` : ''}: `);
+  if (id === '-') { set('GOOGLE_CLIENT_ID', ''); set('GOOGLE_CLIENT_SECRET', ''); console.log('  Borrado: se entra solo con email y contraseña.'); return; }
+  if (id) {
+    if (!/\.apps\.googleusercontent\.com$/.test(id)) { console.log('  Eso no parece un ID de cliente de Google. No cambié nada.'); return; }
+    set('GOOGLE_CLIENT_ID', id);
+  }
+  const sec = await preguntar('Secreto del cliente (no se ve en pantalla): ', { oculto: true });
+  if (sec === '-') set('GOOGLE_CLIENT_SECRET', '');
+  else if (sec) set('GOOGLE_CLIENT_SECRET', sec);
+  console.log('  Listo. Tocá g para guardar y reiniciar la tienda.');
 }
 
 async function seccionCorreo(v, set) {
@@ -635,6 +657,7 @@ async function main() {
     else if (op === '5') await seccionClaude(v, set);
     else if (op === '6') await seccionCorreo(v, set);
     else if (op === '7') await probarTodo(v, probado);
+    else if (op === '8') await seccionGoogle(v, set);
     else if (op === 'g') {
       if (!Object.keys(cambios).length) console.log('\nNo hay cambios para guardar.');
       else await guardarYReiniciar(lineas, v, cambios);

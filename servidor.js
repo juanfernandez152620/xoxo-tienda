@@ -19,6 +19,8 @@ const estadisticas = require('./nucleo/estadisticas');
 const reparto = require('./nucleo/reparto');
 const sesion = require('./nucleo/sesion');
 const pagos = require('./nucleo/pagos');
+const comprobante = require('./nucleo/comprobante');
+const clientes = require('./nucleo/clientes');
 const paginas = require('./nucleo/paginas');
 const admin = require('./nucleo/admin');
 const socio = require('./nucleo/socio');
@@ -184,6 +186,65 @@ function whatsapp(req, res, url) {
   res.end();
 }
 
+/* ---------- Cuenta del cliente (/api/cuenta/…) ---------- */
+async function cuentaApi(req, res, url, route) {
+  const ip = ipDe(req);
+  try {
+    if (route === 'GET /api/cuenta') {
+      return json(res, 200, { cliente: clientes.publico(clientes.sesion(req)), google: clientes.googleActivo() });
+    }
+    if (route === 'POST /api/cuenta/registro') {
+      const c = clientes.registrar(await leerJson(req, 4000), ip);
+      clientes.abrir(res, c);
+      return json(res, 200, { cliente: clientes.publico(c) });
+    }
+    if (route === 'POST /api/cuenta/ingresar') {
+      const c = clientes.ingresar(await leerJson(req, 4000), ip);
+      clientes.abrir(res, c);
+      return json(res, 200, { cliente: clientes.publico(c) });
+    }
+    if (route === 'POST /api/cuenta/salir') { clientes.cerrar(res); return json(res, 200, { ok: true }); }
+    if (route === 'POST /api/cuenta/olvido') { clientes.olvido(await leerJson(req, 2000), ip); return json(res, 200, { ok: true }); }
+    if (route === 'POST /api/cuenta/clave') {
+      const c = clientes.nuevaClave(await leerJson(req, 2000));
+      clientes.abrir(res, c);
+      return json(res, 200, { cliente: clientes.publico(c) });
+    }
+    if (route === 'POST /api/cuenta/confirmar') {
+      const c = clientes.confirmar((await leerJson(req, 2000)).token);
+      clientes.abrir(res, c);
+      return json(res, 200, { cliente: clientes.publico(c) });
+    }
+    if (route === 'GET /api/cuenta/google') return redirigir(res, clientes.irAGoogle(res));
+    if (route === 'GET /api/cuenta/google/vuelta') {
+      try {
+        const c = await clientes.volverDeGoogle(req, url);
+        clientes.abrir(res, c);
+        return redirigir(res, '/cuenta');
+      } catch (err) {
+        return redirigir(res, `/cuenta?error=${encodeURIComponent(err.message)}`);
+      }
+    }
+    // De acá en adelante, con la sesión iniciada
+    const c = clientes.sesion(req);
+    if (!c) return json(res, 401, { error: 'Ingresá a tu cuenta.' });
+    if (route === 'POST /api/cuenta/datos') return json(res, 200, { cliente: clientes.publico(clientes.actualizarDatos(c, await leerJson(req, 4000))) });
+    if (route === 'POST /api/cuenta/reenviar') {
+      if (!limite('cuenta-reenviar', ip, 3, 3600)) return json(res, 429, { error: 'Ya te mandamos el mail. Revisá también la carpeta de spam.' });
+      clientes.mandarConfirmacion(c);
+      return json(res, 200, { ok: true });
+    }
+    if (route === 'GET /api/cuenta/compras') {
+      const lista = clientes.compras(c, pagos.leerPedidos()).map(o => ({ id: o.id, ...pagos.seguimientoPublico(o) }));
+      return json(res, 200, { compras: lista, confirmado: Boolean(c.confirmado) });
+    }
+    return json(res, 404, { error: 'No encontrado' });
+  } catch (err) {
+    if (err.status) return json(res, err.status, { error: err.message });
+    throw err;
+  }
+}
+
 /* ---------- Rutas ---------- */
 const DISENOS = Object.fromEntries(sitio.VARIANTS.map(v => [`/${v}/`, v]));
 // Categorías de la página principal (/audio/), de cada diseño (/historia/audio/) y links de anuncio (/anuncio/audio/)
@@ -242,8 +303,34 @@ const server = http.createServer(async (req, res) => {
 
     // Pago online
     if (route === 'GET /api/checkout/config') return json(res, 200, pagos.configPublica());
+    // Cuenta del cliente: la página y la API (con email y contraseña o con Google)
+    if (get && p === '/cuenta') return html(res, 200, paginas.cuenta(), { 'Cache-Control': 'no-cache', 'X-Robots-Tag': 'noindex' });
+    if (p.startsWith('/api/cuenta')) return await cuentaApi(req, res, url, route);
+    // Seguí tu compra: la página y la consulta (código + email), y el comprobante en PDF
+    if (get && p === '/seguimiento') return html(res, 200, paginas.seguimiento(), { 'Cache-Control': 'no-cache', 'X-Robots-Tag': 'noindex' });
+    if (route === 'GET /api/seguimiento') {
+      if (!limite('seguimiento', ipDe(req), 40, 600)) return json(res, 429, { error: 'Demasiadas consultas seguidas. Esperá unos minutos.' });
+      const [status, data] = pagos.consultarSeguimiento({ pedido: url.searchParams.get('pedido'), email: url.searchParams.get('email') });
+      return json(res, status, data);
+    }
+    const pdfId = get && p.match(/^\/api\/pedidos\/([a-f0-9]{10})\/comprobante\.pdf$/);
+    if (pdfId || (get && p === '/api/comprobante')) {
+      if (!limite('comprobante', ipDe(req), 40, 600)) return texto(res, 429, 'Demasiadas descargas seguidas. Esperá unos minutos.');
+      const o = pdfId ? pagos.buscarPedido(pdfId[1]) : pagos.porRefYEmail(url.searchParams.get('pedido'), url.searchParams.get('email'));
+      if (!o) return texto(res, 404, 'No encontramos esa compra.');
+      if (o.status !== 'approved') return texto(res, 409, 'El comprobante está disponible cuando el pago se aprueba.');
+      const buf = comprobante.comprobante(o);
+      res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Length': buf.length, 'Content-Disposition': `inline; filename="comprobante-${o.ref}.pdf"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+      return res.end(req.method === 'HEAD' ? undefined : buf);
+    }
+    if (route === 'POST /api/codigo') {
+      if (!limite('codigo', ipDe(req), 20, 600)) return json(res, 429, { error: 'Demasiados intentos. Esperá unos minutos.' });
+      const [status, data] = pagos.consultarCodigo(await leerJson(req, 2000));
+      return json(res, status, data);
+    }
     if (route === 'POST /api/checkout') {
-      const [status, data] = await pagos.crear(await leerJson(req, 20000));
+      const cli = clientes.sesion(req);
+      const [status, data] = await pagos.crear(await leerJson(req, 20000), { clienteId: cli && cli.id });
       return json(res, status, data);
     }
     const pedido = p.match(/^\/api\/pedidos\/([a-f0-9]{10})$/);

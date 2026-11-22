@@ -26,9 +26,9 @@
   const VARIANTS = [
     { id: 'red-social', name: 'Red social', cls: 's1', color: '--series-1' },
     { id: 'minimalista', name: 'Minimalista', cls: 's2', color: '--series-2' },
-    { id: 'historia', name: 'Historia (C1)', cls: 's3', color: '--series-3' },
-    { id: 'profesional', name: 'Profesional (C2)', cls: 's4', color: '--series-4' },
+    { id: 'historia', name: 'Historia', cls: 's3', color: '--series-3' },
   ];
+  // Profesional salió de la prueba el 22/11/2026: sus números viejos quedan guardados, sin mostrarse
   const vName = id => (VARIANTS.find(v => v.id === id) || {}).name || id;
   const SPEC_ICONS = { pantalla: 'Pantalla', camara: 'Cámara', bateria: 'Batería', memoria: 'Memoria', ram: 'RAM', parlante: 'Parlante', update: 'Actualizaciones', carga: 'Carga rápida' };
   const TYPE_NAMES = { visita: 'Visita', vista: 'Miró un producto', abrir: 'Abrió un producto', like: 'Me gusta', whatsapp: 'WhatsApp', checkout: 'Abrió el checkout' };
@@ -41,7 +41,7 @@
   const METRICS = { visitors: 'Visitantes', whatsappVisitors: 'Escribieron por WhatsApp', visits: 'Visitas', whatsapp: 'Clicks en WhatsApp' };
 
   const S = {
-    site: null, draft: null, tab: 'estadisticas', stats: null, metric: 'visitors', prodSort: 'views', open: null,
+    site: null, draft: null, tab: 'inicio', stats: null, metric: 'visitors', prodSort: 'views', open: null,
     log: null, logQuery: { dia: '', tipo: '', q: '' }, backups: null, upload: null, server: null, exposed: null, reparto: null,
     chat: { list: null, estado: {}, draft: '', files: [], pending: [], uploading: 0, busy: false, rec: null },
   };
@@ -142,11 +142,13 @@
   }
 
   /* ---------- Vistas ---------- */
-  const VIEWS = { estadisticas: viewStats, ia: viewChat, pedidos: viewOrders, anuncio: viewAb, productos: viewProducts, accesorios: viewExtras, tienda: viewStore, registro: viewLog, copias: viewBackups, cuenta: viewAccount };
+  const VIEWS = { inicio: viewInicio, sucursales: viewSucursales, paginas: viewPaginas, clientes: viewClientes, estadisticas: viewStats, ia: viewChat, pedidos: viewOrders, anuncio: viewAb, productos: viewProducts, accesorios: viewExtras, tienda: viewStore, registro: viewLog, copias: viewBackups, cuenta: viewAccount };
   const loading = '<p class="muted">Cargando…</p>';
 
   function render() {
     $$('#tabs [data-tab]').forEach(b => b.setAttribute('aria-current', b.dataset.tab === S.tab ? 'page' : 'false'));
+    const cel = $('#tab-celulares');
+    if (cel && S.draft) cel.hidden = !S.draft.store.phones;
     const y = scrollY;
     $('#view').innerHTML = (S.exposed ? exposedNote() : '') + VIEWS[S.tab]();
     scrollTo(0, y);
@@ -155,7 +157,7 @@
   }
 
   async function go(tab) {
-    if (!VIEWS[tab]) tab = 'estadisticas';
+    if (!VIEWS[tab]) tab = 'inicio';
     if (S.tab !== tab) { scrollTo(0, 0); S.open = null; }
     if (tab !== 'ia' && S.chat.rec) cancelRec();
     S.tab = tab;
@@ -165,8 +167,9 @@
     try {
       if (tab === 'ia') { await loadChat(); render(); paintChat(true); markSeen(); }
       if (tab === 'estadisticas') { S.stats = await api('/estadisticas'); render(); }
-      if (tab === 'anuncio') { S.reparto = await api('/reparto'); render(); }
-      if (tab === 'pedidos') { S.orders = await api('/pedidos'); render(); }
+      if (tab === 'sucursales') { S.reparto = await api('/reparto'); render(); }
+      if (tab === 'pedidos' || tab === 'inicio' || tab === 'clientes') { S.orders = await api('/pedidos'); render(); }
+      if (tab === 'clientes') { S.clientes = await api('/clientes'); render(); }
       if (tab === 'registro') await loadLog();
       if (tab === 'copias') { S.backups = await api('/backups'); render(); }
       if (tab === 'cuenta') { S.server = await api('/servidor'); render(); }
@@ -282,7 +285,7 @@
         <div class="table-wrap"><table>
           <thead>
             <tr><th></th>${cols.map(([, l]) => `<th colspan="2" class="th-group">${l}</th>`).join('')}</tr>
-            <tr><th>Producto</th>${cols.map(() => VARIANTS.map(v => `<th class="num"><i class="swatch ${v.cls}" title="${v.name}"></i><span class="muted"> ${{ 'red-social': 'A', minimalista: 'B', historia: 'C1', profesional: 'C2' }[v.id] || v.name}</span></th>`).join('')).join('')}</tr>
+            <tr><th>Producto</th>${cols.map(() => VARIANTS.map(v => `<th class="num"><i class="swatch ${v.cls}" title="${v.name}"></i><span class="muted"> ${{ 'red-social': 'A', minimalista: 'B', historia: 'C' }[v.id] || v.name}</span></th>`).join('')).join('')}</tr>
           </thead>
           <tbody>${prodRows}</tbody>
         </table></div>
@@ -428,13 +431,17 @@
         ${field('Dirección', `${p}.address`, { help: 'Se muestra en la tienda, con el botón "Cómo llegar".' })}
         ${field('Provincia', `${p}.province`, { help: 'Agrupa las sucursales en la página Historia. Ej. Tucumán, Catamarca, Buenos Aires.' })}
       </div>
-      ${mediaField('Foto del local', `${p}.photo`, 'El frente o el interior. Se ve en Historia → Ventilación; sin foto se muestra una de ejemplo.')}
+      <div class="grid-2">
+        ${field('Horarios', `${p}.hours`, { ph: 'Lunes a sábado de 9 a 13 y de 16 a 21', help: 'Se ven en el seguimiento, el comprobante y el mail de "listo para retirar".' })}
+        ${field('Teléfono fijo (opcional)', `${p}.phone`, { ph: '381 4211234' })}
+      </div>
+      ${mediaField('Foto del local', `${p}.photo`, 'El frente o el interior. Se ve en Historia; sin foto se muestra una de ejemplo.')}
       <div class="row">${check('Recibe mensajes de WhatsApp', `${p}.on`)}<span class="spacer"></span>
         ${len > 1 ? `<button class="btn small" type="button" data-act="del-branch" data-i="${i}">Quitar sucursal</button>` : ''}</div>
     </div>`;
   }
 
-  /* ----- Anuncio (reparto entre los dos diseños) ----- */
+  /* ----- Anuncio (reparto entre los 3 diseños) ----- */
   // Reparto entre los 3 diseños: cada uno tiene una parte (no hace falta que sumen 100)
   const splitPct = w => {
     const total = VARIANTS.reduce((s, v) => s + (Number(w[v.id]) || 0), 0) || 1;
@@ -452,7 +459,7 @@
       <div class="page-head"><h1>Anuncio</h1></div>
       <section class="card">
         <div class="card-head"><h2>Link para anuncio digital</h2></div>
-        <p>Usalo en Instagram, Facebook, TikTok o donde publiques. Cada persona que entra ve uno de los cuatro diseños (A, B, C1 y C2) y queda registrada en las estadísticas.</p>
+        <p>Usalo en Instagram, Facebook, TikTok o donde publiques. Cada persona que entra ve uno de los 3 diseños (Red social, Minimalista e Historia) y queda registrada en las estadísticas.</p>
         <div class="link-box"><code>${esc(link)}</code>
           <button class="btn primary" type="button" data-act="copy" data-text="${esc(link)}">Copiar link</button></div>
         <p class="muted">Para saber de qué red vino cada visita, agregale <code>?src=</code> y un nombre, por ejemplo
@@ -463,22 +470,14 @@
           return `<div class="link-box"><code>${esc(l)}</code><button class="btn small" type="button" data-act="copy" data-text="${esc(l)}">Copiar</button></div>`;
         }).join('')}
       </section>
-      <section class="card">
-        <div class="card-head"><h2>Sucursales y reparto de WhatsApp</h2></div>
-        <p>Los mensajes se reparten en partes iguales: cada persona nueva que toca WhatsApp va a la sucursal que hoy recibió menos.
-          Si vuelve a escribir, sigue con la misma. Vale para todos los visitantes, vengan del anuncio o no.</p>
-        <div class="branches">${S.draft.store.branches.map((b, i, all) => branchEditor(b, i, all.length)).join('')}</div>
-        <div class="row"><button class="btn small" type="button" data-act="add-branch">Agregar sucursal</button></div>
-      </section>
-      ${repartoCard(S.reparto)}
+      <p class="muted">Las sucursales y el reparto de WhatsApp están en la pestaña Sucursales.</p>
       <section class="card">
         <div class="card-head"><h2>Qué diseño se muestra</h2></div>
         <div class="modes">
-          ${mode('split', 'Todos (prueba A/B/C)', 'Cada visitante ve uno de los cuatro diseños, según la parte de cada uno.')}
+          ${mode('split', 'Los 3 (prueba A/B/C)', 'Cada visitante ve uno de los 3 diseños, según la parte de cada uno.')}
           ${mode('red-social', 'Solo Red social (A)', 'Todos ven Red social. Los links de los otros diseños también llevan a Red social.')}
           ${mode('minimalista', 'Solo Minimalista (B)', 'Todos ven Minimalista. Los links de los otros diseños también llevan a Minimalista.')}
-          ${mode('historia', 'Solo Historia (C1)', 'Todos ven Historia, la página animada. Los links de los otros diseños también llevan a Historia.')}
-          ${mode('profesional', 'Solo Profesional (C2)', 'Todos ven Profesional, la página clásica y blanca. Los links de los otros diseños también llevan a Profesional.')}
+          ${mode('historia', 'Solo Historia (C)', 'Todos ven Historia, la página animada. Los links de los otros diseños también llevan a Historia.')}
         </div>
         ${ab.mode === 'split' ? `<div class="split">
           <p class="field">Reparto <span id="split-text">${splitText(ab.weights)}</span></p>
@@ -492,8 +491,7 @@
           <button class="btn" type="button" data-act="reround">Repartir de nuevo a todos</button>
           <a class="btn" href="${esc(BASE)}/red-social/?ver" target="_blank" rel="noopener">Ver Red social</a>
           <a class="btn" href="${esc(BASE)}/minimalista/?ver" target="_blank" rel="noopener">Ver Minimalista</a>
-          <a class="btn" href="${esc(BASE)}/historia/?ver" target="_blank" rel="noopener">Ver Historia (C1)</a>
-          <a class="btn" href="${esc(BASE)}/profesional/?ver" target="_blank" rel="noopener">Ver Profesional (C2)</a>
+          <a class="btn" href="${esc(BASE)}/historia/?ver" target="_blank" rel="noopener">Ver Historia</a>
         </div>
       </section>`;
   }
@@ -608,7 +606,29 @@
   /* ----- Otros productos (la vidriera de la tienda) ----- */
   const EXTRA_ICONS = { 'ventilador-pie': 'Ventilador de pie', 'ventilador-piso': 'Ventilador de piso', 'ventilador-techo': 'Ventilador de techo', ventilador: 'Ventilador', mic: 'Micrófono', tripode: 'Trípode', luz: 'Luz', parlante: 'Parlante', auricular: 'Auriculares' };
   const catName = id => ((S.draft && S.draft.categories) || []).find(c => c.id === id)?.name || '';
-  const extraMeta = p => `${p.example ? 'EJEMPLO · ' : ''}${catName(p.cat) ? `${catName(p.cat)} · ` : ''}${[p.group, p.brand].filter(Boolean).join(' · ') || 'Sin tipo'} · ${money(p.price)}${Number(p.listPrice) > Number(p.price) ? ` · antes ${money(p.listPrice)}` : ''}`;
+  // Cuotas de cada producto (22/11/2026): con crédito hasta 1, 3, 6, 9 o 12; con débito, si se acepta
+  const CUOTAS_CREDITO = [1, 3, 6, 9, 12];
+  const cuotasMeta = p => `${Number(p.credito || 12) > 1 ? `hasta ${Number(p.credito || 12)} cuotas` : '1 pago'}${p.debito === false ? ', sin débito' : ''}`;
+  const extraMeta = p => `${p.example ? 'EJEMPLO · ' : ''}${catName(p.cat) ? `${catName(p.cat)} · ` : ''}${[p.group, p.brand].filter(Boolean).join(' · ') || 'Sin tipo'} · ${money(p.price)}${Number(p.listPrice) > Number(p.price) ? ` · antes ${money(p.listPrice)}` : ''} · ${cuotasMeta(p)}`;
+
+  // Cambiar las cuotas de varios productos a la vez: los de una categoría o un tipo
+  function cuotasCard(list) {
+    const C = S.cuotasMasivo || (S.cuotasMasivo = { cual: 'todos', credito: '', debito: '' });
+    const tipos = [...new Set(list.map(p => p.group).filter(Boolean))];
+    const opciones = [['todos', 'Todos los productos'], ...(S.draft.categories || []).map(c => [`cat:${c.id}`, `Categoría: ${c.name}`]), ...tipos.map(t => [`tipo:${t}`, `Tipo: ${t}`])];
+    return `<section class="card"><div class="card-head"><h2>Cuotas de varios productos a la vez</h2></div>
+      <p class="muted">Elegí a qué productos aplicar, las cuotas, y tocá Aplicar. Después, Guardar arriba. Cada producto se puede cambiar también desde su Editar.</p>
+      <div class="grid-3">
+        <label class="field">Aplicar a
+          <select id="cm-cual">${opciones.map(([v, l]) => `<option value="${esc(v)}"${C.cual === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+        <label class="field">Con crédito
+          <select id="cm-credito"><option value="">Sin cambiar</option>${CUOTAS_CREDITO.map(n => `<option value="${n}"${String(C.credito) === String(n) ? ' selected' : ''}>${n === 1 ? 'Solo en 1 pago' : `Hasta ${n} cuotas`}</option>`).join('')}</select></label>
+        <label class="field">Con débito
+          <select id="cm-debito"><option value="">Sin cambiar</option><option value="si"${C.debito === 'si' ? ' selected' : ''}>Acepta</option><option value="no"${C.debito === 'no' ? ' selected' : ''}>No acepta</option></select></label>
+      </div>
+      <div class="row"><button class="btn small primary" type="button" data-act="cuotas-masivo">Aplicar</button></div>
+    </section>`;
+  }
 
   function viewExtras() {
     const list = S.draft.extras;
@@ -625,6 +645,7 @@
           ${field('Texto chico arriba del título', 'store.extras.eyebrow')}
         </div>
       </section>
+      ${cuotasCard(list)}
       <div class="plist">${list.map((p, i) => extraRow(p, i, list.length)).join('')}</div>`;
   }
 
@@ -668,6 +689,14 @@
         ${field('Precio', b + '.price', { type: 'number', live: 'title' })}
         ${field('Precio normal (opcional)', b + '.listPrice', { type: 'number', live: 'title', help: 'Si es mayor al precio, se muestra tachado y con el % de descuento.' })}
       </div></fieldset>
+      <fieldset><legend>Cuotas</legend><div class="grid-2">
+        <label class="field">Con tarjeta de crédito (Mercado Pago)
+          <select ${attrs(b + '.credito', { kind: 'num', live: 'title' })}>${CUOTAS_CREDITO.map(n => `<option value="${n}"${Number(p.credito || 12) === n ? ' selected' : ''}>${n === 1 ? 'Solo en 1 pago' : `Hasta ${n} cuotas`}</option>`).join('')}</select>
+          <small>Mercado Pago no le ofrece al cliente más cuotas que estas.</small></label>
+        <div class="field">Con débito (${esc(S.draft.store.financing || 'GO cuotas')})
+          ${check(`Acepta ${Number(S.draft.store.extras.cuotas) || 6} cuotas con débito`, b + '.debito', true)}
+          <small>La cantidad de cuotas con débito la fija el acuerdo con ${esc(S.draft.store.financing || 'GO cuotas')} (Tienda y textos).</small></div>
+      </div></fieldset>
       ${photosField(p, i, 'extras', 'La primera es la principal: la de la tarjeta.')}
       <fieldset><legend>Video</legend>${mediaField('Video del producto (.mp4, vertical)', b + '.video', 'Se reproduce solo y sin sonido en la tarjeta, y es lo primero de la ficha. Hasta 30 MB.')}</fieldset>
       <fieldset><legend>Textos</legend>
@@ -677,7 +706,7 @@
       <div class="row">${check('Oculto: no aparece en la tienda', b + '.hidden', true)}</div>
     </div>`;
   }
-  const newExtra = () => ({ id: '', hidden: true, cat: 'contenido', group: '', brand: '', name: 'Producto nuevo', icon: 'luz', weight: '', price: '', listPrice: '', pitch: '', details: [], gallery: [] });
+  const newExtra = () => ({ id: '', hidden: true, cat: 'contenido', group: '', brand: '', name: 'Producto nuevo', icon: 'luz', weight: '', price: '', listPrice: '', pitch: '', details: [], gallery: [], credito: 12, debito: true });
   const listOf = el => S.draft[el.dataset.list || 'products'];
 
   const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -728,6 +757,32 @@
     </section>`;
   }
 
+  // Códigos de descuento propios (22/11/2026): los que reparten por redes o WhatsApp. Bajan el precio de verdad.
+  function codigosCard() {
+    const list = S.draft.codes || (S.draft.codes = []);
+    const usos = code => ((S.orders && S.orders.pedidos) || []).filter(o => o.status === 'approved' && o.discount && o.discount.code === code).length;
+    return `<section class="card"><div class="card-head"><h2>Códigos de descuento</h2></div>
+      <p>Los que dan ustedes, por ejemplo a quien los sigue en las redes y les escribe. A diferencia del flash, <b>bajan el precio</b>: el cliente lo
+        pone en el carrito y paga con ese porcentaje menos. Un pedido usa un solo código.</p>
+      <p class="muted">Cuando el descuento flash está apagado, el carrito invita a seguirlos en Instagram, Facebook y TikTok (los del pie de página)
+        y a pedir un código por WhatsApp.</p>
+      ${list.length ? `<div class="table-wrap"><table class="table">
+        <thead><tr><th>Código</th><th>% off</th><th>Vale hasta</th><th>Usos máx.</th><th>Usado</th><th>Nota</th><th>Activo</th><th></th></tr></thead>
+        <tbody>${list.map((c, i) => `<tr>
+          <td><input ${attrs(`codes.${i}.code`)} value="${esc(c.code || '')}" placeholder="sigueme10" maxlength="30" aria-label="Código"></td>
+          <td><input class="num-in" type="number" min="1" max="90" inputmode="numeric" ${attrs(`codes.${i}.percent`, { kind: 'num' })} value="${esc(c.percent ?? '')}" aria-label="Porcentaje"></td>
+          <td><input type="date" ${attrs(`codes.${i}.until`)} value="${esc(c.until || '')}" aria-label="Vale hasta"></td>
+          <td><input class="num-in" type="number" min="0" inputmode="numeric" ${attrs(`codes.${i}.max`, { kind: 'num' })} value="${esc(c.max ?? 0)}" aria-label="Usos máximos (0 = sin límite)"></td>
+          <td class="num">${n(usos(c.code))}</td>
+          <td><input ${attrs(`codes.${i}.note`)} value="${esc(c.note || '')}" placeholder="Para Instagram" maxlength="80" aria-label="Nota"></td>
+          <td>${check('', `codes.${i}.on`)}</td>
+          <td><button class="btn small" type="button" data-act="del-code" data-i="${i}">Quitar</button></td>
+        </tr>`).join('')}</tbody></table></div>
+        <p class="muted">Usos máx.: cuántos pedidos pagados pueden usarlo (0 = sin límite). Vale hasta: vacío = sin fecha.</p>` : '<p class="muted">Todavía no hay códigos.</p>'}
+      <div class="row"><button class="btn small" type="button" data-act="add-code">Agregar código</button></div>
+    </section>`;
+  }
+
   function enviosCard() {
     const e = S.draft.shipping;
     if (!e) return '';
@@ -756,7 +811,7 @@
   function categoriasCard() {
     const cats = S.draft.categories || [];
     return `<section class="card"><div class="card-head"><h2>Las 3 categorías</h2></div>
-      <p class="muted">Cada una tiene su propia home en los cuatro diseños, por ejemplo <code>/profesional/${esc((cats[0] || {}).id || '')}/</code>. Ahí se ven estos textos: portada, beneficios, guía y preguntas.</p>
+      <p class="muted">Cada una tiene su propia home en los 3 diseños, por ejemplo <code>/${esc((cats[0] || {}).id || '')}/</code> (Historia, la página principal). Ahí se ven estos textos: portada, beneficios, guía y preguntas.</p>
       ${cats.map((c, i) => `<fieldset><legend>${c.num}. ${esc(c.name)}</legend><div class="grid-2">
         ${field('Nombre', `categories.${i}.name`)}
         ${field('Nombre corto (menú)', `categories.${i}.short`)}
@@ -848,9 +903,8 @@
           y los celulares no se pueden comprar. Prendido, vuelve el catálogo de celulares de la pestaña Celulares.</p>
       </section>
       ${flashCard()}
+      ${codigosCard()}
       ${enviosCard()}
-      ${categoriasCard()}
-      ${historiaCard()}
 
       <section class="card"><div class="card-head"><h2>Tienda</h2></div>
         <div class="grid-2">
@@ -896,17 +950,7 @@
         </div>
       </section>
 
-      <section class="card"><div class="card-head"><h2>Pie de página</h2><p>Se ve en Minimalista. Lo que quede vacío no aparece.</p></div>
-        ${area('Sobre la tienda', 'footer.about', { rows: 2 })}
-        <div class="grid-2">
-          ${field('Horarios', 'footer.hours', { ph: 'Lunes a sábado de 9 a 13 y de 17 a 21' })}
-          ${field('Email', 'footer.email', { type: 'email' })}
-          ${field('Instagram', 'footer.instagram', { ph: '@tutienda o https://…' })}
-          ${field('Facebook', 'footer.facebook', { ph: 'tutienda o https://…' })}
-          ${field('TikTok', 'footer.tiktok', { ph: '@tutienda o https://…' })}
-        </div>
-        ${field('Datos legales', 'footer.legal', { ph: 'Razón social · CUIT 30-00000000-0' })}
-      </section>
+      <p class="muted">El pie de página (email, horarios y redes) está en la pestaña Sucursales; las categorías y la página Historia, en Páginas.</p>
 
       <section class="card"><div class="card-head"><h2>Al compartir el link y en Google</h2></div>
         ${field('Título', 'texts.seoTitle')}
@@ -1343,36 +1387,204 @@
       </div>` : ''}
     </section>`;
   }
+  /* ----- 22/11/2026: Inicio, Sucursales, Páginas y Clientes ----- */
+  const diaDe = iso => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const DISENOS = [['historia', 'Historia', '/'], ['red-social', 'Red social', '/red-social/'], ['minimalista', 'Minimalista', '/minimalista/']];
+  const linkPaginas = () => `<div class="paginas-grid">${DISENOS.map(([id, nombre, raiz]) => `
+    <div class="pagina-col"><b>${nombre}${id === 'historia' ? ' <span class="chip">página principal</span>' : ''}</b>
+      <a href="${esc(BASE)}${raiz}${id === 'historia' ? '' : '?ver'}" target="_blank" rel="noopener">Inicio</a>
+      ${(S.draft.categories || []).map(c => `<a href="${esc(BASE)}${raiz}${c.id}/${id === 'historia' ? '' : '?ver'}" target="_blank" rel="noopener">${esc(c.name)}</a>`).join('')}
+    </div>`).join('')}</div>`;
+
+  // Inicio: lo del día, lo que hay que hacer y accesos directos
+  function viewInicio() {
+    const head = '<div class="page-head"><h1>Inicio</h1></div>';
+    const P = S.orders;
+    if (!P) return head + loading;
+    const pagos = P.pedidos.filter(o => o.status === 'approved');
+    const hoy = diaDe(new Date());
+    const semana = Date.now() - 7 * 864e5;
+    const deHoy = pagos.filter(o => diaDe(o.paidAt || o.createdAt) === hoy);
+    const deSemana = pagos.filter(o => new Date(o.paidAt || o.createdAt).getTime() >= semana);
+    const suma = l => l.reduce((s, o) => s + o.amount, 0);
+    const cuenta = f => P.pedidos.filter(f).length;
+    const tile = (titulo, valor, sub, tab = '') => `<${tab ? `button type="button" data-act="ir-pedidos" data-otab="${tab}"` : 'div'} class="tile">
+      <span class="tile-t">${titulo}</span><b class="tile-v">${valor}</b>${sub ? `<span class="tile-s">${sub}</span>` : ''}</${tab ? 'button' : 'div'}>`;
+    return `${head}
+      <section class="tiles">
+        ${tile('Ventas de hoy', money(suma(deHoy)), `${n(deHoy.length)} pedido${deHoy.length === 1 ? '' : 's'}`)}
+        ${tile('Últimos 7 días', money(suma(deSemana)), `${n(deSemana.length)} pedido${deSemana.length === 1 ? '' : 's'}`)}
+        ${tile('Por preparar', n(cuenta(o => o.status === 'approved' && !estadoDe(o))), 'Pagados sin tildar', 'preparar')}
+        ${tile('Preparando', n(cuenta(o => estadoDe(o) === 'preparando')), 'Por despachar o dejar listos', 'preparando')}
+        ${tile('Para retirar', n(cuenta(o => estadoDe(o) === 'listo')), 'Esperan en la sucursal', 'retirar')}
+        ${tile('Despachados', n(cuenta(o => estadoDe(o) === 'despachado')), 'En camino', 'despachados')}
+      </section>
+      <section class="card"><div class="card-head"><h2>Últimas compras</h2></div>
+        ${pagos.length ? `<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Productos</th><th class="num">Total</th><th>Entrega</th></tr></thead><tbody>
+          ${pagos.slice(0, 6).map(o => `<tr><td><b>#${esc(o.ref)}</b><span class="sub">${when(o.paidAt || o.createdAt)}</span></td><td>${esc(o.buyer.name)}</td>
+            <td>${esc(itemsDe(o).map(x => `${x.n > 1 ? `${x.n} × ` : ''}${x.name}`).join(', '))}</td><td class="num">${money(o.amount)}</td>
+            <td>${esc(PASOS[estadoDe(o)] || 'Por preparar')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Todavía no hay compras pagadas.</p>'}
+        <div class="row"><button class="btn small" type="button" data-act="ir-pedidos" data-otab="todos">Ver todos los pedidos</button></div>
+      </section>
+      <section class="card"><div class="card-head"><h2>Las páginas</h2><p>Abren en otra pestaña. La página principal (xoxotecno.com.ar) es Historia.</p></div>
+        ${linkPaginas()}
+      </section>`;
+  }
+
+  // Sucursales: cada local (horarios, teléfono, WhatsApp, foto), el reparto de WhatsApp y los datos de contacto
+  function viewSucursales() {
+    const provs = [...new Set(S.draft.store.branches.map(b => b.province).filter(Boolean))];
+    return `
+      <div class="page-head"><h1>Sucursales</h1><button class="btn small primary" type="button" data-act="add-branch">Agregar sucursal</button></div>
+      <p class="muted">${n(S.draft.store.branches.length)} sucursales${provs.length ? ` en ${esc(provs.join(', '))}` : ''}. Se ven en las páginas, en "Retiro en sucursal" al pagar y en el reparto de WhatsApp.</p>
+      <section class="card">
+        <div class="card-head"><h2>Locales</h2><p>Los mensajes de WhatsApp se reparten en partes iguales entre las que reciben mensajes.</p></div>
+        <div class="branches">${S.draft.store.branches.map((b, i, all) => branchEditor(b, i, all.length)).join('')}</div>
+      </section>
+      ${repartoCard(S.reparto)}
+      <section class="card"><div class="card-head"><h2>Teléfonos, email y redes</h2><p>Se ven en el pie de las páginas y en el carrito (para pedir un código de descuento). Lo que quede vacío no aparece.</p></div>
+        ${area('Sobre la tienda', 'footer.about', { rows: 2 })}
+        <div class="grid-2">
+          ${field('Horarios generales', 'footer.hours', { ph: 'Lunes a sábado de 9 a 13 y de 16 a 21' })}
+          ${field('Email', 'footer.email', { type: 'email' })}
+          ${field('Instagram', 'footer.instagram', { ph: '@tutienda o https://…' })}
+          ${field('Facebook', 'footer.facebook', { ph: 'tutienda o https://…' })}
+          ${field('TikTok', 'footer.tiktok', { ph: '@tutienda o https://…' })}
+          ${field('Datos legales', 'footer.legal', { ph: 'Razón social · CUIT 30-00000000-0' })}
+        </div>
+      </section>`;
+  }
+
+  // Páginas: verlas todas y editar los textos de cada categoría y de la página Historia
+  function viewPaginas() {
+    return `
+      <div class="page-head"><h1>Páginas</h1></div>
+      <section class="card"><div class="card-head"><h2>Ver las páginas</h2><p>Abren en otra pestaña, con los cambios guardados.</p></div>${linkPaginas()}</section>
+      ${categoriasCard()}
+      ${historiaCard()}`;
+  }
+
+  // Clientes: las cuentas (con email y contraseña o con Google) y lo que compró cada uno
+  function viewClientes() {
+    const head = '<div class="page-head"><h1>Clientes</h1></div>';
+    if (!S.clientes || !S.orders) return head + loading;
+    const pagos = S.orders.pedidos.filter(o => o.status === 'approved');
+    const de = c => pagos.filter(o => String(o.buyer.email).toLowerCase() === c.email || o.clienteId === c.id);
+    const lista = S.clientes.clientes.slice().sort((a, b) => String(b.creado).localeCompare(String(a.creado)));
+    const sinCuenta = new Set(pagos.map(o => String(o.buyer.email).toLowerCase()).filter(e => !lista.some(c => c.email === e))).size;
+    return `${head}
+      <p class="muted">${n(lista.length)} cuentas · ${n(sinCuenta)} clientes compraron sin cuenta. Las contraseñas se guardan cifradas: nadie las puede ver.</p>
+      <section class="card">
+        ${lista.length ? `<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Cómo entra</th><th class="num">Compras</th><th class="num">Total</th><th>Desde</th></tr></thead><tbody>
+          ${lista.map(c => { const l = de(c); return `<tr><td><b>${esc(c.nombre)}</b><span class="sub">${esc(c.email)}${c.telefono ? ` · ${esc(c.telefono)}` : ''}</span></td>
+            <td>${c.google ? 'Google' : 'Email y contraseña'}${c.confirmado ? '' : ' <span class="chip warn">sin confirmar</span>'}</td>
+            <td class="num">${n(l.length)}</td><td class="num">${money(l.reduce((s, o) => s + o.amount, 0))}</td>
+            <td>${c.creado ? when(c.creado) : ''}${c.ultimo ? `<span class="sub">entró ${when(c.ultimo)}</span>` : ''}</td></tr>`; }).join('')}
+          </tbody></table></div>` : '<p class="muted">Todavía nadie creó una cuenta. Se crean en xoxotecno.com.ar/cuenta (y con el botón de la persona, arriba en cada página).</p>'}
+      </section>`;
+  }
+
+  // Seguimiento de la entrega (22/11/2026): los pasos que tildan después del pago
+  const PASOS = { preparando: 'Preparando', despachado: 'Despachado', listo: 'Listo para retirar', entregado: 'Entregado', cancelado: 'Cancelado' };
+  const EMPRESAS = { andreani: 'Andreani', correo: 'Correo Argentino', otra: 'Otra' };
+  const esRetiro = o => !o.envio || o.envio.tipo === 'retiro';
+  const estadoDe = o => (o.seguimiento && o.seguimiento.estado) || '';
+  // Las pestañas: qué hay que hacer con cada pedido
+  const PESTANAS = [
+    ['preparar', 'Por preparar', o => o.status === 'approved' && !estadoDe(o)],
+    ['preparando', 'Preparando', o => estadoDe(o) === 'preparando'],
+    ['retirar', 'Para retirar', o => estadoDe(o) === 'listo'],
+    ['despachados', 'Despachados', o => estadoDe(o) === 'despachado'],
+    ['entregados', 'Entregados', o => estadoDe(o) === 'entregado'],
+    ['sin-pagar', 'Sin pagar', o => o.status !== 'approved' && estadoDe(o) !== 'cancelado'],
+    ['cancelados', 'Cancelados', o => estadoDe(o) === 'cancelado'],
+    ['todos', 'Todos', () => true],
+  ];
+  const plano = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const itemsDe = o => o.items || [{ name: o.product.name, n: 1, price: o.productAmount ?? o.amount }];
+
+  function pedidoCard(o) {
+    const phone = String(o.buyer.phone || '');
+    const wa = phone.startsWith('54') ? phone : `549${phone}`;
+    const d = o.delivery || {};
+    const seg = o.seguimiento || { estado: '', historial: [] };
+    const est = seg.estado;
+    const pagado = o.status === 'approved';
+    const entrega = esRetiro(o)
+      ? `${esc(o.envio ? o.envio.nombre : 'Retiro en sucursal')}`
+      : `${esc(o.envio.nombre)} (${money(o.envio.costo)})<span class="sub">${esc([d.address, d.city, o.envio.provincia, d.cp && `CP ${d.cp}`].filter(Boolean).join(', '))}</span>`;
+    const pasos = [
+      { paso: 'pagado', at: pagado ? (o.paidAt || o.createdAt) : '' },
+      ...(seg.historial || []),
+    ].filter(h => h.at);
+    const btn = (paso, label, cls = '') => `<button class="btn small${cls}" type="button" data-act="seguir" data-id="${esc(o.id)}" data-paso="${paso}">${label}</button>`;
+    const acciones = est === 'cancelado' ? ''
+      : !pagado ? btn('cancelado', 'Cancelar')
+      : !est ? `${btn('preparando', 'Preparando', ' primary')}${btn('cancelado', 'Cancelar')}`
+      : est === 'preparando' ? `${esRetiro(o) ? btn('listo', 'Listo para retirar', ' primary') : btn('despachado', 'Despachado…', ' primary')}${btn('cancelado', 'Cancelar')}`
+      : ['listo', 'despachado'].includes(est) ? btn('entregado', 'Entregado', ' primary') : '';
+    return `<article class="order${est === 'cancelado' ? ' is-off' : ''}" id="pedido-${esc(o.ref)}">
+      <header class="order-head">
+        <b class="order-ref">#${esc(o.ref)}</b>
+        <span class="muted">${when(o.createdAt)}</span>
+        <span class="chip${pagado ? '' : ' off'}">${esc(ORDER_STATUS[o.status] || o.status)}</span>
+        ${est ? `<span class="chip ${est === 'cancelado' ? 'off' : 'seg'}">${esc(PASOS[est])}</span>` : pagado ? '<span class="chip warn">Por preparar</span>' : ''}
+        ${o.gateway && o.gateway.demo ? '<span class="chip off">DEMO</span>' : ''}
+        <b class="order-total">${money(o.amount)}</b>
+      </header>
+      <div class="order-grid">
+        <div>
+          <h3>Productos</h3>
+          <ul class="order-items">${itemsDe(o).map(x => `<li><span>${x.n > 1 ? `${x.n} × ` : ''}${esc(x.name)}</span><b>${money(x.price * x.n)}</b></li>`).join('')}
+            ${o.discount ? `<li class="save"><span>Código ${esc(o.discount.code)} (−${o.discount.percent}%)</span><b>−${money(o.discount.amount)}</b></li>` : ''}
+            <li><span>${esc(o.envio ? o.envio.nombre : 'Entrega')}</span><b>${o.envio && o.envio.costo ? money(o.envio.costo) : 'Gratis'}</b></li></ul>
+          <p class="sub">${esc(METHOD_NAMES[o.method] || o.method)} · ${o.method === 'gocuotas' ? `${n(o.plan)} cuotas con débito` : o.gateway && o.gateway.installments ? `${n(o.gateway.installments)} ${o.gateway.installments === 1 ? 'pago' : 'cuotas'}` : `hasta ${n(o.credito || 12)} cuotas`}${o.coupon ? ` · cupón ${esc(o.coupon)}` : ''}${o.gateway && o.gateway.paymentId ? ` · operación ${esc(o.gateway.paymentId)}` : ''}</p>
+        </div>
+        <div>
+          <h3>Cliente</h3>
+          <p>${esc(o.buyer.name)}<span class="sub">${esc(o.buyer.email)}${o.buyer.dni ? ` · DNI ${esc(o.buyer.dni)}` : ''}</span></p>
+          <p><a href="https://wa.me/${esc(wa)}?text=${encodeURIComponent(`¡Hola ${o.buyer.name.split(' ')[0]}! Te escribimos de ${S.site.store.name} por tu pedido #${o.ref}.`)}" target="_blank" rel="noopener">WhatsApp ${esc(phone)}</a> · <a href="mailto:${esc(o.buyer.email)}?subject=${encodeURIComponent(`Tu pedido #${o.ref}`)}">Mail</a></p>
+          <h3>Entrega</h3>
+          <p>${entrega}</p>
+          ${seg.numero ? `<p>${esc(EMPRESAS[seg.empresa] || seg.empresa || '')}: <b>${esc(seg.numero)}</b></p>` : ''}
+        </div>
+        <div>
+          <h3>Historia</h3>
+          <ol class="order-steps">${pasos.map(h => `<li><b>${esc(h.paso === 'pagado' ? 'Pagado' : PASOS[h.paso] || h.paso)}</b> <span class="muted">${when(h.at)}</span>${h.numero ? `<span class="sub">${esc(EMPRESAS[h.empresa] || '')} ${esc(h.numero)}</span>` : ''}${h.motivo ? `<span class="sub">Motivo: ${esc(h.motivo)}</span>` : ''}</li>`).join('') || '<li class="muted">Todavía sin pagar</li>'}</ol>
+          <label class="field">Nota interna <textarea rows="2" maxlength="500" data-nota="${esc(o.id)}" placeholder="Solo la ven ustedes">${esc(o.nota || '')}</textarea></label>
+        </div>
+      </div>
+      <div class="row order-actions">${acciones}
+        ${(seg.historial || []).length ? `<button class="btn small ghost" type="button" data-act="seguir" data-id="${esc(o.id)}" data-paso="deshacer">Deshacer el último paso</button>` : ''}
+        <button class="btn small ghost" type="button" data-act="guardar-nota" data-id="${esc(o.id)}">Guardar nota</button>
+      </div>
+    </article>`;
+  }
+
   function viewOrders() {
-    const head = '<div class="page-head"><h1>Pedidos</h1><button class="btn small" type="button" data-act="reload-orders">Actualizar</button></div>';
+    const head = `<div class="page-head"><h1>Pedidos</h1>
+      <div class="row"><button class="btn small" type="button" data-act="orders-csv">Descargar (Excel)</button>
+      <button class="btn small" type="button" data-act="reload-orders">Actualizar</button></div></div>`;
     const P = S.orders;
     if (!P) return head + loading;
     const list = P.pedidos;
+    const tab = S.ordersTab || 'preparar';
+    const q = plano(S.ordersQ || '');
+    const filtro = (PESTANAS.find(t => t[0] === tab) || PESTANAS[0])[2];
+    const busca = o => !q || plano([o.ref, o.buyer.name, o.buyer.email, o.buyer.dni, o.buyer.phone, (o.seguimiento || {}).numero].join(' ')).includes(q);
+    const vista = list.filter(o => busca(o) && (q ? true : filtro(o)));
     const paid = list.filter(o => o.status === 'approved');
-    const rows = list.map(o => {
-      const phone = String(o.buyer.phone || '');
-      const wa = phone.startsWith('54') ? phone : `549${phone}`;
-      const d = o.delivery || {};
-      const where = o.envio
-        ? (o.envio.tipo === 'retiro' ? o.envio.nombre : `${o.envio.nombre} (${money(o.envio.costo)}): ${[d.address, d.city, o.envio.provincia, d.cp && `CP ${d.cp}`].filter(Boolean).join(', ')}`)
-        : d.type === 'envio' ? `Envío: ${d.address}, ${d.city}` : 'Retira en el local';
-      return `<tr>
-        <td><b>#${esc(o.ref)}</b><span class="sub">${when(o.createdAt)}</span></td>
-        <td>${esc(o.product.name)}<span class="sub">${money(o.amount)} · ${esc(METHOD_NAMES[o.method] || o.method)} · ${n(o.plan)} ${o.plan === 1 ? 'pago' : 'cuotas'}${o.coupon ? ` · cupón ${esc(o.coupon)}` : ''}${o.gateway && o.gateway.demo ? ' · DEMO' : ''}</span></td>
-        <td><span class="chip${o.status === 'approved' ? '' : ' off'}">${esc(ORDER_STATUS[o.status] || o.status)}</span></td>
-        <td>${esc(o.buyer.name)}<span class="sub">${esc(o.buyer.email)}${o.buyer.dni ? ` · DNI ${esc(o.buyer.dni)}` : ''}</span></td>
-        <td><a href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener">${esc(phone)}</a><span class="sub">${esc(where)}</span></td>
-      </tr>`;
-    }).join('');
     return `${head}
-      ${P.pasarelas ? gatewaysCard(P.pasarelas) : ''}
-      ${P.correo ? correoCard(P.correo) : ''}
       <section class="card">
-        <div class="card-head"><h2>${n(list.length)} pedidos · ${n(paid.length)} pagados</h2><p>Los pagos se confirman consultando a la financiera, nunca solo por la vuelta del comprador.</p></div>
-        ${list.length ? `<div class="table-wrap"><table>
-          <thead><tr><th>Pedido</th><th>Producto</th><th>Estado</th><th>Comprador</th><th>Contacto y entrega</th></tr></thead>
-          <tbody>${rows}</tbody></table></div>` : '<p class="muted">Todavía no hay pedidos.</p>'}
-      </section>`;
+        <div class="order-tools">
+          <div class="otabs" role="tablist">${PESTANAS.map(([id, label, f]) => `<button type="button" role="tab" class="otab${tab === id ? ' on' : ''}" data-act="orders-tab" data-otab="${id}" aria-selected="${tab === id}">${label} <span class="count">${n(list.filter(f).length)}</span></button>`).join('')}</div>
+          <input class="order-search" type="search" placeholder="Buscar por código, nombre, email, DNI o n.º de seguimiento" value="${esc(S.ordersQ || '')}" data-orders-q aria-label="Buscar pedidos">
+        </div>
+        <p class="muted">${n(list.length)} pedidos · ${n(paid.length)} pagados. ${q ? `Resultados de "${esc(S.ordersQ)}" en todos los pedidos.` : ''} Los pagos se confirman consultando a la financiera; los pasos de la entrega los tildan ustedes y el cliente los ve en xoxotecno.com.ar/seguimiento.</p>
+        ${vista.length ? vista.map(pedidoCard).join('') : `<p class="muted">${q ? 'No hay pedidos con esa búsqueda.' : 'No hay pedidos en esta pestaña.'}</p>`}
+      </section>
+      ${P.pasarelas ? gatewaysCard(P.pasarelas) : ''}
+      ${P.correo ? correoCard(P.correo) : ''}`;
   }
 
   /* ----- Registro ----- */
@@ -1556,6 +1768,19 @@
     }
   }
 
+  // Búsqueda de pedidos: filtra mientras se escribe
+  let ordersT = 0;
+  document.addEventListener('input', e => {
+    if (!e.target.matches('[data-orders-q]')) return;
+    S.ordersQ = e.target.value;
+    clearTimeout(ordersT);
+    ordersT = setTimeout(() => {
+      const pos = e.target.selectionStart;
+      render();
+      const nuevo = document.querySelector('[data-orders-q]');
+      if (nuevo) { nuevo.focus(); nuevo.setSelectionRange(pos, pos); }
+    }, 250);
+  });
   document.addEventListener('input', e => {
     const el = e.target.closest('[data-path]');
     if (!el || !S.draft || el.tagName === 'BUTTON' || (el.type === 'radio' && !el.checked)) return;
@@ -1598,6 +1823,58 @@
   const ACTIONS = {
     'reload-stats': () => go('estadisticas'),
     'reload-orders': () => go('pedidos'),
+    'ir-pedidos'(el) { S.ordersTab = el.dataset.otab; S.ordersQ = ''; go('pedidos'); },
+    'orders-tab'(el) { S.ordersTab = el.dataset.otab; S.ordersQ = ''; render(); },
+    async seguir(el) {
+      const o = S.orders.pedidos.find(x => x.id === el.dataset.id);
+      const paso = el.dataset.paso;
+      const body = { id: o.id, paso };
+      if (paso === 'despachado') {
+        const emp = (o.envio && o.envio.empresa) || '';
+        const empresa = prompt('¿Con qué empresa salió? Escribí andreani, correo u otra.', emp || 'andreani');
+        if (empresa === null) return;
+        body.empresa = ['andreani', 'correo', 'otra'].includes(empresa.trim().toLowerCase()) ? empresa.trim().toLowerCase() : 'otra';
+        body.numero = prompt('Número de seguimiento del envío:', '');
+        if (body.numero === null) return;
+      }
+      if (paso === 'cancelado') {
+        body.motivo = prompt(`Motivo de la cancelación del pedido #${o.ref}:`, '');
+        if (body.motivo === null) return;
+      }
+      if (paso === 'deshacer' && !confirm(`¿Deshacer el último paso del pedido #${o.ref}?`)) return;
+      try {
+        await api('/pedidos/seguir', { method: 'POST', body });
+        S.orders = await api('/pedidos');
+        render();
+        toast(paso === 'deshacer' ? 'Listo: se deshizo el último paso.' : `Pedido #${o.ref}: ${PASOS[paso]}.${['despachado', 'listo'].includes(paso) ? ' Le avisamos al cliente por mail.' : ''}`);
+      } catch (err) { toast(err.message, true); }
+    },
+    async 'guardar-nota'(el) {
+      const t = document.querySelector(`[data-nota="${CSS.escape(el.dataset.id)}"]`);
+      try {
+        await api('/pedidos/nota', { method: 'POST', body: { id: el.dataset.id, nota: t.value } });
+        const o = S.orders.pedidos.find(x => x.id === el.dataset.id);
+        if (o) o.nota = t.value;
+        toast('Nota guardada.');
+      } catch (err) { toast(err.message, true); }
+    },
+    'orders-csv'() {
+      const col = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const filas = [['Código', 'Fecha', 'Estado del pago', 'Entrega', 'Productos', 'Código de descuento', 'Descuento', 'Envío', 'Total', 'Medio', 'Cuotas', 'Cliente', 'Email', 'Teléfono', 'DNI', 'Dirección', 'Empresa', 'Seguimiento', 'Nota']];
+      for (const o of S.orders.pedidos) {
+        const d = o.delivery || {}, seg = o.seguimiento || {};
+        filas.push([o.ref, o.createdAt.slice(0, 16).replace('T', ' '), ORDER_STATUS[o.status] || o.status, PASOS[seg.estado] || (o.status === 'approved' ? 'Por preparar' : ''),
+          itemsDe(o).map(x => `${x.n} x ${x.name}`).join(' + '), o.discount ? o.discount.code : '', o.discount ? o.discount.amount : '', o.envio ? o.envio.costo : 0, o.amount,
+          METHOD_NAMES[o.method] || o.method, o.plan, o.buyer.name, o.buyer.email, o.buyer.phone, o.buyer.dni || '',
+          [d.address, d.city, d.province, d.cp].filter(Boolean).join(', '), EMPRESAS[seg.empresa] || '', seg.numero || '', o.nota || '']);
+      }
+      const csv = '\ufeff' + filas.map(f => f.map(col).join(';')).join('\r\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      a.download = `pedidos-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    },
     'chat-photo': () => $('#chat-file').click(),
     'chat-rec': () => startRec(),
     'rec-cancel': () => cancelRec(),
@@ -1671,8 +1948,18 @@
         if (r.ok) setTimeout(() => ACTIONS['reload-orders'](), 900);
       } catch (err) { msg.textContent = err.message; }
     },
+    'add-code'() {
+      (S.draft.codes || (S.draft.codes = [])).push({ code: '', percent: 10, until: '', max: 0, on: true, note: '' });
+      render();
+    },
+    'del-code'(el) {
+      const c = S.draft.codes[+el.dataset.i];
+      if (!confirm(`¿Quitar el código ${c.code || 'nuevo'}?`)) return;
+      S.draft.codes.splice(+el.dataset.i, 1);
+      render();
+    },
     'add-branch'() {
-      S.draft.store.branches.push({ id: '', name: '', whatsapp: '', address: '', on: true });
+      S.draft.store.branches.push({ id: '', name: '', whatsapp: '', address: '', province: '', hours: '', phone: '', on: true });
       render();
     },
     'del-branch'(el) {
@@ -1689,6 +1976,19 @@
       [list[i], list[j]] = [list[j], list[i]];
       if (S.open === i) S.open = j; else if (S.open === j) S.open = i;
       render();
+    },
+    'cuotas-masivo'() {
+      const cual = $('#cm-cual').value, credito = $('#cm-credito').value, debito = $('#cm-debito').value;
+      S.cuotasMasivo = { cual, credito, debito };
+      if (!credito && !debito) return toast('Elegí las cuotas con crédito o con débito.', true);
+      const [tipo, valor] = cual === 'todos' ? ['todos', ''] : [cual.slice(0, cual.indexOf(':')), cual.slice(cual.indexOf(':') + 1)];
+      const lista = S.draft.extras.filter(p => tipo === 'todos' || (tipo === 'cat' ? p.cat === valor : p.group === valor));
+      for (const p of lista) {
+        if (credito) p.credito = Number(credito);
+        if (debito) p.debito = debito === 'si';
+      }
+      render();
+      toast(`Cuotas cambiadas en ${lista.length} producto${lista.length === 1 ? '' : 's'}. Tocá Guardar para que se vean en la tienda.`);
     },
     'toggle-hidden'(el) {
       const list = listOf(el), p = list[+el.dataset.i];
