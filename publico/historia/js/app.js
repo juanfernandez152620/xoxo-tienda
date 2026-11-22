@@ -1,5 +1,5 @@
 /* XOXO Tecno · diseño C "Historia": una página que se cuenta con el scroll.
- * Inicio (/historia/): quiénes somos (los 3 socios), el equipo, las sucursales, la garantía, cómo comprar
+ * Inicio (/historia/): quiénes somos, el equipo, las sucursales, la garantía, cómo comprar
  * (Mercado Pago → envío → mail de confirmación), la calculadora de envíos y las 3 categorías con sus productos.
  * Categoría (/historia/ventilacion/, /contenido/, /audio/): la categoría primero y después lo mismo, más corto.
  * Los textos vienen de /admin (window.SITE.story); los productos, de la vidriera (shared/vidriera.js).
@@ -75,47 +75,13 @@
           <p class="kicker hero-kicker">${esc(STORY.kicker || STORE.name)}</p>
           <div class="hero-logo" aria-hidden="true">${$('.logo-svg').outerHTML}</div>
           <h1 class="hero-title">${esc(STORY.title || STORE.name)}</h1>
-          <p class="hero-text">${esc(STORY.text)}</p>
+          <p class="hero-text">${esc(textoReal(STORY.text, 'Ventilación, creación de contenido y audio, con garantía y en cuotas: con crédito por Mercado Pago o con tu débito en GO cuotas.'))}</p>
           <div class="hero-ctas">
             <a class="btn" href="#categorias">Ver productos ${I.arrow}</a>
             <a class="btn ghost" href="#envios">Calculá tu envío</a>
           </div>
         </div>
-        <a class="scroll-cue" href="#socios" aria-label="Seguir bajando">${I.down}</a>
-      </section>`;
-  }
-
-  // Los 3 socios: las fotos llegan apiladas y se abren mientras bajás
-  function socios() {
-    const f = (STORY.founders || []).slice(0, 3);
-    return `
-      <section class="founders" id="socios" data-scroll>
-        <div class="founders-sticky">
-          <div class="founders-copy">
-            <p class="kicker" data-reveal>Quiénes somos</p>
-            <h2 class="sec-title" data-reveal>${esc(STORY.foundersTitle)}</h2>
-            <p class="sec-text" data-reveal>${esc(STORY.foundersText)}</p>
-          </div>
-          <div class="founders-cards">
-            ${f.map((p, i) => `
-              <figure class="founder" style="--k:${i - 1}">
-                ${retrato(p, i)}
-                <figcaption><b>${esc(p.name)}</b><span>${esc(p.role)}</span></figcaption>
-              </figure>`).join('')}
-          </div>
-        </div>
-      </section>`;
-  }
-
-  function numeros() {
-    const st = STORY.stats || [];
-    if (!st.length) return '';
-    return `
-      <section class="stats" aria-label="XOXO Tecno en números">
-        ${st.map((x, i) => `
-          <div class="stat" data-reveal style="--i:${i}">
-            <b class="js-count" data-to="${esc(x.v)}">${esc(x.v)}</b><span>${esc(x.l)}</span>
-          </div>`).join('')}
+        <a class="scroll-cue" href="#${(STORY.team || []).length ? 'equipo' : 'sucursales'}" aria-label="Seguir bajando">${I.down}</a>
       </section>`;
   }
 
@@ -123,13 +89,13 @@
     const t = STORY.team || [];
     if (!t.length) return '';
     return `
-      <section class="team wrap">
-        ${sectionHead('El equipo', STORY.teamTitle, STORY.teamText)}
+      <section class="team wrap" id="equipo">
+        ${sectionHead('Conocé nuestro equipo', textoReal(STORY.teamTitle, 'Un equipo que te atiende de verdad'), textoReal(STORY.teamText, 'Te asesoramos en el local y por WhatsApp, y armamos cada pedido.'))}
         <div class="team-grid">
           ${t.map((p, i) => `
             <figure class="member" data-reveal style="--i:${i}">
               ${retrato(p, i + 1)}
-              <figcaption><b>${esc(p.name)}</b><span>${esc(p.role)}</span></figcaption>
+              ${nombreReal(p.name) ? `<figcaption><b>${esc(p.name)}</b>${nombreReal(p.role) && sinRelleno(p.role) ? `<span>${esc(sinRelleno(p.role))}</span>` : ''}</figcaption>` : ''}
             </figure>`).join('')}
         </div>
       </section>`;
@@ -143,7 +109,7 @@
     if (!provs.length) return '';
     return `
       <section class="branches wrap" id="sucursales" data-scroll>
-        ${sectionHead('Sucursales', STORY.branchesTitle, STORY.branchesText)}
+        ${sectionHead('Sucursales', textoReal(STORY.branchesTitle, 'Nuestras sucursales'), textoReal(STORY.branchesText, 'Vení a vernos: te asesoramos y retirás tu compra gratis.'))}
         <div class="route">
           <span class="route-line" aria-hidden="true"><i></i></span>
           ${provs.map(([prov, list], i) => `
@@ -312,7 +278,7 @@
      La prueba ABC compara qué pesa más para el cliente: el precio (Red social), el producto (Minimalista) o la
      confianza (Historia). Acá, en los primeros 5 segundos: quiénes somos y la oferta flash; enseguida, cada
      ventilador como un capítulo con su historia, su video y la compra a un toque. Nada de relleno: lo que en
-     /admin → Historia sigue siendo de ejemplo (lorem ipsum, "Socio 1", sin foto) no se muestra. */
+     /admin → Historia sigue siendo de ejemplo (lorem ipsum, sin foto) no se muestra. */
   const CAPITULOS = {
     ventilacion: [
       { id: 'ventilador-piso-exahome-turbo-20', ocasion: 'Para las fiestas', color: '#ec4899', titulo: 'Para la mesa larga de las fiestas',
@@ -363,7 +329,6 @@
   };
   const relato = () => RELATO[CAT && CAT.id] || RELATO.ventilacion;
   const sinRelleno = t => String(t || '').replace(/\s*Lorem ipsum[\s\S]*$/i, '').trim();
-  const esReal = p => Boolean(p && p.photo && p.name && !/^Socio \d+$/i.test(p.name));
   const listaY = arr => arr.join(', ').replace(/, ([^,]*)$/, ' y $1');
   const conDireccion = b => b.address && !/a confirmar/i.test(b.address);
   const flashOn = () => Boolean(FL && FL.cfg && FL.cfg.on && FL.cfg.percent > 0);
@@ -376,7 +341,6 @@
   // 1. Portada: una sola pantalla, lo que el cliente ve en los primeros segundos
   function hvPortada(c) {
     const provs = [...new Set((STORE.branches || []).map(b => b.province).filter(Boolean))];
-    const socios = (STORY.founders || []).filter(esReal).slice(0, 3);
     const d = STORY.warrantyDays || 30;
     return `
       <section class="hv-hero" data-scroll>
@@ -385,12 +349,10 @@
             <p class="kicker hv-anim" style="--i:0">Somos ${esc(STORE.name)}</p>
             <h1 class="hv-title hv-anim" style="--i:1">${esc(relato().titulo)}</h1>
             <ul class="hv-trust hv-anim" style="--i:2">
-              <li>${I.store}<span>${esc((STORY.founders || []).length || 3)} socios y sucursales en ${esc(listaY(provs))}</span></li>
+              <li>${I.store}<span>Sucursales en ${esc(listaY(provs))}</span></li>
               <li>${I.shield}<span>${esc(d)} días de garantía en todo</span></li>
-              <li>${I.wa}<span>Por WhatsApp te contesta una persona</span></li>
+              <li>${I.truck}<span>Compra segura y envíos a todo el país</span></li>
             </ul>
-            ${socios.length ? `<div class="hv-socios hv-anim" style="--i:3">${socios.map((p, i) => `
-              <figure class="hv-socio" style="--k:${i}">${retrato(p, i)}<figcaption>${esc(p.name)}</figcaption></figure>`).join('')}</div>` : ''}
             ${flashOn() ? `<p class="hv-flash hv-anim fl-only" style="--i:3"><b>-${FL.cfg.percent}% flash</b> con el cupón <b>${esc(FL.cupon())}</b> · termina en <b class="js-flash-reloj">${FL.reloj(FL.restante())}</b></p>` : ''}
             <div class="hv-ctas hv-anim" style="--i:4">
               <a class="btn" href="#cap-1" data-sx-go="cap-1">${esc(relato().ver)} ${I.down}</a>
@@ -406,12 +368,12 @@
       </section>`;
   }
 
-  /* 2. La historia, después del banner: los socios, el equipo y las sucursales, armados igual que los capítulos
+  /* 2. La historia, después del banner: el equipo y las sucursales, armados igual que los capítulos
         de los ventiladores (mismo marco vertical, mismo encabezado, misma historia y el recuadro al final).
-        Cada parte cuenta el porqué y termina en su promesa: la garantía, las cuotas y los envíos.
+        Cada parte cuenta el porqué y termina en su promesa: las cuotas y los envíos.
         Los textos de /admin → Historia se usan cuando ya son reales; los porqués son de acá. */
   const textoReal = (t, porDefecto) => sinRelleno(t) || porDefecto;
-  const nombreReal = n => Boolean(n && !/^(socio \d+|lorem|ipsum|dolor|sit|amet|elit|consectetur)$/i.test(String(n).trim()));
+  const nombreReal = n => Boolean(n && !/^(socio \d+|persona \d+|lorem|ipsum|dolor|sit|amet|elit|consectetur)$/i.test(String(n).trim()));
 
   // Fotos de ejemplo (marcadas así) hasta que se carguen las reales en /admin → Historia y → Sucursales
   const SILUETA = {
@@ -444,7 +406,7 @@
   };
 
   // Cada parte, igual que un capítulo: las fotos de un lado; el encabezado, la historia y la promesa del otro
-  // fondo: en el celular la foto pasa a ser el fondo de arriba de la parte (los socios), para que entre en una pantalla
+  // fondo: en el celular la foto pasa a ser el fondo de arriba de la parte, para que entre en una pantalla
   const hvParte = ({ id, alt, fondo, color, etiqueta, titulo, parrafos, promesa, visual }) => `
     <section class="hv-cap hv-parte${alt ? ' hv-cap-alt' : ''}${fondo ? ' hv-parte-fondo' : ''}" id="${id}" data-scroll style="--c:${color}">
       <div class="hv-cap-in wrap">
@@ -461,25 +423,6 @@
       </div>
     </section>`;
 
-  // Los 3 socios, en una sola foto: por qué damos garantía
-  function hvSocios() {
-    const n = (STORY.founders || []).length || 3;
-    const d = STORY.warrantyDays || 30;
-    return hvParte({
-      id: 'socios', fondo: true, color: '#63a3d1', etiqueta: 'Los socios',
-      titulo: `${esc(n)} socios detrás de cada venta`,
-      parrafos: [
-        esc(textoReal(STORY.foundersText, `Arrancamos ${STORE.name} entre tres y elegimos cada producto que vendemos: lo que no pondríamos en nuestra casa, no lo vendemos.`)),
-        'Sabemos lo que es comprar algo y quedarse con la duda de qué pasa si falla. Preferimos que esa duda sea nuestra y no tuya.',
-      ],
-      promesa: {
-        ico: I.shield, titulo: `Por eso te damos ${esc(d)} días de garantía`,
-        texto: esc(textoReal(STORY.warrantyText, `Si algo no anda en los primeros ${d} días, lo resolvemos en la sucursal o por WhatsApp, sin vueltas.`)),
-      },
-      visual: carrusel([{ foto: fotoOEjemplo(STORY.foundersPhoto, `los ${n} socios de ${STORE.name}`, 'grupo', '#63a3d1') }], 'los socios'),
-    });
-  }
-
   // El equipo: por qué te damos cuotas y por qué el pago es seguro
   function hvEquipo() {
     const t = (STORY.team || []).slice(0, 8);
@@ -492,7 +435,7 @@
         return `<figure class="hv-cara" data-reveal style="--i:${i}">${fotoOEjemplo(p.photo, nombre || 'alguien del equipo', 'persona', TONOS[(i + 1) % TONOS.length])}${nombre ? `<figcaption>${esc(nombre)}</figcaption>` : ''}</figure>`;
       }).join('')}</div>
       ${gente.some(p => !p.photo) ? '<p class="hv-caras-nota">Fotos de ejemplo</p>' : ''}`;
-    // Las formas de pagar en cuotas, una por renglón (22/11/2026: el equipo es la primera parte, sin los socios)
+    // Las formas de pagar en cuotas, una por renglón (22/11/2026: el equipo es la primera parte)
     const pagos = `
       <ul class="hv-pagos">
         <li><span class="hv-pago-n">12</span><div><b>cuotas${sinInteres} con tarjeta de crédito</b><small>Por Mercado Pago</small></div></li>
@@ -774,7 +717,7 @@
       ? [CAT.banner ? `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.hero(CAT)}${window.Secciones.videos(CAT)}</div>` : heroCategoria(CAT), franja(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.beneficios(CAT)}</div>`,
         productosCategoria(CAT), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.guia(CAT)}</div>`,
         comoComprar(), calculadora(), garantia(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.faq(CAT)}</div>`, categorias(CAT)].join('')
-      : [heroHome(), socios(), numeros(), equipo(), sucursales(), garantia(), franja(), categorias(), productosHome(), comoComprar(), calculadora()].join('');
+      : [heroHome(), equipo(), sucursales(), garantia(), franja(), categorias(), productosHome(), comoComprar(), calculadora()].join('');
     nav();
     pie();
   }

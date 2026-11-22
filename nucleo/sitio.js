@@ -318,6 +318,14 @@ function migrarSoul(s) {
   return { ...s, extras, categories, migraciones: [...hechas, 'soul-21'] };
 }
 
+// 22/11/2026: el título de fábrica de la historia ya no habla de los socios (si nadie lo cambió en /admin)
+function migrarSinSocios(s) {
+  const hechas = Array.isArray(s.migraciones) ? s.migraciones : [];
+  if (hechas.includes('sin-socios')) return s;
+  const story = s.story && s.story.title === 'Tres socios, una idea y sucursales en tres provincias' ? { ...s.story, title: 'Tecnología en cuotas, con sucursales en tres provincias' } : s.story;
+  return { ...s, story, migraciones: [...hechas, 'sin-socios'] };
+}
+
 function migrarSinCelulares(s) {
   const t = s.texts || {};
   const viejo = {
@@ -361,7 +369,7 @@ function normalizar(s) {
   if (!s || typeof s !== 'object' || !s.store || typeof s.store !== 'object' || !Array.isArray(s.products)) {
     fallar('El contenido no tiene el formato esperado');
   }
-  s = migrarSoul(migrarEnvioParejo(migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s))))));
+  s = migrarSinSocios(migrarSoul(migrarEnvioParejo(migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s)))))));
   const st = s.store;
   const logo = obj(st.financingLogo);
   const closing = st.closing && typeof st.closing === 'object' ? st.closing : null;

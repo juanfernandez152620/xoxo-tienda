@@ -95,6 +95,32 @@
     : `<p class="x-cuotas">Hasta 12 cuotas con Mercado Pago</p>${STORE.financing
       ? `<p class="x-cuotas x-debito">o <b>${esc(STORE.extras.cuotas)} cuotas</b> con tu <b>débito</b> en ${goLogo()}</p>` : ''}`);
 
+  // Ficha: el precio desglosado en cuotas. Crédito por Mercado Pago en 1, 3, 6, 9 y 12 (los planes que acepta el
+  // checkout) y débito en GO cuotas. Cada cuota se redondea para arriba, igual que en las tarjetas de cada diseño
+  function desgloseHTML(p) {
+    const precio = p.price || (p.cuotas ? p.cuotas[12] * 12 : 0);
+    if (!precio) return cuotasHTML();
+    const cuota = n => money(p.cuotas && p.cuotas[n] ? p.cuotas[n] : Math.ceil(precio / n));
+    const sin = STORE.sinInteres ? ' sin interés' : '';
+    const fila = (n, dest = false) => `<li${dest ? ' class="fc-dest"' : ''}><span>${n === 1 ? '1 pago' : `${n} cuotas${sin}`}</span><b>${n === 1 ? money(precio) : `${cuota(n)}`}</b></li>`;
+    const deb = p.cuotas ? 9 : Number(STORE.extras.cuotas) || 0;
+    return `
+      <div class="ficha-cuotas">
+        <p class="fc-t">Pagalo en cuotas</p>
+        <div class="fc-grupo">
+          <p class="fc-medio"><b>Con tarjeta de crédito</b><span>por Mercado Pago</span></p>
+          <ul class="fc-lista">${[1, 3, 6, 9].map(n => fila(n)).join('')}${fila(12, true)}</ul>
+        </div>
+        ${STORE.financing && deb > 1 ? `
+        <div class="fc-grupo">
+          <p class="fc-medio"><b>Con tarjeta de débito</b><span>con ${goLogo()}</span></p>
+          <ul class="fc-lista">${fila(deb, true)}</ul>
+          <p class="fc-nota">La primera cuota se paga hoy.</p>
+        </div>` : ''}
+        <p class="fc-nota">${STORE.sinInteres ? `En todas las opciones pagás el mismo total: ${money(precio)}.` : 'El interés de cada plan lo define tu tarjeta al pagar.'}</p>
+      </div>`;
+  }
+
   function buyMessage(p) {
     const lines = ['¡Hola! Vi este producto en la web y me interesa:', `🛒 ${p.name}`, `💵 ${money(p.price)}`, `💳 ${cuotasText()}`, '¿Sigue disponible?'];
     if (isWeb) lines.push(productUrl(p));
@@ -201,7 +227,7 @@
             <span class="ficha-off-txt">Termina en <b class="js-flash-reloj">${FL.reloj(FL.restante())}</b></span>
             <span class="ficha-off-cupon">Con el cupón <b>${esc(FL.cupon())}</b></span></div>`
           : off ? `<div class="ficha-off"><span class="x-off">${off}% OFF</span><span class="ficha-off-txt">Ahorrás ${money(p.listPrice - p.price)}</span></div>` : ''}
-        ${cuotasHTML()}
+        ${desgloseHTML(p)}
         ${p.pitch ? `<p class="ficha-pitch">${esc(p.pitch)}</p>` : ''}
         ${(p.details || []).length ? `<ul class="ficha-details">${p.details.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : ''}
         <div class="ficha-ctas">
