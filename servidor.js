@@ -220,7 +220,12 @@ async function cuentaApi(req, res, url, route) {
       clientes.abrir(res, c);
       return json(res, 200, { cliente: clientes.publico(c) });
     }
-    if (route === 'GET /api/cuenta/google') return redirigir(res, clientes.irAGoogle(res));
+    if (route === 'GET /api/cuenta/google') {
+      // Google vuelve siempre a BASE_URL (xoxotecno.com.ar): si entraron por otra dirección (www), se arranca desde
+      // ahí, así la cookie del ingreso queda en la misma dirección a la que vuelve Google
+      if (String(req.headers.host || '').toLowerCase() !== new URL(BASE_URL).host) return redirigir(res, `${BASE_URL}/api/cuenta/google`);
+      return redirigir(res, clientes.irAGoogle(res));
+    }
     if (route === 'GET /api/cuenta/google/vuelta') {
       try {
         const c = await clientes.volverDeGoogle(req, url);

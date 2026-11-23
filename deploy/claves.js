@@ -3,7 +3,11 @@
 /* Carga las claves de la tienda en el VPS sin que pasen por el chat ni por GitHub: Mercado Pago, GO cuotas,
  * el pago simulado, el WhatsApp del socio, Claude y el correo de la tienda (SMTP).
  *
- *   ssh -t xoxo-vps xoxo-claves
+ *   ssh -t xoxo-vps xoxo-claves          el menú con todas (las de pagos separadas de las otras)
+ *   ssh -t xoxo-vps xoxo-claves guia     solo las de pagos, una por una
+ *   ssh -t xoxo-vps xoxo-claves google   solo la del ingreso de clientes con Google
+ *
+ * Cada modo cambia solo lo que se carga ahí: el resto del archivo queda como está.
  *
  * En el servidor está instalado en /usr/local/bin/xoxo-claves (esta es la copia de referencia) y corre como root.
  * Cada clave se prueba contra la pasarela antes de guardarla: si no anda, no se guarda. Al guardar deja una copia
@@ -21,7 +25,9 @@ const { execFileSync } = require('child_process');
 
 // "guia": las claves de pago una por una (ssh -t xoxo-vps xoxo-claves guia), en vez del menú
 const MODO_GUIA = process.argv.slice(2).includes('guia');
-const ARCHIVO = path.resolve(process.argv.slice(2).find(a => a !== 'guia') || '/etc/xoxo-tienda.env');
+// "google": solo la clave del ingreso de clientes con Google (ssh -t xoxo-vps xoxo-claves google)
+const MODO_GOOGLE = process.argv.slice(2).includes('google');
+const ARCHIVO = path.resolve(process.argv.slice(2).find(a => a !== 'guia' && a !== 'google') || '/etc/xoxo-tienda.env');
 const EN_SERVIDOR = ARCHIVO === '/etc/xoxo-tienda.env';
 const SERVICIO = 'xoxo-tienda';
 const TTY = Boolean(process.stdin.isTTY);
@@ -270,14 +276,18 @@ function resumen(v, probado, cambios) {
   console.log(`
 Claves de la tienda XOXO Tecno · ${ARCHIVO}
 
-  1) Mercado Pago     ${mp}
-  2) GO cuotas        ${go}
-  3) Pago simulado    ${demo}
-  4) WhatsApp socio   ${wa}
-  5) Claude (chat)    ${ia}
-  6) Correo (SMTP)    ${mail}
-  7) Probar todo lo cargado
+  PAGOS
+  1) Mercado Pago      ${mp}
+  2) GO cuotas         ${go}
+  3) Pago simulado     ${demo}
+
+  OTRAS
+  4) WhatsApp socio    ${wa}
+  5) Claude (chat)     ${ia}
+  6) Correo (SMTP)     ${mail}
   8) Google (clientes) ${v.GOOGLE_CLIENT_ID ? `cargado (${enmascarar(v.GOOGLE_CLIENT_ID)})` : 'sin cargar: se entra solo con email y contraseña'}
+
+  7) Probar todo lo cargado
 
   g) Guardar${EN_SERVIDOR ? ' y reiniciar la tienda' : ''}    s) Salir sin guardar${n ? `\n\n  Hay ${n} ${n === 1 ? 'cambio' : 'cambios'} sin guardar.` : ''}
 `);
@@ -431,23 +441,59 @@ Claude · contesta solo el chat "Cambios por IA" del panel
 }
 
 // El botón "Continuar con Google" de /cuenta: hace falta un ID de cliente de OAuth de Google Cloud
-async function seccionGoogle(v, set) {
+const vueltaGoogle = v => `${(v.BASE_URL || 'https://xoxotecno.com.ar').replace(/\/+$/, '')}/api/cuenta/google/vuelta`;
+// Le pide a Google un ingreso con un código inventado: si el ID y el secreto andan, Google contesta que el código no
+// sirve (invalid_grant); si no, que no conoce al cliente (invalid_client)
+async function probarGoogle(v, id, secreto) {
+  try {
+    const res = await conTiempo('https://oauth2.googleapis.com/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ code: 'prueba-de-xoxo-claves', client_id: id, client_secret: secreto, redirect_uri: vueltaGoogle(v), grant_type: 'authorization_code' }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (d.error === 'invalid_client' || d.error === 'unauthorized_client') {
+      return { ok: false, error: `Google no acepta ese ID con ese secreto (${d.error_description || d.error}). Revisá que los dos sean del mismo cliente; si lo acabás de crear, puede tardar unos minutos en andar` };
+    }
+    return { ok: true };
+  } catch (err) { return fallo(err); }
+}
+
+async function seccionGoogle(v, set, { solo = false } = {}) {
   console.log(`
 Google: ingreso de clientes en /cuenta. Se crea gratis en console.cloud.google.com:
-  APIs y servicios → Pantalla de consentimiento (externa, con el nombre de la tienda) → Credenciales →
-  Crear credenciales → ID de cliente de OAuth → Aplicación web.
-  URI de redireccionamiento autorizado: https://xoxotecno.com.ar/api/cuenta/google/vuelta
-${AYUDA_VACIO}`);
+  Google Auth Platform → Clientes → Crear cliente → Aplicación web.
+  URI de redireccionamiento autorizado: ${vueltaGoogle(v)}
+  Copiá cada dato de la página del cliente en Google y pegalo acá (clic derecho), después Enter.
+  ${AYUDA_VACIO}`);
   const id = await preguntar(`ID de cliente (termina en .apps.googleusercontent.com)${v.GOOGLE_CLIENT_ID ? ` [${enmascarar(v.GOOGLE_CLIENT_ID)}]` : ''}: `);
-  if (id === '-') { set('GOOGLE_CLIENT_ID', ''); set('GOOGLE_CLIENT_SECRET', ''); console.log('  Borrado: se entra solo con email y contraseña.'); return; }
-  if (id) {
-    if (!/\.apps\.googleusercontent\.com$/.test(id)) { console.log('  Eso no parece un ID de cliente de Google. No cambié nada.'); return; }
-    set('GOOGLE_CLIENT_ID', id);
-  }
-  const sec = await preguntar('Secreto del cliente (no se ve en pantalla): ', { oculto: true });
-  if (sec === '-') set('GOOGLE_CLIENT_SECRET', '');
-  else if (sec) set('GOOGLE_CLIENT_SECRET', sec);
-  console.log('  Listo. Tocá g para guardar y reiniciar la tienda.');
+  if (id === '-') { set('GOOGLE_CLIENT_ID', ''); set('GOOGLE_CLIENT_SECRET', ''); console.log('  Se borra al guardar: se entra solo con email y contraseña.'); return; }
+  if (id && !/^[\w.-]+\.apps\.googleusercontent\.com$/.test(id)) return console.log('  Eso no parece un ID de cliente de Google. No cambié nada.');
+  const nuevoId = id || v.GOOGLE_CLIENT_ID || '';
+  if (!nuevoId) return console.log('  Sin el ID de cliente no se puede seguir. No cambié nada.');
+  const sec = await preguntar(`Secreto del cliente (empieza con GOCSPX-; no se ve en pantalla)${v.GOOGLE_CLIENT_SECRET ? ' [Enter = dejar el que está]' : ''}: `, { oculto: true });
+  if (sec === '-') { set('GOOGLE_CLIENT_SECRET', ''); return console.log('  Se borra al guardar: el botón de Google deja de aparecer.'); }
+  if (/\s/.test(sec)) return console.log('  El secreto no puede tener espacios. No cambié nada.');
+  const nuevoSec = sec || v.GOOGLE_CLIENT_SECRET || '';
+  if (!nuevoSec) return console.log('  Falta el secreto: sin él el botón no aparece. No cambié nada.');
+  if (nuevoId === v.GOOGLE_CLIENT_ID && nuevoSec === v.GOOGLE_CLIENT_SECRET) return console.log('  Quedó igual que antes.');
+  process.stdout.write('Probando con Google… ');
+  const r = await probarGoogle(v, nuevoId, nuevoSec);
+  console.log(r.ok ? 'anda.' : `no anduvo: ${r.error}.`);
+  if (!r.ok && !(await siNo('¿Lo guardo igual?'))) return console.log('  No cambié nada.');
+  set('GOOGLE_CLIENT_ID', nuevoId);
+  set('GOOGLE_CLIENT_SECRET', nuevoSec);
+  if (!solo) console.log('  Listo. Tocá g para guardar y reiniciar la tienda.');
+}
+
+/* ---------- Solo Google: ssh -t xoxo-vps xoxo-claves google ---------- */
+async function soloGoogle(v, set, lineas, cambios) {
+  console.log(`
+Solo la clave del ingreso con Google. Las claves de pagos y las demás quedan como están.
+Ctrl+C = salir sin guardar nada.`);
+  await seccionGoogle(v, set, { solo: true });
+  if (!Object.keys(cambios).length) return console.log('\nNo cambió nada.');
+  await guardarYReiniciar(lineas, v, cambios);
+  console.log(`Listo. El botón "Continuar con Google" ya está en ${(v.BASE_URL || 'https://xoxotecno.com.ar').replace(/\/+$/, '')}/cuenta`);
 }
 
 async function seccionCorreo(v, set) {
@@ -644,6 +690,10 @@ async function main() {
 
   if (MODO_GUIA) {
     await guia(v, set, probado, lineas, cambios);
+    return salir(0);
+  }
+  if (MODO_GOOGLE) {
+    await soloGoogle(v, set, lineas, cambios);
     return salir(0);
   }
 
