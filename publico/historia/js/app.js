@@ -95,10 +95,19 @@
           ${t.map((p, i) => `
             <figure class="member" data-reveal style="--i:${i}">
               ${retrato(p, i + 1)}
-              ${nombreReal(p.name) ? `<figcaption><b>${esc(p.name)}</b>${nombreReal(p.role) && sinRelleno(p.role) ? `<span>${esc(sinRelleno(p.role))}</span>` : ''}</figcaption>` : ''}
+              ${nombreReal(p.name) ? `<figcaption><b>${esc(p.name)}</b>${[nombreReal(p.role) ? sinRelleno(p.role) : '', p.branch].filter(Boolean).length ? `<span>${esc([nombreReal(p.role) ? sinRelleno(p.role) : '', p.branch].filter(Boolean).join(' · '))}</span>` : ''}</figcaption>` : ''}
             </figure>`).join('')}
         </div>
       </section>`;
+  }
+
+  // Fotos de un local (23/11/2026, se cargan en /admin → Equipo y locales): la principal grande y, si hay más,
+  // miniaturas para pasar de una a otra
+  function fotosLocal(b) {
+    const f = (b.photos && b.photos.length ? b.photos : b.photo ? [b.photo] : []).slice(0, 6);
+    if (!f.length) return '';
+    return `<div class="suc-fotos"><img class="suc-foto" src="${esc(f[0])}" alt="El local de ${esc(b.name)}" loading="lazy" decoding="async">${f.length > 1 ? `
+      <div class="suc-mini">${f.map((u, k) => `<button type="button" data-suc-foto="${esc(u)}" aria-label="Foto ${k + 1} del local de ${esc(b.name)}" aria-pressed="${k === 0}"><img src="${esc(u)}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>` : ''}</div>`;
   }
 
   // Sucursales agrupadas por provincia, sobre una línea que se dibuja con el scroll
@@ -117,7 +126,7 @@
               <span class="prov-pin" aria-hidden="true">${I.pin}</span>
               <h3>${esc(prov)}</h3>
               <ul>${list.map(b => `
-                <li><b>${esc(b.name)}</b><span>${esc(b.address)}</span>
+                <li>${fotosLocal(b)}<b>${esc(b.name)}</b><span>${esc(b.address)}</span>
                   ${b.address && !/a confirmar/i.test(b.address) ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}</li>`).join('')}
               </ul>
             </article>`).join('')}
@@ -459,15 +468,18 @@
     const branches = STORE.branches || [];
     const conDir = branches.filter(conDireccion);
     const provs = [...new Set(branches.map(b => b.province).filter(Boolean))];
-    // Cada foto lleva adentro el nombre del local, la dirección y "Cómo llegar"
-    const fotos = [...conDir, ...branches.filter(b => !conDireccion(b))].map((b, i) => {
+    // Cada foto lleva adentro el nombre del local, la dirección y "Cómo llegar".
+    // 23/11/2026: cada local puede tener varias fotos: primero va la principal de cada uno y después las demás
+    // (hasta 3 por local)
+    const porLocal = [...conDir, ...branches.filter(b => !conDireccion(b))].map((b, i) => {
       const nombre = b.province && b.province !== b.name ? `${b.name} · ${b.province}` : b.name;
       const calle = conDireccion(b) ? String(b.address).split(',')[0] : 'Dirección a confirmar';
-      return {
-        foto: fotoOEjemplo(b.photo, `el local de ${b.name}`, 'local', TONOS[(i + 3) % TONOS.length]),
-        pie: `<b>${esc(nombre)}</b><span>${esc(calle)}</span>${conDireccion(b) ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">${I.pin}Cómo llegar</a>` : ''}`,
-      };
+      const pie = `<b>${esc(nombre)}</b><span>${esc(calle)}</span>${conDireccion(b) ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">${I.pin}Cómo llegar</a>` : ''}`;
+      const srcs = (b.photos && b.photos.length ? b.photos : [b.photo]).slice(0, 3);
+      return srcs.map(src => ({ foto: fotoOEjemplo(src, `el local de ${b.name}`, 'local', TONOS[(i + 3) % TONOS.length]), pie }));
     });
+    const fotos = [];
+    for (let k = 0; k < 3; k++) for (const lista of porLocal) if (lista[k]) fotos.push(lista[k]);
     return hvParte({
       id: 'sucursales', alt: true, color: '#2b4966', etiqueta: 'Las sucursales',
       titulo: esc(textoReal(STORY.branchesTitle, `Sucursales en ${listaY(provs)}`)),
@@ -917,6 +929,13 @@
   hvBarra();
   hvSonido();
   hvCarruseles();
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-suc-foto]');
+    if (!t) return;
+    const box = t.closest('.suc-fotos');
+    $('.suc-foto', box).src = t.dataset.sucFoto;
+    $$('[data-suc-foto]', box).forEach(x => x.setAttribute('aria-pressed', String(x === t)));
+  });
   // Producto compartido (#x=…) lo abre la vidriera; el ancla (#envios) baja después de armar la página
   if (/^#[a-z-]+$/.test(location.hash)) {
     const el = document.getElementById(location.hash.slice(1));

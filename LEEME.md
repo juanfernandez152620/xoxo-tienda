@@ -56,6 +56,13 @@ Todos los botones de WhatsApp pasan por `/api/whatsapp`, que elige la sucursal: 
 recibió menos personas. La misma persona sigue siempre con la misma sucursal (por una cookie y por el código de su
 navegador, así un doble toque no la manda a las dos). Se configura en **/admin → Anuncio**.
 
+## Equipo y locales
+
+En **/admin → Equipo y locales** se cargan las personas del equipo (foto, nombre, puesto, sucursal donde trabaja y si se
+ven en la página) y hasta 12 fotos por local. Se ven en la página principal (Historia): el equipo, y cada local con su
+foto principal y miniaturas. En las páginas de cada categoría, las fotos de los locales van en el carrusel de sucursales.
+Las fotos JPG grandes del celular se achican a 1600 px antes de subirse.
+
 ## Carpetas
 
 ```

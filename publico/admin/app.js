@@ -142,7 +142,7 @@
   }
 
   /* ---------- Vistas ---------- */
-  const VIEWS = { inicio: viewInicio, sucursales: viewSucursales, paginas: viewPaginas, clientes: viewClientes, estadisticas: viewStats, ia: viewChat, pedidos: viewOrders, anuncio: viewAb, productos: viewProducts, accesorios: viewExtras, tienda: viewStore, registro: viewLog, copias: viewBackups, cuenta: viewAccount };
+  const VIEWS = { inicio: viewInicio, sucursales: viewSucursales, equipo: viewEquipo, paginas: viewPaginas, clientes: viewClientes, estadisticas: viewStats, ia: viewChat, pedidos: viewOrders, anuncio: viewAb, productos: viewProducts, accesorios: viewExtras, tienda: viewStore, registro: viewLog, copias: viewBackups, cuenta: viewAccount };
   const loading = '<p class="muted">Cargando…</p>';
 
   function render() {
@@ -436,7 +436,10 @@
         ${field('Horarios', `${p}.hours`, { ph: 'Lunes a sábado de 9 a 13 y de 16 a 21', help: 'Se ven en el seguimiento, el comprobante y el mail de "listo para retirar".' })}
         ${field('Teléfono fijo', `${p}.phone`, { ph: '381 4211234' })}
       </div>
-      ${mediaField('Foto del local', `${p}.photo`, 'El frente o el interior. Se ve en Historia; sin foto se muestra una de ejemplo.')}
+      <div class="field"><span>Fotos del local</span>
+        <div class="row">${(b.photos || []).slice(0, 4).map(u => `<img class="mini-foto" src="${esc(media(u))}" alt="">`).join('')}
+          <span class="muted">${(b.photos || []).length ? `${n((b.photos || []).length)} foto${(b.photos || []).length === 1 ? '' : 's'}` : 'Sin fotos todavía'}</span>
+          <button class="btn small" type="button" data-tab="equipo">Cargar fotos en Equipo y locales</button></div></div>
       <div class="row">${check('Recibe mensajes de WhatsApp', `${p}.on`)}${b.on && !wa ? '<span class="muted">(cuando le cargues el WhatsApp)</span>' : ''}<span class="spacer"></span>
         ${len > 1 ? `<button class="btn small" type="button" data-act="del-branch" data-i="${i}">Quitar sucursal</button>` : ''}</div>
     </div>`;
@@ -846,8 +849,8 @@
         ${(h.founders || []).map((p, i) => persona('founders', i, 'Socio')).join('')}
       </fieldset>
       <fieldset><legend>El equipo</legend>
-        ${field('Título', 'story.teamTitle')}${area('Texto', 'story.teamText')}
-        ${(h.team || []).map((p, i) => persona('team', i, 'Persona')).join('')}
+        <div class="row"><span class="muted">Las personas, sus fotos y el texto del equipo se cargan en su propia pantalla.</span>
+          <button class="btn small" type="button" data-tab="equipo">Ir a Equipo y locales</button></div>
       </fieldset>
       <fieldset><legend>Sucursales y garantía</legend>
         ${field('Título de sucursales', 'story.branchesTitle')}${area('Texto de sucursales', 'story.branchesText')}
@@ -1459,6 +1462,62 @@
       </section>`;
   }
 
+  // Equipo y locales (23/11/2026): las personas del equipo (con su foto y su sucursal) y las fotos de cada local
+  function galeria(arr, max = 12) {
+    const list = getPath(S.draft, arr) || [];
+    const at = `data-arr="${esc(arr)}"`;
+    const foto = (src, k) => `<div class="photo">${k === 0 ? '<span class="badge">Principal</span>' : ''}
+      <img src="${esc(media(src))}" alt="Foto ${k + 1}" loading="lazy">
+      <div class="row">
+        <button class="icon-btn" type="button" data-act="gal-move" ${at} data-k="${k}" data-d="-1"${k ? '' : ' disabled'} aria-label="Mover a la izquierda">←</button>
+        <button class="icon-btn" type="button" data-act="gal-del" ${at} data-k="${k}" aria-label="Quitar esta foto">✕</button>
+        <button class="icon-btn" type="button" data-act="gal-move" ${at} data-k="${k}" data-d="1"${k < list.length - 1 ? '' : ' disabled'} aria-label="Mover a la derecha">→</button>
+      </div></div>`;
+    return `<div class="photos">${list.map(foto).join('')}
+      ${list.length < max ? `<button class="add-photo" type="button" data-act="gal-add" ${at} data-max="${max}">+ Subir fotos<small>Podés elegir varias</small></button>` : ''}</div>`;
+  }
+
+  function personaEditor(p, i, len) {
+    const b = `story.team.${i}`;
+    const suc = S.draft.store.branches.filter(x => x.id);
+    const inicial = (p.name || '?').trim().charAt(0).toUpperCase() || '?';
+    return `<div class="persona${p.show === false ? ' oculta' : ''}">
+      <div class="persona-foto">
+        ${p.photo ? `<img src="${esc(media(p.photo))}" alt="Foto de ${esc(p.name || 'la persona')}">` : `<span class="persona-ph" aria-hidden="true">${esc(inicial)}</span>`}
+        <button class="btn small" type="button" data-act="upload" data-path="${b}.photo" data-solo-fotos>${p.photo ? 'Cambiar foto' : 'Subir foto'}</button>
+        ${p.photo ? `<button class="btn small" type="button" data-act="clear" data-path="${b}.photo">Quitar foto</button>` : ''}
+      </div>
+      <div class="persona-datos">
+        <div class="grid-2">${field('Nombre', `${b}.name`, { ph: 'Ej. Sofía' })}${field('Puesto', `${b}.role`, { ph: 'Ej. Ventas, Envíos, Atención por WhatsApp' })}</div>
+        <label class="field">Sucursal donde trabaja
+          <select ${attrs(`${b}.branch`)}><option value="">Sin sucursal (o en todas)</option>${suc.map(x => `<option value="${esc(x.id)}"${x.id === p.branch ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+        <div class="row">${check('Se ve en la página', `${b}.show`, true)}<span class="spacer"></span>
+          <button class="icon-btn" type="button" data-act="team-move" data-i="${i}" data-d="-1"${i ? '' : ' disabled'} aria-label="Subir">↑</button>
+          <button class="icon-btn" type="button" data-act="team-move" data-i="${i}" data-d="1"${i < len - 1 ? '' : ' disabled'} aria-label="Bajar">↓</button>
+          <button class="btn small" type="button" data-act="team-del" data-i="${i}">Quitar</button></div>
+      </div>
+    </div>`;
+  }
+
+  function viewEquipo() {
+    const team = (S.draft.story && S.draft.story.team) || [];
+    const visibles = team.filter(p => p.show !== false).length;
+    const branches = S.draft.store.branches;
+    return `
+      <div class="page-head"><h1>Equipo y locales</h1><button class="btn small primary" type="button" data-act="team-add">Agregar persona</button></div>
+      <p class="muted">Las personas que atienden y las fotos de cada local. Se ven en la página principal de la tienda (Historia). Después de cambiar algo, tocá <b>Guardar cambios</b>.</p>
+      <section class="card">
+        <div class="card-head"><h2>El equipo</h2><p>${n(team.length)} persona${team.length === 1 ? '' : 's'}${team.length !== visibles ? `, ${n(visibles)} se ven en la página` : ''}. En la portada se ven las primeras 8: cambiá el orden con las flechas. Una foto de frente, de los hombros para arriba, queda mejor.</p></div>
+        <div class="grid-2">${field('Título', 'story.teamTitle', { ph: 'Un equipo que te atiende de verdad' })}${area('Texto', 'story.teamText', { rows: 2 })}</div>
+        <div class="personas">${team.map((p, i) => personaEditor(p, i, team.length)).join('') || '<p class="muted">Todavía no hay nadie cargado.</p>'}</div>
+        <div class="row"><button class="btn small" type="button" data-act="team-add">Agregar persona</button></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Fotos de los locales</h2><p>Hasta 12 por local: el frente, el interior, la vidriera. La primera es la principal. Se ven en la página principal, en la parte de las sucursales. La dirección, el WhatsApp y los horarios de cada local se cambian en <button class="link" type="button" data-tab="sucursales">Sucursales</button>.</p></div>
+        ${branches.map((b, i) => `<fieldset><legend>${esc(b.name || `Sucursal ${i + 1}`)}${b.address ? ` <small class="muted">· ${esc(b.address)}</small>` : ''}</legend>${galeria(`store.branches.${i}.photos`)}</fieldset>`).join('')}
+      </section>`;
+  }
+
   // Páginas: verlas todas y editar los textos de cada categoría y de la página Historia
   function viewPaginas() {
     return `
@@ -1797,31 +1856,67 @@
     if (el && el.hasAttribute('data-rerender')) render();
   });
 
+  const ACEPTA = $('#file').accept;
+  const SOLO_FOTOS = 'image/png,image/jpeg,image/webp,image/gif';
   function pickFile(target) {
     S.upload = target;
     const input = $('#file');
     input.value = '';
+    input.multiple = Boolean(target.arr);
+    input.accept = target.fotos || target.arr ? SOLO_FOTOS : ACEPTA;
     input.click();
   }
+  // Las fotos sacadas con el celular suelen ser enormes: se achican a 1600 px (JPG) antes de subirlas
+  async function achicar(file) {
+    if (file.type !== 'image/jpeg' || !window.createImageBitmap) return file;
+    try {
+      const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+      if (k === 1 && file.size < 1.5 * 1048576) return file;
+      const c = document.createElement('canvas');
+      c.width = Math.round(bmp.width * k);
+      c.height = Math.round(bmp.height * k);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86));
+      return blob && blob.size < file.size ? blob : file;
+    } catch { return file; }
+  }
   $('#file').addEventListener('change', async e => {
-    const file = e.target.files[0];
+    let files = [...e.target.files];
     const target = S.upload;
-    if (!file || !target) return;
+    if (!files.length || !target) return;
     try {
       // El hosting tiene un tamaño máximo: mejor avisar antes de subir
       if (!S.server) S.server = await api('/servidor');
       const limit = S.server.uploadLimit;
-      if (limit && file.size > limit) {
-        return toast(`El archivo pesa ${size(file.size)} y el hosting acepta hasta ${size(limit)}. Achicalo o pedile al hosting que suba el límite.`, true);
+      let lista = null;
+      if (target.arr) {
+        lista = getPath(S.draft, target.arr);
+        if (!Array.isArray(lista)) { lista = []; setPath(S.draft, target.arr, lista); }
+        const lugar = Math.max(0, (target.max || 12) - lista.length);
+        if (files.length > lugar) {
+          toast(`Entran ${lugar} foto${lugar === 1 ? '' : 's'} más: se suben las primeras.`, true);
+          files = files.slice(0, lugar);
+        }
       }
-      if (!/^video\//.test(file.type) && file.size > 8 * 1048576) return toast('La foto pesa más de 8 MB. Achicala y probá de nuevo.', true);
-      toast('Subiendo…');
-      const { url } = await api('/subir', { method: 'POST', file });
-      if (target.gallery != null) S.draft[target.list][target.gallery].gallery.push(url);
-      else setPath(S.draft, target.path, url);
-      render();
-      toast('Listo. Acordate de guardar los cambios.');
-    } catch (err) { toast(err.message, true); }
+      let hechas = 0;
+      for (const original of files) {
+        toast(files.length > 1 ? `Subiendo ${hechas + 1} de ${files.length}…` : 'Subiendo…');
+        const file = await achicar(original);
+        if (limit && file.size > limit) {
+          toast(`"${original.name}" pesa ${size(file.size)} y el hosting acepta hasta ${size(limit)}. Achicalo o pedile al hosting que suba el límite.`, true);
+          continue;
+        }
+        if (!/^video\//.test(file.type) && file.size > 8 * 1048576) { toast(`"${original.name}" pesa más de 8 MB. Achicala y probá de nuevo.`, true); continue; }
+        const { url } = await api('/subir', { method: 'POST', file });
+        if (target.gallery != null) S.draft[target.list][target.gallery].gallery.push(url);
+        else if (lista) lista.push(url);
+        else setPath(S.draft, target.path, url);
+        hechas++;
+        render();
+      }
+      if (hechas) toast(hechas > 1 ? `Listo: ${hechas} fotos subidas. Acordate de guardar los cambios.` : 'Listo. Acordate de guardar los cambios.');
+    } catch (err) { render(); toast(err.message, true); }
   });
 
   const ACTIONS = {
@@ -1963,7 +2058,7 @@
       render();
     },
     'add-branch'() {
-      S.draft.store.branches.push({ id: '', name: '', whatsapp: '', address: '', province: '', hours: '', phone: '', on: true });
+      S.draft.store.branches.push({ id: '', name: '', whatsapp: '', address: '', province: '', hours: '', phone: '', photos: [], on: true });
       render();
     },
     'del-branch'(el) {
@@ -2029,7 +2124,39 @@
       render();
     },
     'photo-del'(el) { listOf(el)[+el.dataset.i].gallery.splice(+el.dataset.k, 1); render(); },
-    upload: el => pickFile({ path: el.dataset.path }),
+    upload: el => pickFile({ path: el.dataset.path, fotos: el.hasAttribute('data-solo-fotos') }),
+    'gal-add': el => pickFile({ arr: el.dataset.arr, max: +el.dataset.max || 12 }),
+    'gal-move'(el) {
+      const g = getPath(S.draft, el.dataset.arr), k = +el.dataset.k, j = k + Number(el.dataset.d);
+      [g[k], g[j]] = [g[j], g[k]];
+      render();
+    },
+    'gal-del'(el) {
+      if (!confirm('¿Quitar esta foto?')) return;
+      getPath(S.draft, el.dataset.arr).splice(+el.dataset.k, 1);
+      render();
+    },
+    'team-add'() {
+      const story = S.draft.story || (S.draft.story = {});
+      const team = story.team || (story.team = []);
+      if (team.length >= 40) return toast('Entran hasta 40 personas.', true);
+      team.push({ name: '', role: '', photo: '', branch: '', show: true });
+      render();
+      const nombres = $$('.persona-datos input[type="text"]');
+      const nombre = nombres[nombres.length - 2];
+      if (nombre) { nombre.scrollIntoView({ block: 'center' }); nombre.focus(); }
+    },
+    'team-del'(el) {
+      const team = S.draft.story.team, p = team[+el.dataset.i];
+      if (!confirm(`¿Quitar a ${p.name || 'esta persona'} del equipo?`)) return;
+      team.splice(+el.dataset.i, 1);
+      render();
+    },
+    'team-move'(el) {
+      const t = S.draft.story.team, i = +el.dataset.i, j = i + Number(el.dataset.d);
+      [t[i], t[j]] = [t[j], t[i]];
+      render();
+    },
     clear(el) { setPath(S.draft, el.dataset.path, ''); render(); },
     async restore(el) {
       const name = el.dataset.name;

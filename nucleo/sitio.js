@@ -144,7 +144,7 @@ const codigoDe = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').t
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '');
 function normalizarSucursales(list) {
   const ids = new Set();
-  const cargadas = items(list, b => obj(b), 30).filter(b => CAMPOS_SUCURSAL.some(k => txt(b[k], 200)));
+  const cargadas = items(list, b => obj(b), 30).filter(b => CAMPOS_SUCURSAL.some(k => txt(b[k], 200)) || (Array.isArray(b.photos) && b.photos.some(Boolean)));
   if (!cargadas.length) fallar('Tiene que quedar al menos una sucursal (con el nombre alcanza)');
   const out = cargadas.map((b, i) => {
     const name = txt(b.name, 40) || `Sucursal ${i + 1}`;
@@ -157,8 +157,12 @@ function normalizarSucursales(list) {
     const on = Boolean(b.on);
     // El WhatsApp puede quedar vacío; si lo cargan, tiene que ser un número que WhatsApp entienda
     if (phone && !/^\d{11,15}$/.test(phone)) fallar(`Sucursal ${name}: el WhatsApp tiene que ser la característica y el número, sin 0 ni 15 (ej. 3813629235). También puede quedar vacío.`);
+    // 23/11/2026: varias fotos del local (/admin → Equipo y locales). "photo" es la primera, la principal.
+    let photos = items(b.photos, (u, k) => mediaUrl(u, `Sucursal ${name}: foto ${k + 1}`), 12).filter(Boolean);
+    const sola = mediaUrl(b.photo, `Sucursal ${name}: foto del local`);
+    if (!photos.length && sola && !Array.isArray(b.photos)) photos = [sola];
     return {
-      id, name, province: txt(b.province, 40), whatsapp: phone, address: txt(b.address, 150), photo: mediaUrl(b.photo, `Sucursal ${name}: foto del local`), on,
+      id, name, province: txt(b.province, 40), whatsapp: phone, address: txt(b.address, 150), photo: photos[0] || '', photos, on,
       // 22/11/2026: horarios y teléfono fijo (se ven en el seguimiento, el comprobante y el mail de "listo para retirar")
       hours: txt(b.hours, 120), phone: txt(b.phone, 30),
     };
@@ -274,6 +278,9 @@ function normalizarHistoria(h) {
     p = obj(p);
     return { name: txt(p.name, 40), role: txt(p.role, 60), photo: mediaUrl(p.photo, `${label}: foto`) };
   };
+  // 23/11/2026: el equipo se carga en /admin → Equipo y locales: en qué sucursal trabaja y si se ve en la página.
+  // Una persona agregada y dejada vacía no se guarda.
+  const empleado = (p, label) => ({ ...persona(p, label), branch: txt(obj(p).branch, 40), show: obj(p).show !== false });
   return {
     kicker: txt(h.kicker, 60), title: txt(h.title, 120), text: txt(h.text, 600),
     foundersTitle: txt(h.foundersTitle, 90), foundersText: txt(h.foundersText, 600),
@@ -281,7 +288,7 @@ function normalizarHistoria(h) {
     // Una sola foto de los 3 socios juntos (Historia → Ventilación)
     foundersPhoto: mediaUrl(h.foundersPhoto, 'Historia: foto de los 3 socios'),
     teamTitle: txt(h.teamTitle, 90), teamText: txt(h.teamText, 400),
-    team: items(h.team, (p, i) => persona(p, `Equipo ${i + 1}`), 12),
+    team: items(h.team, (p, i) => empleado(p, `Equipo ${i + 1}`), 40).filter(p => p.name || p.role || p.photo),
     branchesTitle: txt(h.branchesTitle, 90), branchesText: txt(h.branchesText, 400),
     warrantyDays: Math.round(num(h.warrantyDays ?? 3, 'Garantía: días', 0, 3650)),
     warrantyTitle: txt(h.warrantyTitle, 90), warrantyText: txt(h.warrantyText, 400),
@@ -360,6 +367,30 @@ function migrarSoul(s) {
   return { ...s, extras, categories, migraciones: [...hechas, 'soul-21'] };
 }
 
+// 23/11/2026: los 21 productos SOUL suman su galería de fotos y el video nuevo (editado). Solo cambia
+// lo que sigue como venía de fábrica: si en /admin le cargaron otras fotos u otro video, se respetan.
+function migrarSoulFotos(s) {
+  const hechas = Array.isArray(s.migraciones) ? s.migraciones : [];
+  if (hechas.includes('soul-fotos')) return s;
+  const semilla = leerJson(SEMILLA) || {};
+  const fab = Object.fromEntries((semilla.extras || []).filter(p => ['contenido', 'audio'].includes(p.cat)).map(p => [p.id, p]));
+  const viejas = {
+    'luz-led-rgb-jl60': ['/media/productos/luz-led-rgb-jl60-1.png', '/media/productos/luz-led-rgb-jl60-2.png'],
+    'luz-led-full-jl80': ['/media/productos/luz-led-full-jl80-1.png', '/media/productos/luz-led-full-jl80-2.png'],
+    'tripode-soul-j500': ['/media/productos/tripode-soul-j500-1.png', '/media/productos/tripode-soul-j500-2.png', '/media/productos/tripode-soul-j500-3.png'],
+  };
+  const extras = (Array.isArray(s.extras) ? s.extras : []).map(p => {
+    const f = p && fab[p.id];
+    if (!f) return p;
+    const out = { ...p };
+    const g = Array.isArray(p.gallery) ? p.gallery : [];
+    if (!g.length || JSON.stringify(g) === JSON.stringify(viejas[p.id] || null)) out.gallery = f.gallery;
+    if (!p.video || p.video === `/media/${f.cat}/${f.id}/video.mp4`) out.video = f.video;
+    return out;
+  });
+  return { ...s, extras, migraciones: [...hechas, 'soul-fotos'] };
+}
+
 // 22/11/2026: el título de fábrica de la historia ya no habla de los socios (si nadie lo cambió en /admin)
 function migrarSinSocios(s) {
   const hechas = Array.isArray(s.migraciones) ? s.migraciones : [];
@@ -411,7 +442,7 @@ function normalizar(s) {
   if (!s || typeof s !== 'object' || !s.store || typeof s.store !== 'object' || !Array.isArray(s.products)) {
     fallar('El contenido no tiene el formato esperado');
   }
-  s = migrarSinSocios(migrarSoul(migrarEnvioParejo(migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s)))))));
+  s = migrarSoulFotos(migrarSinSocios(migrarSoul(migrarEnvioParejo(migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s))))))));
   const st = s.store;
   const logo = obj(st.financingLogo);
   const closing = st.closing && typeof st.closing === 'object' ? st.closing : null;
@@ -596,13 +627,15 @@ function publico() {
   const { closing, financingLogo, ...store } = site.store;
   store.closing = closing.show && closing.title ? { title: closing.title, text: closing.text } : null;
   store.financingLogo = financingLogo.color ? { color: financingLogo.color, icon: financingLogo.icon || financingLogo.color } : null;
-  store.branches = store.branches.map(b => ({ id: b.id, name: b.name, province: b.province, address: b.address, photo: b.photo || '', hours: b.hours || '', phone: b.phone || '' }));
+  const nombreSuc = Object.fromEntries(store.branches.map(b => [b.id, b.name]));
+  store.branches = store.branches.map(b => ({ id: b.id, name: b.name, province: b.province, address: b.address, photo: b.photo || '', photos: b.photos || [], hours: b.hours || '', phone: b.phone || '' }));
+  const story = { ...site.story, team: (site.story.team || []).filter(p => p.show).map(({ show, branch, ...p }) => ({ ...p, branch: nombreSuc[branch] || '' })) };
   const visibles = list => list.filter(p => !p.hidden).map(({ hidden, ...p }) => p);
   return {
     store, products: site.store.phones ? visibles(site.products) : [], extras: visibles(site.extras),
     site: {
       texts: site.texts, footer: site.footer, categories: site.categories, flash: site.flash,
-      shipping: site.shipping, story: site.story,
+      shipping: site.shipping, story,
     },
   };
 }

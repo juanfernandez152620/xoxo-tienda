@@ -762,3 +762,12 @@ section { position: relative; }
 .hv-pago-seguro svg { flex: none; width: 18px; height: 18px; margin-top: 2px; color: #2b4966; }
 /* En el celular el recuadro es una grilla: las cuotas van a lo ancho, debajo del título */
 .hv-promesa-fin .hv-pagos { grid-column: 1 / -1; }
+
+/* Fotos de cada local en la lista de sucursales (23/11/2026) */
+.suc-fotos { display: grid; gap: 8px; margin: -4px -6px 10px; }
+.suc-foto { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 10px; background: var(--bg-2); }
+.suc-mini { display: flex; gap: 6px; flex-wrap: wrap; }
+.suc-mini button { padding: 0; border: 2px solid transparent; border-radius: 8px; background: none; cursor: pointer; line-height: 0; }
+.suc-mini button[aria-pressed="true"] { border-color: var(--accent); }
+.suc-mini img { width: 52px; height: 40px; object-fit: cover; border-radius: 6px; }
+.prov li { align-content: start; }

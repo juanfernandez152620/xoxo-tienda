@@ -118,7 +118,7 @@
           <p class="sec-text">${esc(STORY.foundersText)}</p>
           ${(STORY.stats || []).length ? `<dl class="stats">${STORY.stats.map(x => `<div><dt>${esc(x.l)}</dt><dd>${esc(x.v)}</dd></div>`).join('')}</dl>` : ''}
         </div>
-        <div class="people" data-fade>${f.map(p => `<figure class="person">${retrato(p)}<figcaption><b>${esc(p.name)}</b><span>${esc(p.role)}</span></figcaption></figure>`).join('')}</div>
+        <div class="people" data-fade>${f.map(p => `<figure class="person">${retrato(p)}<figcaption><b>${esc(p.name)}</b><span>${esc([p.role, p.branch].filter(Boolean).join(' · '))}</span></figcaption></figure>`).join('')}</div>
       </section>`;
   }
 
@@ -128,7 +128,7 @@
     return `
       <section class="team wrap">
         ${head('El equipo', STORY.teamTitle, STORY.teamText)}
-        <div class="team-grid">${t.map(p => `<figure class="person" data-fade>${retrato(p)}<figcaption><b>${esc(p.name)}</b><span>${esc(p.role)}</span></figcaption></figure>`).join('')}</div>
+        <div class="team-grid">${t.map(p => `<figure class="person" data-fade>${retrato(p)}<figcaption><b>${esc(p.name)}</b><span>${esc([p.role, p.branch].filter(Boolean).join(' · '))}</span></figcaption></figure>`).join('')}</div>
       </section>`;
   }
 

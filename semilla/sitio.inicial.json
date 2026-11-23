@@ -786,8 +786,12 @@
       "weight": 0,
       "pitch": "Luz LED magnética para grabar con el celular.",
       "details": [],
-      "gallery": [],
-      "video": "/media/contenido/luz-led-magnetica-jl70/video.mp4"
+      "gallery": [
+        "/media/contenido/luz-led-magnetica-jl70/foto-1.webp",
+        "/media/contenido/luz-led-magnetica-jl70/foto-2.webp",
+        "/media/contenido/luz-led-magnetica-jl70/foto-3.webp"
+      ],
+      "video": "/media/contenido/luz-led-magnetica-jl70/video-editado.mp4"
     },
     {
       "id": "luz-led-rgb-jl60",
@@ -802,10 +806,11 @@
       "pitch": "Luz LED RGB: elegí el color de la luz de tus videos.",
       "details": [],
       "gallery": [
-        "/media/productos/luz-led-rgb-jl60-1.png",
-        "/media/productos/luz-led-rgb-jl60-2.png"
+        "/media/contenido/luz-led-rgb-jl60/foto-1.webp",
+        "/media/contenido/luz-led-rgb-jl60/foto-2.webp",
+        "/media/contenido/luz-led-rgb-jl60/foto-3.webp"
       ],
-      "video": "/media/contenido/luz-led-rgb-jl60/video.mp4"
+      "video": "/media/contenido/luz-led-rgb-jl60/video-editado.mp4"
     },
     {
       "id": "luz-led-full-jl80",
@@ -820,10 +825,11 @@
       "pitch": "Luz LED para que tus videos y vivos se vean bien.",
       "details": [],
       "gallery": [
-        "/media/productos/luz-led-full-jl80-1.png",
-        "/media/productos/luz-led-full-jl80-2.png"
+        "/media/contenido/luz-led-full-jl80/foto-1.webp",
+        "/media/contenido/luz-led-full-jl80/foto-2.webp",
+        "/media/contenido/luz-led-full-jl80/foto-3.webp"
       ],
-      "video": "/media/contenido/luz-led-full-jl80/video.mp4"
+      "video": "/media/contenido/luz-led-full-jl80/video-editado.mp4"
     },
     {
       "id": "tripode-soul-j500",
@@ -844,11 +850,12 @@
         "Sujeción con pinza y magnética"
       ],
       "gallery": [
-        "/media/productos/tripode-soul-j500-1.png",
-        "/media/productos/tripode-soul-j500-2.png",
-        "/media/productos/tripode-soul-j500-3.png"
+        "/media/contenido/tripode-soul-j500/foto-1.webp",
+        "/media/contenido/tripode-soul-j500/foto-2.webp",
+        "/media/contenido/tripode-soul-j500/foto-3.webp",
+        "/media/contenido/tripode-soul-j500/foto-4.webp"
       ],
-      "video": "/media/contenido/tripode-soul-j500/video.mp4"
+      "video": "/media/contenido/tripode-soul-j500/video-editado.mp4"
     },
     {
       "id": "soporte-de-mesa-sop-q400",
@@ -862,8 +869,12 @@
       "weight": 0,
       "pitch": "Soporte de mesa para el celular: grabá con las manos libres.",
       "details": [],
-      "gallery": [],
-      "video": "/media/contenido/soporte-de-mesa-sop-q400/video.mp4"
+      "gallery": [
+        "/media/contenido/soporte-de-mesa-sop-q400/foto-1.webp",
+        "/media/contenido/soporte-de-mesa-sop-q400/foto-2.webp",
+        "/media/contenido/soporte-de-mesa-sop-q400/foto-3.webp"
+      ],
+      "video": "/media/contenido/soporte-de-mesa-sop-q400/video-editado.mp4"
     },
     {
       "id": "tripode-automatico-j450",
@@ -877,8 +888,14 @@
       "weight": 0,
       "pitch": "Trípode automático para grabar con el celular.",
       "details": [],
-      "gallery": [],
-      "video": "/media/contenido/tripode-automatico-j450/video.mp4"
+      "gallery": [
+        "/media/contenido/tripode-automatico-j450/foto-1.webp",
+        "/media/contenido/tripode-automatico-j450/foto-2.webp",
+        "/media/contenido/tripode-automatico-j450/foto-3.webp",
+        "/media/contenido/tripode-automatico-j450/foto-4.webp",
+        "/media/contenido/tripode-automatico-j450/foto-5.webp"
+      ],
+      "video": "/media/contenido/tripode-automatico-j450/video-editado.mp4"
     },
     {
       "id": "microfono-corbatero-furry-simple",
@@ -892,8 +909,11 @@
       "weight": 0,
       "pitch": "Un micrófono corbatero con protector furry.",
       "details": [],
-      "gallery": [],
-      "video": "/media/contenido/microfono-corbatero-furry-simple/video.mp4"
+      "gallery": [
+        "/media/contenido/microfono-corbatero-furry-simple/foto-1.webp",
+        "/media/contenido/microfono-corbatero-furry-simple/foto-2.webp"
+      ],
+      "video": "/media/contenido/microfono-corbatero-furry-simple/video-editado.mp4"
     },
     {
       "id": "microfono-corbatero-furry-dual",
@@ -907,8 +927,13 @@
       "weight": 0,
       "pitch": "Dos micrófonos corbateros con protector furry: para grabar de a dos.",
       "details": [],
-      "gallery": [],
-      "video": "/media/contenido/microfono-corbatero-furry-dual/video.mp4"
+      "gallery": [
+        "/media/contenido/microfono-corbatero-furry-dual/foto-1.webp",
+        "/media/contenido/microfono-corbatero-furry-dual/foto-2.webp",
+        "/media/contenido/microfono-corbatero-furry-dual/foto-3.webp",
+        "/media/contenido/microfono-corbatero-furry-dual/foto-4.webp"
+      ],
+      "video": "/media/contenido/microfono-corbatero-furry-dual/video-editado.mp4"
     },
     {
       "id": "microfono-corbatero-dual",
@@ -922,8 +947,11 @@
       "weight": 0,
       "pitch": "Dos micrófonos corbateros para entrevistas y videos de a dos.",
       "details": [],
-      "gallery": [],
-      "video": "/media/contenido/microfono-corbatero-dual/video.mp4"
+      "gallery": [
+        "/media/contenido/microfono-corbatero-dual/foto-1.webp",
+        "/media/contenido/microfono-corbatero-dual/foto-2.webp"
+      ],
+      "video": "/media/contenido/microfono-corbatero-dual/video-editado.mp4"
     },
     {
       "id": "microfono-live-xmic400",
@@ -944,8 +972,13 @@
         "Salida para auriculares",
         "Pedestal de mesa incluido"
       ],
-      "gallery": [],
-      "video": "/media/contenido/microfono-live-xmic400/video.mp4"
+      "gallery": [
+        "/media/contenido/microfono-live-xmic400/foto-1.webp",
+        "/media/contenido/microfono-live-xmic400/foto-2.webp",
+        "/media/contenido/microfono-live-xmic400/foto-3.webp",
+        "/media/contenido/microfono-live-xmic400/foto-4.webp"
+      ],
+      "video": "/media/contenido/microfono-live-xmic400/video-editado.mp4"
     },
     {
       "id": "auriculares-dream-flow-bt350",
@@ -962,8 +995,12 @@
         "Alcance de 18 m",
         "Batería de 300 mAh"
       ],
-      "gallery": [],
-      "video": "/media/audio/auriculares-dream-flow-bt350/video.mp4"
+      "gallery": [
+        "/media/audio/auriculares-dream-flow-bt350/foto-1.webp",
+        "/media/audio/auriculares-dream-flow-bt350/foto-2.webp",
+        "/media/audio/auriculares-dream-flow-bt350/foto-3.webp"
+      ],
+      "video": "/media/audio/auriculares-dream-flow-bt350/video-editado.mp4"
     },
     {
       "id": "auriculares-neox-bt250",
@@ -980,8 +1017,13 @@
         "Alcance de 12 m",
         "Batería de 200 mAh"
       ],
-      "gallery": [],
-      "video": "/media/audio/auriculares-neox-bt250/video.mp4"
+      "gallery": [
+        "/media/audio/auriculares-neox-bt250/foto-1.webp",
+        "/media/audio/auriculares-neox-bt250/foto-2.webp",
+        "/media/audio/auriculares-neox-bt250/foto-3.webp",
+        "/media/audio/auriculares-neox-bt250/foto-4.webp"
+      ],
+      "video": "/media/audio/auriculares-neox-bt250/video-editado.mp4"
     },
     {
       "id": "auriculares-tws-40",
@@ -995,8 +1037,14 @@
       "weight": 0,
       "pitch": "Auriculares inalámbricos con estuche de carga.",
       "details": [],
-      "gallery": [],
-      "video": "/media/audio/auriculares-tws-40/video.mp4"
+      "gallery": [
+        "/media/audio/auriculares-tws-40/foto-1.webp",
+        "/media/audio/auriculares-tws-40/foto-2.webp",
+        "/media/audio/auriculares-tws-40/foto-3.webp",
+        "/media/audio/auriculares-tws-40/foto-4.webp",
+        "/media/audio/auriculares-tws-40/foto-5.webp"
+      ],
+      "video": "/media/audio/auriculares-tws-40/video-editado.mp4"
     },
     {
       "id": "auriculares-tws-30",
@@ -1010,8 +1058,13 @@
       "weight": 0,
       "pitch": "Auriculares inalámbricos con estuche de carga.",
       "details": [],
-      "gallery": [],
-      "video": "/media/audio/auriculares-tws-30/video.mp4"
+      "gallery": [
+        "/media/audio/auriculares-tws-30/foto-1.webp",
+        "/media/audio/auriculares-tws-30/foto-2.webp",
+        "/media/audio/auriculares-tws-30/foto-3.webp",
+        "/media/audio/auriculares-tws-30/foto-4.webp"
+      ],
+      "video": "/media/audio/auriculares-tws-30/video-editado.mp4"
     },
     {
       "id": "auriculares-tws-1300",
@@ -1025,8 +1078,14 @@
       "weight": 0,
       "pitch": "Auriculares inalámbricos con estuche de carga.",
       "details": [],
-      "gallery": [],
-      "video": "/media/audio/auriculares-tws-1300/video.mp4"
+      "gallery": [
+        "/media/audio/auriculares-tws-1300/foto-1.webp",
+        "/media/audio/auriculares-tws-1300/foto-2.webp",
+        "/media/audio/auriculares-tws-1300/foto-3.webp",
+        "/media/audio/auriculares-tws-1300/foto-4.webp",
+        "/media/audio/auriculares-tws-1300/foto-5.webp"
+      ],
+      "video": "/media/audio/auriculares-tws-1300/video-editado.mp4"
     },
     {
       "id": "auriculares-tws-1400",
@@ -1040,8 +1099,13 @@
       "weight": 0,
       "pitch": "Auriculares inalámbricos con estuche de carga.",
       "details": [],
-      "gallery": [],
-      "video": "/media/audio/auriculares-tws-1400/video.mp4"
+      "gallery": [
+        "/media/audio/auriculares-tws-1400/foto-1.webp",
+        "/media/audio/auriculares-tws-1400/foto-2.webp",
+        "/media/audio/auriculares-tws-1400/foto-3.webp",
+        "/media/audio/auriculares-tws-1400/foto-4.webp"
+      ],
+      "video": "/media/audio/auriculares-tws-1400/video-editado.mp4"
     },
     {
       "id": "parlante-thunderbolt-xl600",
@@ -1055,8 +1119,12 @@
       "weight": 0,
       "pitch": "Parlante SOUL para que la música llegue a toda la juntada.",
       "details": [],
-      "gallery": [],
-      "video": "/media/audio/parlante-thunderbolt-xl600/video.mp4",
+      "gallery": [
+        "/media/audio/parlante-thunderbolt-xl600/foto-1.webp",
+        "/media/audio/parlante-thunderbolt-xl600/foto-2.webp",
+        "/media/audio/parlante-thunderbolt-xl600/foto-3.webp"
+      ],
+      "video": "/media/audio/parlante-thunderbolt-xl600/video-editado.mp4",
       "hidden": true
     },
     {
@@ -1071,8 +1139,12 @@
       "weight": 0,
       "pitch": "Parlante SOUL para llevar la música a donde vayas.",
       "details": [],
-      "gallery": [],
-      "video": "/media/audio/parlante-evo-sound-xl550/video.mp4",
+      "gallery": [
+        "/media/audio/parlante-evo-sound-xl550/foto-1.webp",
+        "/media/audio/parlante-evo-sound-xl550/foto-2.webp",
+        "/media/audio/parlante-evo-sound-xl550/foto-3.webp"
+      ],
+      "video": "/media/audio/parlante-evo-sound-xl550/video-editado.mp4",
       "hidden": true
     },
     {
@@ -1087,8 +1159,12 @@
       "weight": 0,
       "pitch": "Parlante SOUL para llevar la música a donde vayas.",
       "details": [],
-      "gallery": [],
-      "video": "/media/audio/parlante-boxbeat-xl50/video.mp4",
+      "gallery": [
+        "/media/audio/parlante-boxbeat-xl50/foto-1.webp",
+        "/media/audio/parlante-boxbeat-xl50/foto-2.webp",
+        "/media/audio/parlante-boxbeat-xl50/foto-3.webp"
+      ],
+      "video": "/media/audio/parlante-boxbeat-xl50/video-editado.mp4",
       "hidden": true
     },
     {
@@ -1103,8 +1179,12 @@
       "weight": 0,
       "pitch": "Parlante SOUL para que la música llegue a toda la juntada.",
       "details": [],
-      "gallery": [],
-      "video": "/media/audio/parlante-soundtech-xl900/video.mp4"
+      "gallery": [
+        "/media/audio/parlante-soundtech-xl900/foto-1.webp",
+        "/media/audio/parlante-soundtech-xl900/foto-2.webp",
+        "/media/audio/parlante-soundtech-xl900/foto-3.webp"
+      ],
+      "video": "/media/audio/parlante-soundtech-xl900/video-editado.mp4"
     },
     {
       "id": "microfono-pop-m100",
@@ -1118,8 +1198,12 @@
       "weight": 0,
       "pitch": "Micrófono SOUL Pop M100.",
       "details": [],
-      "gallery": [],
-      "video": "/media/audio/microfono-pop-m100/video.mp4"
+      "gallery": [
+        "/media/audio/microfono-pop-m100/foto-1.webp",
+        "/media/audio/microfono-pop-m100/foto-2.webp",
+        "/media/audio/microfono-pop-m100/foto-3.webp"
+      ],
+      "video": "/media/audio/microfono-pop-m100/video-editado.mp4"
     }
   ],
   "categories": [
