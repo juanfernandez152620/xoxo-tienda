@@ -130,23 +130,46 @@
       </div>`;
   }
 
+  /* ---------- Stock (/admin → Stock): window.STOCK trae solo los productos con pocas unidades o sin stock ---------- */
+  const stockDe = p => (p && (window.STOCK || {})[p.id]) || null;
+  // Sin stock, o la última unidad la está pagando otra persona: no se puede comprar, se consulta por WhatsApp
+  const sinStock = p => { const s = stockDe(p); return Boolean(s && (s.agotado || s.reservado)); };
+  function stockTagHTML(p) {
+    const s = stockDe(p);
+    if (!s) return '';
+    return s.agotado ? '<span class="x-stock x-stock-out">Sin stock</span>'
+      : s.reservado ? '<span class="x-stock x-stock-out">Reservado</span>'
+      : `<span class="x-stock">${s.quedan === 1 ? '¡Queda 1!' : `¡Quedan ${s.quedan}!`}</span>`;
+  }
+  function stockNoteHTML(p) {
+    const s = stockDe(p);
+    if (!s) return '';
+    if (s.agotado) return '<p class="x-stock-note x-stock-out">Sin stock por ahora. Escribinos y te avisamos cuando vuelva a entrar.</p>';
+    if (s.reservado) return '<p class="x-stock-note x-stock-out">Alguien está pagando la última unidad. Si no completa el pago, se libera en unos minutos.</p>';
+    return `<p class="x-stock-note">${s.quedan === 1 ? '¡Queda 1 sola!' : `¡Quedan ${s.quedan}!`}</p>`;
+  }
+
   function buyMessage(p) {
-    const lines = ['¡Hola! Vi este producto en la web y me interesa:', `🛒 ${p.name}`, `💵 ${money(p.price)}`, `💳 ${cuotasText(p)}`, '¿Sigue disponible?'];
+    const lines = ['¡Hola! Vi este producto en la web y me interesa:', `🛒 ${p.name}`, `💵 ${money(p.price)}`, `💳 ${cuotasText(p)}`,
+      sinStock(p) ? 'Figura sin stock. ¿Cuándo vuelve a entrar?' : '¿Sigue disponible?'];
     if (isWeb) lines.push(productUrl(p));
     return lines.join('\n');
   }
 
   const waLink = (p, text, cls = '') => `<a class="x-btn ${cls} js-wa" target="_blank" rel="noopener" data-x="${esc(p.id)}" href="${esc(window.TB_WA(buyMessage(p)))}">${ICON.wa}${text}</a>`;
-  const buyButton = (p, text) => `<button class="x-btn js-x-buy" type="button" data-x="${esc(p.id)}">${ICON.cart}${text}</button>`;
+  // Sin stock, el botón de comprar (en todos los diseños) pasa a ser la consulta por WhatsApp
+  const buyButton = (p, text) => (sinStock(p) ? waLink(p, 'Sin stock · Consultar', 'x-btn-out')
+    : `<button class="x-btn js-x-buy" type="button" data-x="${esc(p.id)}">${ICON.cart}${text}</button>`);
 
   /* ---------- Tarjetas ---------- */
   function cardHTML(p) {
     const off = percentOff(p);
     return `
-      <article class="xcard">
+      <article class="xcard${sinStock(p) ? ' xcard-out' : ''}">
         <a class="xcard-media js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}" aria-label="Ver ${esc(p.name)}">
           ${coverHTML(p, PREVIEW)}${previewHTML(p)}
           ${off ? (FL ? `<span class="x-off fl-only">-${off}%</span>` : `<span class="x-off">${off}% OFF</span>`) : ''}
+          ${stockTagHTML(p)}
         </a>
         <div class="xcard-info">
           <p class="x-kicker">${esc(kicker(p))}</p>
@@ -232,6 +255,7 @@
         <p class="x-kicker">${esc(kicker(p))}</p>
         <h2 class="ficha-name" id="ficha-title">${esc(p.name)}</h2>
         ${priceHTML(p)}
+        ${stockNoteHTML(p)}
         ${FL ? `<div class="ficha-off ficha-flash fl-only"><span class="x-off">-${off}% flash</span>
             <span class="ficha-off-txt">Termina en <b class="js-flash-reloj">${FL.reloj(FL.restante())}</b></span>
             <span class="ficha-off-cupon">Con el cupón <b>${esc(FL.cupon())}</b></span></div>`
@@ -240,7 +264,8 @@
         ${p.pitch ? `<p class="ficha-pitch">${esc(p.pitch)}</p>` : ''}
         ${(p.details || []).length ? `<ul class="ficha-details">${p.details.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : ''}
         <div class="ficha-ctas">
-          ${PAY ? `<button class="x-btn js-x-ahora" type="button" data-x="${esc(p.id)}">Comprar ahora</button><button class="x-btn ghost js-x-buy" type="button" data-x="${esc(p.id)}">${ICON.cart}Agregar al carrito</button>${waLink(p, 'Consultar por WhatsApp', 'ghost')}` : waLink(p, 'Pedilo por WhatsApp')}
+          ${sinStock(p) ? waLink(p, stockDe(p).agotado ? 'Avisame cuando vuelva' : 'Consultar por WhatsApp')
+            : PAY ? `<button class="x-btn js-x-ahora" type="button" data-x="${esc(p.id)}">Comprar ahora</button><button class="x-btn ghost js-x-buy" type="button" data-x="${esc(p.id)}">${ICON.cart}Agregar al carrito</button>${waLink(p, 'Consultar por WhatsApp', 'ghost')}` : waLink(p, 'Pedilo por WhatsApp')}
           <button class="x-btn ghost js-x-share" type="button">${ICON.share}Compartir</button>
         </div>
         <p class="ficha-note">¿Tenés dudas de medidas o compatibilidad? Preguntanos por WhatsApp.</p>
@@ -450,5 +475,6 @@
     cuotasDe,
     title: STORE.extras.title, short: STORE.extras.short, groups, cats: CATS, filter, byCat, gridHTML, shelfHTML,
     cardHTML, priceHTML, coverHTML, videoHTML, previewHTML: p => previewHTML(p, true), buyButton, waLink, icon: key => ICON[key], open, close,
+    stockDe, sinStock, stockTagHTML, stockNoteHTML,
   };
 })();

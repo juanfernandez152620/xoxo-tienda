@@ -157,9 +157,9 @@
         ${head('Mirá cómo funcionan', o.title || 'Los videos de cada producto')}
         <div class="sx-reels">
           ${list.map(p => `
-            <article class="sx-reel">
+            <article class="sx-reel${V.sinStock(p) ? ' x-out' : ''}">
               <a class="sx-reel-media js-ficha" href="#x=${esc(p.id)}" data-x="${esc(p.id)}" aria-label="Ver ${esc(p.name)}">
-                ${V.coverHTML(p)}${V.previewHTML(p)}
+                ${V.coverHTML(p)}${V.previewHTML(p)}${V.stockTagHTML(p)}
               </a>
               <div class="sx-reel-info">
                 <p class="sx-kicker">${esc((dest.length && tipo(p)) || p.group || (c && c.name) || '')}${p.brand ? ` · ${esc(p.brand)}` : ''}</p>

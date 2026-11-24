@@ -52,6 +52,38 @@
         : '<p class="sp-muted">Cuando lo despachemos vas a ver acá el número de seguimiento (y te lo mandamos por mail).</p>'}</div>`;
   }
 
+  // Sin pagar todavía: si se puede, el botón para pagarlo ahora (el servidor arma un link nuevo de la pasarela)
+  function sinPagar(p) {
+    const tienda = esc(document.querySelector('.sp-volver')?.getAttribute('href') || '/');
+    if (p.pagar === 'en-curso') return '<div class="sp-box"><h2>Estamos esperando tu pago</h2><p>Ya empezaste a pagar con Mercado Pago (por ejemplo, en efectivo). Apenas se acredite, tu pedido pasa a Pagado y te avisamos por mail.</p></div>';
+    if (p.pagar === 'vencido') return `<div class="sp-box"><h2>Este pedido no se pagó</h2><p>Pasaron más de 3 días y los precios pueden haber cambiado. Si todavía lo querés, armalo de nuevo desde la tienda.</p><a class="sp-btn" href="${tienda}">Ir a la tienda</a></div>`;
+    if (p.pagar !== 'si') return '<div class="sp-box"><h2>Todavía no recibimos el pago</h2><p>Apenas se acredite, tu pedido pasa a Pagado y te avisamos por mail.</p></div>';
+    const fallo = p.pago === 'rejected' || p.pago === 'error';
+    return `<div class="sp-box sp-pagar"><h2>${fallo ? 'El pago no se completó' : 'Todavía no recibimos el pago'}</h2>
+      <p>${fallo ? `No se cobró nada. Podés intentarlo de nuevo con ${esc(p.medio)}.` : `Si no llegaste a terminar el pago, podés hacerlo ahora con ${esc(p.medio)}.`} Apenas se acredite, tu pedido pasa a Pagado y te avisamos por mail.</p>
+      <button class="sp-btn" type="button" data-pagar>Pagar ${money(p.total)}</button>
+      <p class="sp-error" role="alert" hidden></p></div>`;
+  }
+
+  async function pagar(btn, p, email) {
+    const err = btn.nextElementSibling;
+    const antes = btn.textContent;
+    err.hidden = true;
+    btn.disabled = true;
+    btn.textContent = `Conectando con ${p.medio}…`;
+    try {
+      const res = await fetch('/api/seguimiento/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pedido: p.ref, email }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error || 'No pudimos iniciar el pago. Probá de nuevo.');
+      location.href = data.url; // a Mercado Pago (o GO cuotas)
+    } catch (e) {
+      err.textContent = e instanceof TypeError ? 'No hay conexión. Probá de nuevo.' : e.message;
+      err.hidden = false;
+      btn.disabled = false;
+      btn.textContent = antes;
+    }
+  }
+
   function mostrar(p, email) {
     const seg = p.seguimiento;
     const cancelado = seg.estado === 'cancelado';
@@ -66,7 +98,7 @@
       <p class="sp-hola">Hola${p.nombre ? `, ${esc(p.nombre)}` : ''}. Compraste el ${esc(new Date(p.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }))}.</p>
       ${p.demo ? '<p class="sp-demo">PRUEBA: pago simulado, no se cobró nada.</p>' : ''}
       ${cancelado ? `<div class="sp-box mal"><h2>El pedido se canceló</h2>${motivo ? `<p>${esc(motivo)}</p>` : ''}<p>Si tenés dudas, escribinos por WhatsApp.</p></div>`
-        : p.pago !== 'approved' ? '<div class="sp-box"><h2>Todavía no recibimos el pago</h2><p>Apenas se acredite, tu pedido pasa a Pagado y te avisamos por mail.</p></div>'
+        : p.pago !== 'approved' ? sinPagar(p)
         : pasos(p)}
       ${!cancelado ? entrega(p) : ''}
       <div class="sp-box"><h2>Tu compra</h2>
@@ -81,6 +113,8 @@
         <a class="sp-btn sp-btn-wa" href="${esc(wa)}" target="_blank" rel="noopener">${ICON.wa}Consultar por WhatsApp</a>
         <button class="sp-btn sp-btn-2" type="button" data-otro>Buscar otro pedido</button>
       </div>`;
+    const btnPagar = res.querySelector('[data-pagar]');
+    if (btnPagar) btnPagar.addEventListener('click', () => pagar(btnPagar, p, email));
     res.hidden = false;
     $('.sp-buscar').hidden = true;
     res.querySelector('[data-otro]').addEventListener('click', () => {

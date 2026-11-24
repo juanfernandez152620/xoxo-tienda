@@ -313,3 +313,12 @@ html:root { --x-stage: #ffffff; --x-shadow: none; }
 .fc-lista .fc-dest span { color: var(--x-ink); }
 .fc-lista .fc-dest b { font-size: 18px; }
 .fc-nota { margin: 0; color: var(--x-muted); font-size: 13px; line-height: 1.4; }
+
+/* ---------- Stock (/admin → Stock): "¡Quedan 2!" y "Sin stock" (24/11/2026) ---------- */
+.x-stock { position: absolute; top: 10px; right: 10px; z-index: 2; padding: 3px 9px; border-radius: 999px; background: #fff3c4; color: #7a4b00; font-size: 12px; font-weight: 800; pointer-events: none; }
+.x-stock.x-stock-out { background: rgba(0, 0, 0, .72); color: #fff; }
+.xcard-out .xcard-media img, .xcard-out .xcard-media .x-art { opacity: .55; filter: grayscale(.6); }
+.x-stock-note { margin: 2px 0 0; color: #9a5b00; font-size: 14px; font-weight: 700; }
+.x-stock-note.x-stock-out { color: var(--x-muted); font-weight: 600; }
+.x-btn.x-btn-out { background: transparent; color: var(--x-ink); box-shadow: inset 0 0 0 1.5px var(--x-line); }
+.x-out .pr-media img, .x-out .sx-reel-media img { opacity: .55; filter: grayscale(.6); }

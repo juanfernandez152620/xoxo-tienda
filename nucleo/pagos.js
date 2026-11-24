@@ -12,6 +12,7 @@ const { ruta, escribir, leerJson, aJson } = require('./archivos');
 const sitio = require('./sitio');
 const envios = require('./envios');
 const correo = require('./correo');
+const stock = require('./stock');
 const flash = require('../publico/shared/flash');
 const calcEnvios = require('../publico/shared/envios');
 const { diaLocal } = require('./archivos');
@@ -109,7 +110,8 @@ function validar(body) {
 }
 
 /* ---------- Mercado Pago (Checkout Pro) ---------- */
-async function mpCrear(order, lines) {
+// clave: la de idempotencia de Mercado Pago (al volver a pagar un pedido va otra, así arma un link nuevo)
+async function mpCrear(order, lines, clave = order.id) {
   const [first, ...rest] = order.buyer.name.split(' ');
   const foto = p => (p.gallery && p.gallery[0] && HTTPS ? { picture_url: sitio.absoluta(p.gallery[0]) } : {});
   // Con un código de descuento va un solo renglón con el total (Mercado Pago no acepta precios negativos)
@@ -151,7 +153,7 @@ async function mpCrear(order, lines) {
   }
   const res = await fetch('https://api.mercadopago.com/checkout/preferences', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json', 'X-Idempotency-Key': order.id },
+    headers: { Authorization: `Bearer ${MP_TOKEN}`, 'Content-Type': 'application/json', 'X-Idempotency-Key': clave },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
@@ -357,12 +359,59 @@ function seguimientoPublico(o) {
     direccion: retiro ? '' : [d.address, d.city, o.envio.provincia, d.cp && `CP ${d.cp}`].filter(Boolean).join(', '),
     seguimiento: { estado: seg.estado || '', historial: (seg.historial || []).map(h => ({ paso: h.paso, at: h.at, empresa: h.empresa, numero: h.numero, motivo: h.motivo })), empresa: seg.empresa || '', numero: seg.numero || '' },
     demo: Boolean(o.gateway && o.gateway.demo),
+    // Si se puede pagar desde el seguimiento: 'si', 'en-curso' (un pago esperando acreditarse), 'vencido' o ''
+    pagar: comoPagar(o),
   };
 }
 function consultarSeguimiento(q) {
   const o = porRefYEmail(q.pedido, q.email);
   if (!o) return [404, { error: 'No encontramos una compra con ese código y ese email. Revisá los dos (el código está en el mail de la compra).' }];
   return [200, seguimientoPublico(o)];
+}
+
+/* ---------- Pagar un pedido que quedó sin pagar (desde /seguimiento o Mi cuenta → Mis compras) ---------- */
+// Se puede mientras no esté pago ni cancelado, no haya un pago de Mercado Pago esperando acreditarse (efectivo en
+// Pago Fácil o Rapipago: pagar otra vez sería cobrarle dos veces) y no tenga más de VENCE_DIAS días (después los
+// precios pueden haber cambiado y conviene armarlo de nuevo)
+const VENCE_DIAS = 3;
+function comoPagar(o) {
+  if (['approved', 'review'].includes(o.status) || (o.seguimiento && o.seguimiento.estado === 'cancelado')) return '';
+  const g = o.gateway || {};
+  if (o.method === 'mercadopago' && ['pending', 'in_process', 'authorized'].includes(g.gatewayStatus)) return 'en-curso';
+  if (Date.now() - Date.parse(o.createdAt) > VENCE_DIAS * 864e5) return 'vencido';
+  return 'si';
+}
+async function pagarDeNuevo(o) {
+  const como = comoPagar(o);
+  if (!como) return [409, { error: 'Este pedido ya está pago o se canceló.' }];
+  if (como === 'en-curso') return [409, { error: 'Ya hay un pago de este pedido esperando acreditarse. Si pagaste en efectivo, puede tardar hasta 2 días hábiles.' }];
+  if (como === 'vencido') return [409, { error: `Este pedido tiene más de ${VENCE_DIAS} días y los precios pueden haber cambiado. Armalo de nuevo desde la tienda.` }];
+  const medio = METHODS[o.method] ? METHODS[o.method].name : o.method;
+  const state = estadoMedio(o.method);
+  if (!state.enabled) return [503, { error: `El pago con ${medio} no está disponible en este momento. Escribinos por WhatsApp y te ayudamos.` }];
+  // Los productos con el precio del pedido (no el de hoy): el total tiene que dar lo mismo que cuando lo armó
+  const items = Array.isArray(o.items) && o.items.length ? o.items : [{ id: o.product.id, name: o.product.name, n: 1, price: o.productAmount ?? o.amount }];
+  const falta = stock.alcanza(items.map(it => ({ id: it.id, n: it.n, nombre: it.name })), leerPedidos().filter(x => x.id !== o.id));
+  if (falta) return [409, { error: falta }];
+  const site = sitio.cargar();
+  const catalogo = [...site.products, ...site.extras];
+  const lines = items.map(it => ({ p: { ...(catalogo.find(p => p.id === it.id) || { id: it.id, name: it.name }), price: it.price }, n: it.n }));
+  try {
+    const result = state.demo ? demoCrear(o) : o.method === 'mercadopago' ? await mpCrear(o, lines, `${o.id}-${Date.now()}`) : await gcCrear(o);
+    // intentoAt: desde cuándo vuelve a reservar el stock mientras paga (nucleo/stock.js)
+    actualizar(o.id, { status: 'pending', intentoAt: new Date().toISOString(), gateway: { ...(o.gateway || {}), ...result.gateway } });
+    console.log(`[pedido ${o.ref}] vuelve a pagar con ${medio}`);
+    return [200, { url: result.url }];
+  } catch (err) {
+    console.error(`[pedido ${o.ref}] volver a pagar:`, err.message);
+    return [err.status || 500, { error: `No pudimos conectar con ${medio}. Probá de nuevo en un rato o escribinos por WhatsApp.` }];
+  }
+}
+// Desde /seguimiento: con el código y el email de la compra, como la consulta
+function pagarPorSeguimiento(body = {}) {
+  const o = porRefYEmail(body.pedido, body.email);
+  if (!o) return [404, { error: 'No encontramos esa compra. Volvé a buscarla.' }];
+  return pagarDeNuevo(o);
 }
 
 /* ---------- Códigos de descuento propios (/admin → Tienda y textos) ---------- */
@@ -409,6 +458,9 @@ async function crear(body, extra = {}) {
     const ya = lines.find(l => l.p === p);
     if (ya) ya.n = Math.min(10, ya.n + n); else lines.push({ p, n });
   }
+  // Stock (/admin → Stock): que alcance lo que queda, contando lo que otros están pagando en este momento
+  const falta = stock.alcanza(lines.map(l => ({ id: l.p.id, n: l.n, nombre: fullName(l.p) })), leerPedidos());
+  if (falta) return [409, { error: falta }];
   // Cuotas: Mercado Pago, hasta las que permitan todos; GO cuotas, solo si todos aceptan débito
   if (method === 'gocuotas' && lines.some(l => l.p.debito === false)) {
     const no = lines.find(l => l.p.debito === false).p;
@@ -613,4 +665,5 @@ module.exports = {
   estadoAdmin, probar, linkPrueba,
   METHODS, activo, configPublica, leerPedidos, crear, estado, avisoMercadoPago, avisoGoCuotas, demo, lineaArranque, consultarCodigo,
   PASOS, EMPRESAS, seguir, anotar, porRefYEmail, seguimientoPublico, consultarSeguimiento, buscarPedido: buscar,
+  pagarDeNuevo, pagarPorSeguimiento,
 };

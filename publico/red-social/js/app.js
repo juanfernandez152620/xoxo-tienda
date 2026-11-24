@@ -1102,9 +1102,9 @@
     const off = FL ? FL.cfg.percent : 0;
     const ver = `href="#x=${esc(p.id)}" data-x="${esc(p.id)}"`;
     return `
-      <article class="pr-card${mini ? ' pr-card-mini' : ''}" data-g="${esc(p.group || '')}">
+      <article class="pr-card${mini ? ' pr-card-mini' : ''}${V.sinStock(p) ? ' x-out' : ''}" data-g="${esc(p.group || '')}">
         <a class="pr-media x-prev-host js-ficha" ${ver} aria-label="Ver ${esc(p.name)}">
-          ${V.coverHTML(p, false)}${V.previewHTML(p)}
+          ${V.coverHTML(p, false)}${V.previewHTML(p)}${V.stockTagHTML(p)}
           ${tipo ? `<span class="pr-tipo">${esc(tipo)}</span>` : ''}
           ${off ? `<span class="pr-off fl-only"><b>-${off}%</b><small>off</small></span>` : ''}
         </a>

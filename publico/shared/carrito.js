@@ -41,16 +41,22 @@
   const lineas = () => leer().map(x => ({ p: CATALOGO[x.id], n: x.n }));
   const contar = () => leer().reduce((s, x) => s + x.n, 0);
 
+  // Hasta cuántas se pueden llevar: lo que queda en stock (/admin → Stock); 0 = sin stock o reservado
+  const tope = id => {
+    const s = (window.STOCK || {})[id];
+    return !s ? MAX : s.agotado || s.reservado ? 0 : Math.min(MAX, s.quedan);
+  };
+
   function agregar(id, n = 1) {
-    if (!CATALOGO[id]) return;
+    if (!CATALOGO[id] || !tope(id)) return;
     const list = leer();
     const it = list.find(x => x.id === id);
-    if (it) it.n = Math.min(MAX, it.n + n); else list.push({ id, n: Math.min(MAX, n) });
+    if (it) it.n = Math.min(tope(id), it.n + n); else list.push({ id, n: Math.min(tope(id), n) });
     guardar(list);
     if (window.TB_TRACK) window.TB_TRACK('carrito', id);
   }
   function cambiar(id, n) {
-    const list = leer().map(x => (x.id === id ? { ...x, n: Math.min(MAX, Math.max(1, n)) } : x));
+    const list = leer().map(x => (x.id === id ? { ...x, n: Math.max(1, Math.min(MAX, tope(id) || 1, n)) } : x));
     guardar(list);
   }
   const quitar = id => guardar(leer().filter(x => x.id !== id));
@@ -248,10 +254,11 @@
           <div class="cart-info">
             <p class="cart-name">${esc(fullName(l.p))}</p>
             <p class="cart-unit">${money(priceOf(l.p))}${l.n > 1 ? ' c/u' : ''}</p>
+            ${l.n > tope(l.p.id) ? `<p class="cart-unit" style="color:#b45309;font-weight:700">${tope(l.p.id) ? `Quedan ${tope(l.p.id)}: bajá la cantidad para pagar` : 'Sin stock: sacalo para poder pagar'}</p>` : ''}
             <div class="cart-qty" role="group" aria-label="Cantidad de ${esc(fullName(l.p))}">
               <button type="button" data-act="menos" aria-label="Uno menos"${l.n <= 1 ? ' disabled' : ''}>−</button>
               <span aria-live="polite">${l.n}</span>
-              <button type="button" data-act="mas" aria-label="Uno más"${l.n >= MAX ? ' disabled' : ''}>+</button>
+              <button type="button" data-act="mas" aria-label="Uno más"${l.n >= Math.min(MAX, tope(l.p.id)) ? ' disabled' : ''}>+</button>
             </div>
           </div>
           <div class="cart-right">
@@ -269,7 +276,7 @@
         <div><dt>Envío</dt><dd>Lo elegís al pagar</dd></div>
         <div class="cart-total"><dt>Total</dt><dd>${money(t.total)}</dd></div>
       </dl>
-      <button class="cart-pay" type="button" data-act="pagar">Pagar</button>
+      <button class="cart-pay" type="button" data-act="pagar"${ls.some(l => l.n > tope(l.p.id)) ? ' disabled title="Hay productos sin stock en el carrito"' : ''}>Pagar</button>
       <button class="cart-more" type="button" data-act="cerrar">Seguir comprando</button>`;
   }
 

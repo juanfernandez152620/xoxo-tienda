@@ -615,6 +615,7 @@
             <div class="hv-compra" data-reveal style="--i:4">
               <p class="hv-name"><a class="js-ficha" ${ver}>${esc(p.name)}</a></p>
               ${V.priceHTML(p)}
+              ${V.stockNoteHTML(p)}
               ${n ? `<p class="hv-cuotas"><b>${n} cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, n)}</b> con débito ${goImg()}</p>` : ''}
               <p class="hv-cuotas">${cu.credito > 1 ? `<b>${cu.credito} cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, cu.credito)}</b> con crédito` : '<b>En 1 pago</b> con crédito o débito'}</p>
               <div class="hv-btns">${PAY ? V.buyButton(p, 'Comprar') : V.waLink(p, 'Pedilo por WhatsApp')}</div>

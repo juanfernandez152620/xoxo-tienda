@@ -324,6 +324,8 @@
 
   async function abrirPedido(wanted) {
     product = lines[0].p;
+    // Si quedó armado el cartel de un pago anterior (sin formulario), se arma de cero
+    if (root && !root.querySelector('.co-form')) resetPanel();
     if (!root) build();
     lastFocus = document.activeElement;
 
@@ -377,6 +379,9 @@
     root.hidden = true;
     document.documentElement.classList.remove('co-lock');
     if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+    // Al cerrar el cartel del resultado de un pago (tocando afuera o con Esc) se descarta: si no, el próximo
+    // "Pagar" no encontraba el formulario y no abría nada
+    if (root.querySelector('.co-panel[data-result]')) resetPanel();
   }
 
   function fillBuyer() {

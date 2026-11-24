@@ -248,6 +248,15 @@ async function cuentaApi(req, res, url, route) {
       const lista = clientes.compras(c, pagos.leerPedidos()).map(o => ({ id: o.id, ...pagos.seguimientoPublico(o) }));
       return json(res, 200, { compras: lista, confirmado: Boolean(c.confirmado) });
     }
+    // Pagar una compra que quedó sin pagar (Mis compras → Pagar ahora): solo las de esta cuenta
+    if (route === 'POST /api/cuenta/pagar') {
+      if (!limite('pagar', ip, 10, 600)) return json(res, 429, { error: 'Demasiados intentos seguidos. Esperá unos minutos.' });
+      const body = await leerJson(req, 1000);
+      const o = clientes.compras(c, pagos.leerPedidos()).find(x => x.id === String((body && body.id) || ''));
+      if (!o) return json(res, 404, { error: 'No encontramos esa compra en tu cuenta. Recargá la página.' });
+      const [status, data] = await pagos.pagarDeNuevo(o);
+      return json(res, status, data);
+    }
     return json(res, 404, { error: 'No encontrado' });
   } catch (err) {
     if (err.status) return json(res, err.status, { error: err.message });
@@ -321,6 +330,12 @@ const server = http.createServer(async (req, res) => {
     if (route === 'GET /api/seguimiento') {
       if (!limite('seguimiento', ipDe(req), 40, 600)) return json(res, 429, { error: 'Demasiadas consultas seguidas. Esperá unos minutos.' });
       const [status, data] = pagos.consultarSeguimiento({ pedido: url.searchParams.get('pedido'), email: url.searchParams.get('email') });
+      return json(res, status, data);
+    }
+    // Pagar un pedido que quedó sin pagar (con el código y el email, como la consulta)
+    if (route === 'POST /api/seguimiento/pagar') {
+      if (!limite('pagar', ipDe(req), 10, 600)) return json(res, 429, { error: 'Demasiados intentos seguidos. Esperá unos minutos.' });
+      const [status, data] = await pagos.pagarPorSeguimiento(await leerJson(req, 2000));
       return json(res, status, data);
     }
     const pdfId = get && p.match(/^\/api\/pedidos\/([a-f0-9]{10})\/comprobante\.pdf$/);

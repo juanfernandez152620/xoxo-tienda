@@ -98,7 +98,9 @@
           <div class="cu-compra-head"><b>Pedido #${esc(p.ref)}</b><span class="sp-chip${p.seguimiento.estado === 'cancelado' ? ' mal' : ''}">${esc(est)}</span>
             <span class="sp-muted">${esc(new Date(p.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }))}</span><b class="cu-total">${money(p.total)}</b></div>
           <p>${p.items.map(x => `${x.n > 1 ? `${x.n} × ` : ''}${esc(x.name)}`).join(', ')}</p>
+          ${p.pagar === 'si' ? `<p class="sp-muted">${p.pago === 'rejected' || p.pago === 'error' ? 'El pago no se completó y no se cobró nada.' : 'Todavía no recibimos el pago.'} Si no llegaste a terminarlo, podés pagarlo ahora con ${esc(p.medio)}.</p>` : ''}
           <div class="sp-acciones">
+            ${p.pagar === 'si' ? `<button class="sp-btn" type="button" data-pagar="${esc(p.id)}">Pagar ${money(p.total)}</button>` : ''}
             <a class="sp-btn sp-btn-2" href="/seguimiento?${new URLSearchParams({ pedido: p.ref, email: c.email })}">Ver el seguimiento</a>
             ${p.pago === 'approved' ? `<a class="sp-btn" href="/api/pedidos/${encodeURIComponent(p.id)}/comprobante.pdf" target="_blank" rel="noopener">Comprobante (PDF)</a>` : ''}
           </div></article>`;
@@ -108,8 +110,18 @@
 
   /* ---------- Eventos ---------- */
   main.addEventListener('click', async e => {
-    const b = e.target.closest('[data-modo], [data-seccion], [data-salir], [data-reenviar]');
+    const b = e.target.closest('[data-modo], [data-seccion], [data-salir], [data-reenviar], [data-pagar]');
     if (!b) return;
+    // Pagar una compra que quedó sin pagar: el servidor arma un link nuevo de la pasarela
+    if (b.dataset.pagar) {
+      b.disabled = true;
+      b.textContent = 'Conectando…';
+      try {
+        const { url } = await api('/pagar', { id: b.dataset.pagar });
+        location.href = url;
+      } catch (err) { decir(err.message, true); vistaCuenta('compras'); }
+      return;
+    }
     if (b.dataset.modo) { decir(''); return vistaIngreso(b.dataset.modo); }
     if (b.dataset.seccion) return vistaCuenta(b.dataset.seccion);
     if (b.hasAttribute('data-salir')) { await api('/salir', {}); estado.cliente = null; decir('Saliste de tu cuenta.'); return vistaIngreso(); }

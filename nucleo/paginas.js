@@ -7,6 +7,7 @@ const path = require('path');
 const { PUBLICO, PLANTILLAS } = require('./entorno');
 const sitio = require('./sitio');
 const pagos = require('./pagos');
+const stock = require('./stock');
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Datos dentro de un <script>: sin "<", ">" ni "&" que puedan cerrar la etiqueta
@@ -56,6 +57,7 @@ function datos(pago, cat, diseno) {
     window.PRODUCTS = ${js(d.products)};
     window.EXTRAS = ${js(d.extras)};
     window.SITE = ${js(d.site)};
+    window.STOCK = ${js(stock.publico(pagos.leerPedidos()))};
     window.CATEGORIA = ${js(cat || '')};${pago ? "\n    window.TB_MODE = 'pago';" : ''}</script>\n`;
 }
 

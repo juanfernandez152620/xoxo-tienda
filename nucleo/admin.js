@@ -15,6 +15,7 @@ const socio = require('./socio');
 const chat = require('./chat');
 const ia = require('./ia');
 const correo = require('./correo');
+const stock = require('./stock');
 
 const SUBIDAS = path.join(DATOS, 'subidas');
 const MAX_FOTO = 8 * 1048576;
@@ -184,6 +185,22 @@ async function api(req, res, url, h) {
       const [status, data] = pagos.anotar(body.id, body.nota);
       return h.json(status, data);
     }
+
+    // Stock (24/11/2026): cada producto con cuántas quedan, y cargar lo que hay para vender
+    case 'GET /stock': {
+      const site = sitio.cargar();
+      const catalogo = [...(site.store.phones ? site.products : []), ...site.extras];
+      return h.json(200, stock.admin(catalogo, pagos.leerPedidos()));
+    }
+    case 'POST /stock': {
+      const body = await h.leerJson(2000);
+      const site = sitio.cargar();
+      const p = [...site.products, ...site.extras].find(x => x.id === String(body.id || ''));
+      if (!p) throw new Problema('No encontré ese producto. Recargá la página.');
+      return h.json(200, stock.cargar({ id: p.id, cantidad: body.cantidad, nombre: p.name }, pagos.leerPedidos()));
+    }
+    case 'POST /stock/aviso':
+      return h.json(200, stock.configurar(await h.leerJson(500)));
 
     case 'GET /clientes':
       return h.json(200, { clientes: require('./clientes').lista() });

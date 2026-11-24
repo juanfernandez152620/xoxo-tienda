@@ -142,7 +142,7 @@
   }
 
   /* ---------- Vistas ---------- */
-  const VIEWS = { inicio: viewInicio, sucursales: viewSucursales, equipo: viewEquipo, paginas: viewPaginas, clientes: viewClientes, estadisticas: viewStats, ia: viewChat, pedidos: viewOrders, anuncio: viewAb, productos: viewProducts, accesorios: viewExtras, tienda: viewStore, registro: viewLog, copias: viewBackups, cuenta: viewAccount };
+  const VIEWS = { inicio: viewInicio, sucursales: viewSucursales, equipo: viewEquipo, paginas: viewPaginas, clientes: viewClientes, estadisticas: viewStats, ia: viewChat, pedidos: viewOrders, anuncio: viewAb, productos: viewProducts, accesorios: viewExtras, stock: viewStock, tienda: viewStore, registro: viewLog, copias: viewBackups, cuenta: viewAccount };
   const loading = '<p class="muted">Cargando…</p>';
 
   function render() {
@@ -170,6 +170,7 @@
       if (tab === 'sucursales') { S.reparto = await api('/reparto'); render(); }
       if (tab === 'pedidos' || tab === 'inicio' || tab === 'clientes') { S.orders = await api('/pedidos'); render(); }
       if (tab === 'clientes') { S.clientes = await api('/clientes'); render(); }
+      if (tab === 'stock' || tab === 'inicio') { S.stock = await api('/stock'); render(); }
       if (tab === 'registro') await loadLog();
       if (tab === 'copias') { S.backups = await api('/backups'); render(); }
       if (tab === 'cuenta') { S.server = await api('/servidor'); render(); }
@@ -1426,6 +1427,7 @@
         ${tile('Para retirar', n(cuenta(o => estadoDe(o) === 'listo')), 'Esperan en la sucursal', 'retirar')}
         ${tile('Despachados', n(cuenta(o => estadoDe(o) === 'despachado')), 'En camino', 'despachados')}
       </section>
+      ${stockAviso()}
       <section class="card"><div class="card-head"><h2>Últimas compras</h2></div>
         ${pagos.length ? `<div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Productos</th><th class="num">Total</th><th>Entrega</th></tr></thead><tbody>
           ${pagos.slice(0, 6).map(o => `<tr><td><b>#${esc(o.ref)}</b><span class="sub">${when(o.paidAt || o.createdAt)}</span></td><td>${esc(o.buyer.name)}</td>
@@ -1528,6 +1530,65 @@
   }
 
   // Clientes: las cuentas (con email y contraseña o con Google) y lo que compró cada uno
+  /* ----- Stock (24/11/2026): un número total por producto, sin separar por sucursal ----- */
+  // Lo vendido baja solo con cada pago (y vuelve si se cancela el pedido): acá se carga lo que hay para vender
+  const stockDe = p => (!p.control ? null : p.quedan <= 0 ? (p.reservadas > 0 && p.cantidad - p.vendidas > 0 ? 'reservado' : 'agotado') : p.quedan <= S.stock.aviso ? 'pocas' : 'ok');
+  const STOCK_CHIP = { agotado: '<span class="chip off">Sin stock</span>', reservado: '<span class="chip warn">Reservado</span>', pocas: '<span class="chip warn">Quedan pocas</span>', ok: '' };
+
+  // En Inicio: los productos sin stock o con pocas unidades (nada si está todo bien)
+  function stockAviso() {
+    if (!S.stock) return '';
+    const flojos = S.stock.productos.filter(p => !p.oculto && ['agotado', 'reservado', 'pocas'].includes(stockDe(p)));
+    if (!flojos.length) return '';
+    return `<section class="card"><div class="card-head"><h2>Stock</h2><button class="btn small" type="button" data-tab="stock">Ir a Stock</button></div>
+      <p>${flojos.map(p => `<b>${esc(p.nombre)}</b>: ${p.quedan > 0 ? `quedan ${n(p.quedan)}` : stockDe(p) === 'reservado' ? 'la última está reservada' : 'sin stock'}`).join(' · ')}</p></section>`;
+  }
+
+  function viewStock() {
+    const head = '<div class="page-head"><h1>Stock</h1><button class="btn small" type="button" data-act="reload-stock">Actualizar</button></div>';
+    const st = S.stock;
+    if (!st) return head + loading;
+    const conControl = st.productos.filter(p => p.control);
+    const fila = p => {
+      const e = stockDe(p);
+      return `<tr>
+        <td><div class="row" style="gap:10px;flex-wrap:nowrap">${p.foto ? `<img class="thumb" src="${esc(media(p.foto))}" alt="">` : '<span class="thumb"></span>'}
+          <span><b>${esc(p.nombre)}</b>${p.oculto ? ' <span class="chip off">Oculto</span>' : ''} ${e ? STOCK_CHIP[e] : ''}
+          <span class="sub">${p.control ? `Cargadas ${n(p.cantidad)} el ${when(p.desde)} · vendidas ${n(p.vendidas)}${p.reservadas ? ` · ${n(p.reservadas)} pagando ahora` : ''}` : 'Sin control: se vende sin límite'}</span>
+          ${p.control && p.quedan < 0 ? `<span class="sub" style="color:var(--bad)">Se vendieron ${n(-p.quedan)} de más: revisá el pedido y cargá lo que hay.</span>` : ''}</span></div></td>
+        <td class="num"><b style="font-size:20px">${p.control ? n(Math.max(0, p.quedan)) : '—'}</b></td>
+        <td><div class="row" style="gap:6px;flex-wrap:nowrap">
+          <input class="num-in" type="number" min="0" step="1" inputmode="numeric" data-stock="${esc(p.id)}" value="${p.control ? Math.max(0, p.quedan) : ''}" placeholder="Sin control" aria-label="Hay para vender de ${esc(p.nombre)}" style="max-width:110px">
+          <button class="btn small" type="button" data-act="stock-guardar" data-id="${esc(p.id)}">Guardar</button>
+          ${p.control ? `<button class="btn small" type="button" data-act="stock-sin" data-id="${esc(p.id)}" title="Deja de llevar el stock de este producto">Sin control</button>` : ''}
+        </div></td></tr>`;
+    };
+    const mov = m => m.tipo === 'venta'
+      ? `<tr><td>${when(m.at)}</td><td>${esc(m.nombre)}</td><td>Venta #${esc(m.ref)}${m.cancelado ? ' <span class="chip">cancelada: volvió al stock</span>' : ''}</td><td class="num">${m.cancelado ? '' : `−${n(m.n)}`}</td></tr>`
+      : `<tr><td>${when(m.at)}</td><td>${esc(m.nombre)}</td><td>${m.cantidad === null ? 'Sin control de stock' : 'Carga en el panel'}</td><td class="num">${m.cantidad === null ? '' : `${m.antes === null ? '' : `${n(m.antes)} → `}${n(m.cantidad)}`}</td></tr>`;
+    return `${head}
+      <p class="muted">Un número total por producto, sin separar por sucursal. Cada pago aprobado descuenta solo, y si cancelás un pedido en Pedidos, la unidad vuelve.
+        Mientras alguien está pagando, su unidad queda reservada ${n(st.reservaMin)} minutos. ${n(conControl.length)} de ${n(st.productos.length)} productos con control.</p>
+      <section class="card"><div class="card-head"><h2>Cuántas hay</h2></div>
+        <p class="muted">En "Hay para vender" escribí las unidades que tenés hoy para vender (sin contar las que ya están pagadas y esperan entrega) y tocá Guardar.
+          Vacío y Guardar, o "Sin control", lo deja sin límite, como hasta ahora.</p>
+        <div class="table-wrap"><table><thead><tr><th>Producto</th><th class="num">Quedan</th><th>Hay para vender</th></tr></thead>
+          <tbody>${st.productos.map(fila).join('')}</tbody></table></div>
+      </section>
+      <section class="card"><div class="card-head"><h2>Aviso de "Quedan pocas"</h2></div>
+        <div class="row" style="gap:8px;align-items:flex-end">
+          <label class="field" style="max-width:260px">Mostrar "¡Quedan…!" en la tienda con
+            <input class="num-in" type="number" min="0" max="100" step="1" inputmode="numeric" id="stock-aviso" value="${n(st.aviso)}">
+            <small>unidades o menos. Con 0 no se muestra nunca.</small></label>
+          <button class="btn small" type="button" data-act="stock-aviso">Guardar</button>
+        </div>
+      </section>
+      <section class="card"><div class="card-head"><h2>Movimientos</h2></div>
+        ${st.movimientos.length ? `<div class="table-wrap"><table><thead><tr><th>Cuándo</th><th>Producto</th><th>Qué pasó</th><th class="num">Unidades</th></tr></thead>
+          <tbody>${st.movimientos.map(mov).join('')}</tbody></table></div>` : '<p class="muted">Todavía no hay movimientos: cargá el stock de un producto para empezar.</p>'}
+      </section>`;
+  }
+
   function viewClientes() {
     const head = '<div class="page-head"><h1>Clientes</h1></div>';
     if (!S.clientes || !S.orders) return head + loading;
@@ -1922,6 +1983,35 @@
   const ACTIONS = {
     'reload-stats': () => go('estadisticas'),
     'reload-orders': () => go('pedidos'),
+    'reload-stock': () => go('stock'),
+    async 'stock-guardar'(el) {
+      const input = $$('[data-stock]').find(x => x.dataset.stock === el.dataset.id);
+      const v = input ? input.value.trim() : '';
+      try {
+        await api('/stock', { method: 'POST', body: { id: el.dataset.id, cantidad: v === '' ? null : Number(v) } });
+        S.stock = await api('/stock');
+        render();
+        toast(v === '' ? 'Listo: ese producto queda sin control de stock.' : 'Stock guardado.');
+      } catch (err) { toast(err.message, true); }
+    },
+    async 'stock-sin'(el) {
+      const p = S.stock.productos.find(x => x.id === el.dataset.id);
+      if (!confirm(`¿Dejar de llevar el stock de ${p ? p.nombre : 'este producto'}? Se va a poder comprar sin límite.`)) return;
+      try {
+        await api('/stock', { method: 'POST', body: { id: el.dataset.id, cantidad: null } });
+        S.stock = await api('/stock');
+        render();
+        toast('Listo: ese producto queda sin control de stock.');
+      } catch (err) { toast(err.message, true); }
+    },
+    async 'stock-aviso'() {
+      try {
+        await api('/stock/aviso', { method: 'POST', body: { aviso: Number($('#stock-aviso').value) } });
+        S.stock = await api('/stock');
+        render();
+        toast('Aviso guardado.');
+      } catch (err) { toast(err.message, true); }
+    },
     'ir-pedidos'(el) { S.ordersTab = el.dataset.otab; S.ordersQ = ''; go('pedidos'); },
     'orders-tab'(el) { S.ordersTab = el.dataset.otab; S.ordersQ = ''; render(); },
     async seguir(el) {
