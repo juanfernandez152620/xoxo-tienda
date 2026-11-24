@@ -73,8 +73,9 @@ body { margin: 0; background: var(--crema); color: var(--ink); font: 16px/1.5 "I
 .cu-tab.on { background: var(--azul); border-color: var(--azul); color: #fff; }
 .cu > .cu-tabs { max-width: 420px; }
 .cu-form { display: grid; gap: 12px; }
-.cu-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 700; color: var(--muted); }
-.cu-form input, .cu-form select { height: 48px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 12px; font: inherit; font-size: 16px; color: var(--ink); background: #fff; }
+.cu-form label { display: grid; gap: 6px; min-width: 0; font-size: 13px; font-weight: 700; color: var(--muted); }
+/* width 100% y min-width 0: sin esto cada campo mide lo que el navegador quiere y en la fila de 3 se pisan */
+.cu-form input, .cu-form select { width: 100%; min-width: 0; height: 48px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 12px; font: inherit; font-size: 16px; color: var(--ink); background: #fff; }
 .cu-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .cu-link { justify-self: start; padding: 4px 0; border: 0; background: none; color: var(--azul); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .cu-google { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }

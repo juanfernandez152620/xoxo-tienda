@@ -11,6 +11,8 @@
     get(area, key) { try { return window[area].getItem(key); } catch { return null; } },
     set(area, key, value) { try { window[area].setItem(key, value); } catch {} },
   };
+  // Para "Volver a la tienda" de /cuenta y /seguimiento: vuelve al diseño que estaba mirando, no siempre a /
+  store.set('localStorage', 'xoxo:volver', location.pathname + location.search);
   const randomId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, '').slice(0, 16);
 
   // Un id por navegador (visitante) y otro por pestaña (visita)
