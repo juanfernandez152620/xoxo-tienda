@@ -102,7 +102,7 @@
             <a class="sp-btn sp-btn-2" href="/seguimiento?${new URLSearchParams({ pedido: p.ref, email: c.email })}">Ver el seguimiento</a>
             ${p.pago === 'approved' ? `<a class="sp-btn" href="/api/pedidos/${encodeURIComponent(p.id)}/comprobante.pdf" target="_blank" rel="noopener">Comprobante (PDF)</a>` : ''}
           </div></article>`;
-      }).join('') : '<div class="sp-box"><p>Todavía no hay compras en tu cuenta.</p><a class="sp-btn" href="${esc(document.querySelector('.sp-volver')?.getAttribute('href') || '/')}">Ir a la tienda</a></div>');
+      }).join('') : `<div class="sp-box"><p>Todavía no hay compras en tu cuenta.</p><a class="sp-btn" href="${esc(document.querySelector('.sp-volver')?.getAttribute('href') || '/')}">Ir a la tienda</a></div>`);
     } catch (e) { box.innerHTML = `<p class="sp-error">${esc(e.message)}</p>`; }
   }
 
