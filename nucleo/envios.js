@@ -36,6 +36,13 @@ function precio(product, d) {
     const suc = site.store.branches.find(b => b.id === d.sucursal) || site.store.branches.find(b => b.on) || site.store.branches[0];
     return { ok: true, envio: { tipo, nombre: `Retiro en sucursal ${suc.name}`, sucursal: suc.id, costo: 0 } };
   }
+  // 27/11/2026: sin la calculadora, el envío se coordina por WhatsApp después de la compra (se paga aparte)
+  if (site.shipping.modo === 'coordinar') {
+    if (tipo !== 'coordinar') return { error: 'Esa forma de envío no está disponible. Elegí retirar en una sucursal o el envío a coordinar.' };
+    const prov = calc.provincia(d.provincia);
+    return { ok: true, envio: { tipo, nombre: 'Envío a coordinar por WhatsApp', ...(prov ? { provincia: prov.nombre } : {}), costo: 0, coordinar: true } };
+  }
+  if (tipo === 'coordinar') return { error: 'Elegí cómo querés recibir tu compra.' };
   const prov = calc.provincia(d.provincia) || calc.provinciaDeCp(d.cp);
   if (!prov) return { error: 'Elegí la provincia para el envío.' };
   const op = calc.opciones(site.shipping, prov.zona, calc.peso(product), priceOf(product)).find(o => o.id === tipo);

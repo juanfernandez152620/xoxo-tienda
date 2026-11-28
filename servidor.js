@@ -192,33 +192,35 @@ function whatsapp(req, res, url) {
 }
 
 /* ---------- Cuenta del cliente (/api/cuenta/…) ---------- */
+// Lo que ve la página de la cuenta: sus datos y, si todavía no compró, el regalo de bienvenida (27/11/2026)
+const perfil = c => (c ? { ...clientes.publico(c), bienvenida: pagos.bienvenidaPara(c) } : null);
 async function cuentaApi(req, res, url, route) {
   const ip = ipDe(req);
   try {
     if (route === 'GET /api/cuenta') {
-      return json(res, 200, { cliente: clientes.publico(clientes.sesion(req)), google: clientes.googleActivo() });
+      return json(res, 200, { cliente: perfil(clientes.sesion(req)), google: clientes.googleActivo() });
     }
     if (route === 'POST /api/cuenta/registro') {
       const c = clientes.registrar(await leerJson(req, 4000), ip);
       clientes.abrir(res, c);
-      return json(res, 200, { cliente: clientes.publico(c) });
+      return json(res, 200, { cliente: perfil(c) });
     }
     if (route === 'POST /api/cuenta/ingresar') {
       const c = clientes.ingresar(await leerJson(req, 4000), ip);
       clientes.abrir(res, c);
-      return json(res, 200, { cliente: clientes.publico(c) });
+      return json(res, 200, { cliente: perfil(c) });
     }
     if (route === 'POST /api/cuenta/salir') { clientes.cerrar(res); return json(res, 200, { ok: true }); }
     if (route === 'POST /api/cuenta/olvido') { clientes.olvido(await leerJson(req, 2000), ip); return json(res, 200, { ok: true }); }
     if (route === 'POST /api/cuenta/clave') {
       const c = clientes.nuevaClave(await leerJson(req, 2000));
       clientes.abrir(res, c);
-      return json(res, 200, { cliente: clientes.publico(c) });
+      return json(res, 200, { cliente: perfil(c) });
     }
     if (route === 'POST /api/cuenta/confirmar') {
       const c = clientes.confirmar((await leerJson(req, 2000)).token);
       clientes.abrir(res, c);
-      return json(res, 200, { cliente: clientes.publico(c) });
+      return json(res, 200, { cliente: perfil(c) });
     }
     if (route === 'GET /api/cuenta/google') {
       // Google vuelve siempre a BASE_URL (xoxotecno.com.ar): si entraron por otra dirección (www), se arranca desde
@@ -238,7 +240,7 @@ async function cuentaApi(req, res, url, route) {
     // De acá en adelante, con la sesión iniciada
     const c = clientes.sesion(req);
     if (!c) return json(res, 401, { error: 'Ingresá a tu cuenta.' });
-    if (route === 'POST /api/cuenta/datos') return json(res, 200, { cliente: clientes.publico(clientes.actualizarDatos(c, await leerJson(req, 4000))) });
+    if (route === 'POST /api/cuenta/datos') return json(res, 200, { cliente: perfil(clientes.actualizarDatos(c, await leerJson(req, 4000))) });
     if (route === 'POST /api/cuenta/reenviar') {
       if (!limite('cuenta-reenviar', ip, 3, 3600)) return json(res, 429, { error: 'Ya te mandamos el mail. Revisá también la carpeta de spam.' });
       clientes.mandarConfirmacion(c);
@@ -355,7 +357,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (route === 'POST /api/checkout') {
       const cli = clientes.sesion(req);
-      const [status, data] = await pagos.crear(await leerJson(req, 20000), { clienteId: cli && cli.id });
+      const [status, data] = await pagos.crear(await leerJson(req, 20000), { clienteId: cli && cli.id, cliente: cli });
       return json(res, status, data);
     }
     const pedido = p.match(/^\/api\/pedidos\/([a-f0-9]{10})$/);

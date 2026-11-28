@@ -28,6 +28,15 @@
   const par = s => { const [a, ...b] = String(s).split('|'); return { t: a.trim(), x: sinRelleno(b.join('|').trim()) }; };
   const email = (SITE.footer && SITE.footer.email) || 'ventas@xoxotecno.com.ar';
   const dias = () => STORY.warrantyDays || 30;
+  // 27/11/2026: Mercado Pago apagado en /admin (lo dice el servidor en window.TB_PAGOS) y el envío, sin calculadora:
+  // se coordina por WhatsApp después de la compra. Los textos cambian solos al volver a prender cada cosa.
+  const MP = !(window.TB_PAGOS && window.TB_PAGOS.mercadopago === false);
+  const COORD = Boolean(SHIP && SHIP.modo === 'coordinar');
+  const FIN = STORE.financing || 'GO cuotas';
+  const textoPago = () => (MP ? 'Pagás con Mercado Pago: tarjeta en cuotas, débito, dinero en cuenta o efectivo.'
+    : `Pagás en cuotas con tu tarjeta de débito en ${FIN}, en su sitio seguro.`);
+  const textoEnvio = () => (COORD ? 'Retirás gratis en una de nuestras sucursales, o te lo mandamos a todo el país: el envío lo coordinamos por WhatsApp después de la compra.'
+    : 'Andreani o Correo Argentino a tu casa o a la sucursal, o retirás gratis en una de nuestras sucursales.');
 
   const line = d => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const I = {
@@ -112,7 +121,7 @@
           <p class="sx-text">${esc(c.text)}</p>
           <div class="sx-ctas">
             <a class="sx-btn" href="#sx-productos" data-sx-go="sx-productos">Ver los productos ${I.arrow}</a>
-            <a class="sx-btn ghost" href="#sx-envios" data-sx-go="sx-envios">Calculá tu envío</a>
+            ${COORD ? '<a class="sx-btn ghost" href="#sx-como" data-sx-go="sx-como">Cómo comprar</a>' : '<a class="sx-btn ghost" href="#sx-envios" data-sx-go="sx-envios">Calculá tu envío</a>'}
           </div>
         </div>
         <div class="sx-hero-art" aria-hidden="true"><span class="sx-ring"></span><span class="sx-ico">${catIcon(c)}</span></div>
@@ -200,12 +209,12 @@
 
   function pasos() {
     const list = [
-      [I.card, 'Comprás online', 'Pagás con Mercado Pago: tarjeta en cuotas, débito, dinero en cuenta o efectivo.'],
-      [I.truck, 'Elegís el envío', 'Andreani o Correo Argentino a tu casa o a la sucursal, o retirás gratis en una de nuestras sucursales.'],
+      [I.card, 'Comprás online', textoPago()],
+      [I.truck, COORD ? 'Retiro o envío' : 'Elegís el envío', textoEnvio()],
       [I.mail, 'Te llega el mail', `Apenas se acredita el pago te escribimos desde ${email} con el detalle y el seguimiento.`],
     ];
     return `
-      <section class="sx-steps">
+      <section class="sx-steps" id="sx-como">
         ${head('Cómo comprar', 'Simple y seguro')}
         <ol class="sx-steps-list">${list.map(([ico, t, x]) => `<li><span class="sx-sico">${ico}</span><h3>${esc(t)}</h3><p>${esc(x)}</p></li>`).join('')}</ol>
       </section>`;
@@ -221,8 +230,9 @@
   }
 
   // El envío cuesta lo mismo para cualquier producto (17/11/2026): alcanza con la provincia o el código postal
+  // 27/11/2026: sin calculadora mientras el envío se coordina por WhatsApp (SHIP.modo "coordinar")
   function calculadora() {
-    if (!SHIP || !EN || !V) return '';
+    if (!SHIP || !EN || !V || COORD) return '';
     return `
       <section class="sx-calc" id="sx-envios">
         <div class="sx-calc-copy">
@@ -280,10 +290,11 @@
           <div class="sx-banner-copy">
             <p class="sx-banner-brand"><img src="/media/marca/xoxo-avatar.svg" alt=""><span><b>${esc(STORE.name)}</b><small>${esc(donde)}</small></span></p>
             <h1 class="sx-banner-title">${esc(CATS.map(c => c.name).join(', ').replace(/, ([^,]*)$/, ' y $1'))}</h1>
-            <p class="sx-banner-text">Pagalo en hasta 12 cuotas con Mercado Pago o en cuotas con tu tarjeta de débito en ${esc(STORE.financing || 'GO cuotas')}. Envíos a todo el país y ${esc(dias())} días de garantía.</p>
+            <p class="sx-banner-text">${MP ? `Pagalo en hasta 12 cuotas con Mercado Pago o en cuotas con tu tarjeta de débito en ${esc(FIN)}` : `Pagalo en cuotas sin tarjeta de crédito: con tu débito en ${esc(FIN)}`}. Envíos a todo el país y ${esc(dias())} días de garantía.</p>
             <div class="sx-ctas">
               <a class="sx-btn sx-btn-light" href="#sx-categorias" data-sx-go="sx-categorias">Ver productos ${I.arrow}</a>
-              <a class="sx-btn sx-btn-glass" href="#sx-envios" data-sx-go="sx-envios">Calculá tu envío</a>
+              ${COORD ? '<a class="sx-btn sx-btn-glass" href="#sx-sucursales" data-sx-go="sx-sucursales">Ver sucursales</a>'
+                : '<a class="sx-btn sx-btn-glass" href="#sx-envios" data-sx-go="sx-envios">Calculá tu envío</a>'}
             </div>
           </div>
           <div class="sx-banner-prods" aria-label="Categorías">${CATS.map(c => `
@@ -297,9 +308,9 @@
   function beneficiosInicio() {
     const fin = STORE.financing || 'GO cuotas';
     const list = [
-      [I.card, 'Hasta 12 cuotas', 'Con tarjeta de crédito en Mercado Pago.'],
+      MP ? [I.card, 'Hasta 12 cuotas', 'Con tarjeta de crédito en Mercado Pago.'] : [I.store, 'Retiro gratis', 'En cualquiera de nuestras sucursales.'],
       [I.card, 'Cuotas con débito', `Con tu tarjeta de débito en ${fin}.`],
-      [I.truck, 'Envíos a todo el país', 'Andreani y Correo Argentino, o retiro gratis.'],
+      [I.truck, 'Envíos a todo el país', COORD ? 'Lo coordinamos por WhatsApp después de la compra.' : 'Andreani y Correo Argentino, o retiro gratis.'],
       [I.shield, `${dias()} días de garantía`, 'En todos los productos.'],
     ];
     return `<section class="sx-benefits" aria-label="Por qué comprar en ${esc(STORE.name)}">${list.map(([i, t, x]) => `
@@ -339,7 +350,7 @@
       <section class="sx-branches" id="sx-sucursales">
         ${head('Sucursales', 'Vení a conocernos')}
         <div class="sx-prov-grid">${provs.map(([prov, list]) => `
-          <div class="sx-prov"><h3>${esc(prov)}</h3><ul>${list.map(b => `<li><b>${esc(b.name)}</b><span>${esc(b.address)}</span>
+          <div class="sx-prov"><h3>${esc(prov)}</h3><ul>${list.map(b => `<li>${(b.photos && b.photos[0]) || b.photo ? `<img class="sx-suc-foto" src="${esc((b.photos && b.photos[0]) || b.photo)}" alt="El local de ${esc(b.name)}" loading="lazy" decoding="async">` : ''}<b>${esc(b.name)}</b><span>${esc(b.address)}</span>
             ${b.address && !/a confirmar/i.test(b.address) ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}</li>`).join('')}</ul></div>`).join('')}</div>
       </section>`;
   }

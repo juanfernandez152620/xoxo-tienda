@@ -706,7 +706,7 @@
           ${PAY ? `
           <button class="btn-primary js-buy" type="button">${ICON.cart}Comprar ahora</button>
           <a class="btn-secondary js-wa" target="_blank" rel="noopener">${ICON.wa}Consultar por WhatsApp</a>
-          <p class="pay-with">Pagá con ${finLogo()} o <img class="mp-logo" src="/media/marcas/mercadopago-icono.svg" alt=""> Mercado Pago
+          <p class="pay-with">Pagá con ${finLogo()}${window.TB_PAGOS && window.TB_PAGOS.mercadopago === false ? '' : ' o <img class="mp-logo" src="/media/marcas/mercadopago-icono.svg" alt=""> Mercado Pago'}
             <button class="pdp-share js-share" type="button">${ICON.share}Compartir</button></p>` : `
           <a class="btn-primary js-wa" target="_blank" rel="noopener">${ICON.wa}Pedilo por WhatsApp</a>
           <button class="btn-secondary js-share" type="button">${ICON.share}Compartir</button>`}

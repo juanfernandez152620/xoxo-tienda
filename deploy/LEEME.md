@@ -84,6 +84,13 @@ que pedir a integraciones@gocuotas.com que habiliten la API Redirect V1 en esa s
 **Para cobrar de verdad:** cargar las credenciales de producción de los dos medios y apagar el pago simulado
 (opción 3).
 
+**Mercado Pago apagado (27/11/2026):** hasta tener configurado su webhook, Mercado Pago está apagado en
+**/admin → Tienda y textos → Medios de pago**: la tienda cobra solo con GO cuotas y ninguna página lo nombra, aunque
+la clave siga cargada. Al tildar "Cobrar con Mercado Pago" y guardar, vuelve todo como estaba.
+
+**Envíos (27/11/2026):** sin la API de envíos, la calculadora está apagada (/admin → Tienda y textos → Envíos): al
+pagar se elige retiro gratis o "envío a coordinar" y el envío se arregla por WhatsApp después de la compra.
+
 ## Chat "Cambios por IA" (etapa 5)
 
 Tu socio entra al panel, abre la pestaña **Cambios por IA** y escribe ahí lo que quiere cambiar. Puede mandar

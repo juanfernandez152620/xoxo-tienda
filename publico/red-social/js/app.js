@@ -157,6 +157,10 @@
   /* ---------- WhatsApp ---------- */
   // Los botones de WhatsApp pasan por api/whatsapp.php, que reparte los mensajes entre las sucursales
   const waHref = text => window.TB_WA(text);
+  // 27/11/2026: Mercado Pago apagado en /admin (lo dice el servidor): sin las cuotas con crédito
+  const MP_ON = !(window.TB_PAGOS && window.TB_PAGOS.mercadopago === false);
+  // Sin la calculadora (el envío se coordina por WhatsApp después de la compra)
+  const SIN_CALC = Boolean(window.SITE && window.SITE.shipping && window.SITE.shipping.modo === 'coordinar');
   function buyMessage(p, n) {
     const lines = [
       '¡Hola! Vi este celular en la web y me interesa:',
@@ -549,7 +553,8 @@
   const sentinel = $('#sentinel');
   const filters = { brand: '', max: 0, group: '', cat: '' };
   // Entre los celulares aparecen la calculadora de envíos y la garantía como posts (shared/secciones.js)
-  const SEQUENCE = ['howto', 'envios', 'sucursales', 'foryou', 'garantia', 'cheap', 'share', 'memory', 'brands', 'ask'];
+  // 27/11/2026: sin la calculadora (el envío se coordina por WhatsApp) no va el post de envíos
+  const SEQUENCE = ['howto', 'envios', 'sucursales', 'foryou', 'garantia', 'cheap', 'share', 'memory', 'brands', 'ask'].filter(k => !(SIN_CALC && k === 'envios'));
   const PROMOS = ['sucursales', 'share', 'ask', 'howto', 'envios', 'garantia'];
   const MORE_TITLES = ['Seguí mirando', 'Más para vos', 'No te los pierdas', 'Mirá otra vez'];
   let step = 0, recent = [];
@@ -1115,7 +1120,7 @@
             <p class="pr-deb-amt"><small>$</small>${fmt.format(cuotaDe(p.price, n))}<span>c/u</span></p>
             <span class="pr-go">${finLogo()}</span>
           </div>` : ''}
-          <p class="pr-cred">${cu.credito > 1 ? `<b>${cu.credito} cuotas${sinInteres}</b> de <b>${money(cuotaDe(p.price, cu.credito))}</b> con crédito` : '<b>En 1 pago</b> con crédito o débito'}</p>
+          ${!cu.credito ? '' : `<p class="pr-cred">${cu.credito > 1 ? `<b>${cu.credito} cuotas${sinInteres}</b> de <b>${money(cuotaDe(p.price, cu.credito))}</b> con crédito` : '<b>En 1 pago</b> con crédito o débito'}</p>`}
           <div class="pr-total"><span>Total</span>${V.priceHTML(p)}</div>
           <p class="pr-kicker">${esc([p.group, p.brand].filter(Boolean).join(' · '))}</p>
           <h3 class="pr-name"><a class="js-ficha" ${ver}>${esc(p.name)}</a></h3>
@@ -1130,7 +1135,7 @@
     const n = Number(STORE.extras.cuotas) || 6;
     const off = FL ? FL.cfg.percent : 0;
     const cinta = [
-      STORE.financing ? `${n} cuotas con débito` : '', `12 cuotas${sinInteres} con crédito`, 'Envíos a todo el país',
+      STORE.financing ? `${n} cuotas con débito` : '', MP_ON ? `12 cuotas${sinInteres} con crédito` : '', 'Envíos a todo el país',
       `${((window.SITE && window.SITE.story) || {}).warrantyDays || 30} días de garantía`, 'Retiro gratis en sucursal',
     ].filter(Boolean).map(t => `<span>${esc(t)}</span><i>★</i>`).join('');
     const dest = S.destacados(c);
@@ -1149,7 +1154,8 @@
             ${off ? `<p class="pr-reloj fl-only"><b>-${off}% flash</b> termina en <b class="js-flash-reloj">${FL.reloj(FL.restante())}</b></p>` : ''}
             <div class="pr-ctas-hero">
               <a class="pr-btn" href="#pr-ofertas" data-sx-go="pr-ofertas">Ver ofertas ${FLECHA}</a>
-              <a class="pr-btn pr-btn-2" href="#sx-envios" data-sx-go="sx-envios">Calculá tu envío</a>
+              ${SIN_CALC ? `<a class="pr-btn pr-btn-2 js-wa" data-donde="portada" href="${esc(waHref(STORE.greeting || '¡Hola!'))}" target="_blank" rel="noopener">Consultanos</a>`
+                : '<a class="pr-btn pr-btn-2" href="#sx-envios" data-sx-go="sx-envios">Calculá tu envío</a>'}
             </div>
           </div>
           <div class="pr-art" aria-hidden="true">
@@ -1200,7 +1206,7 @@
           <ul class="rsf-badges">
             <li>🛡️ ${esc(ST.warrantyDays || 30)} días de garantía</li>
             <li>🚚 Envíos a todo el país</li>
-            <li>💳 Mercado Pago${STORE.financing ? ` y ${esc(STORE.financing)} (débito)` : ''}</li>
+            <li>💳 ${MP_ON ? `Mercado Pago${STORE.financing ? ` y ${esc(STORE.financing)} (débito)` : ''}` : `Cuotas con débito en ${esc(STORE.financing || 'GO cuotas')}`}</li>
           </ul>
         </div>
         <nav aria-label="Secciones"><h3>Tienda</h3><a href="/red-social/">Inicio</a>${CATS.map(c => `<a href="/red-social/${c.id}/">${esc(c.name)}</a>`).join('')}<a href="/seguimiento">Seguí tu compra</a></nav>

@@ -265,9 +265,40 @@ function normalizarEnvios(e) {
   }, 4);
   while (days.length < 4) days.push([3, 7]);
   return {
+    // 27/11/2026: mientras no esté la API de envíos, el envío se coordina por WhatsApp después de la compra
+    // ("coordinar": sin calculadora y sin costo en el pago). "calculadora" vuelve a la tabla de precios de abajo.
+    modo: e.modo === 'calculadora' ? 'calculadora' : 'coordinar',
     pickup: e.pickup !== false,
     freeFrom: Math.round(num(e.freeFrom ?? 0, 'Envío gratis desde', 0, 1e9)),
     rates, days,
+  };
+}
+
+// Regalo de bienvenida (27/11/2026): quien se crea la cuenta antes de comprar tiene un descuento en su primera
+// compra. tipo "monto" (pesos) o "porcentaje"; minimo: compra mínima para usarlo (0 = sin mínimo).
+function normalizarBienvenida(b) {
+  b = obj(b);
+  const tipo = b.tipo === 'porcentaje' ? 'porcentaje' : 'monto';
+  return {
+    on: b.on !== false,
+    tipo,
+    valor: Math.round(num(b.valor ?? 7000, 'Regalo de bienvenida: descuento', 1, tipo === 'porcentaje' ? 90 : 1e7)),
+    minimo: Math.round(num(b.minimo === '' || b.minimo === undefined || b.minimo === null ? 0 : b.minimo, 'Regalo de bienvenida: compra mínima', 0, 1e9)),
+  };
+}
+
+// Cartel flotante de una promo pasajera (27/11/2026: Black Week con la mascota). Se ve hasta el día "hasta"
+// incluido (vacío = sin fecha) y no cambia nada de la página: va flotando en una esquina.
+function normalizarPromo(p) {
+  p = obj(p);
+  const hasta = String(p.hasta ?? '2026-12-04').trim();
+  if (hasta && !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) fallar('Cartel de promo: la fecha va como 2026-12-04');
+  return {
+    on: p.on !== false,
+    hasta,
+    titulo: txt(p.titulo ?? 'Black Week', 40),
+    texto: txt(p.texto ?? 'Promociones exclusivas por tiempo limitado', 140),
+    imagen: mediaUrl(p.imagen ?? '/media/marca/mascota-black-week.webp', 'Cartel de promo: imagen'),
   };
 }
 
@@ -399,6 +430,80 @@ function migrarSinSocios(s) {
   return { ...s, story, migraciones: [...hechas, 'sin-socios'] };
 }
 
+// 27/11/2026, la versión final: sin lorem ipsum en ningún texto, las fotos de los locales y los textos sin
+// Mercado Pago ni la calculadora de envíos. Pasa una sola vez y solo cambia lo que sigue como venía de fábrica:
+// lo que ya se cambió en /admin se respeta.
+const LOREM = /lorem ipsum|dolor sit amet|consectetur adipiscing/i;
+const sinLorem = v => String(v || '').replace(/[\s,.:;·-]*(lorem ipsum|dolor sit amet)[\s\S]*$/i, '').trim();
+function migrarVersionFinal(s) {
+  const hechas = Array.isArray(s.migraciones) ? s.migraciones : [];
+  if (hechas.includes('version-final')) return s;
+  const cierra = t => (t && !/[.!?]$/.test(t) ? `${t}.` : t);
+  // Los textos de la historia que eran de relleno pasan a textos reales
+  const st = obj(s.story);
+  const reales = {
+    text: 'Somos una tienda de tecnología de Tucumán: ventiladores, todo para crear contenido y audio, en cuotas, con garantía y con atención por WhatsApp.',
+    branchesText: 'Vení a conocernos: te asesoramos, probás los productos y retirás tu compra sin cargo.',
+    warrantyText: 'Si algo falla en los primeros 30 días, lo resolvemos en la sucursal o por WhatsApp.',
+  };
+  const story = { ...st };
+  for (const k of ['text', 'foundersText', 'teamText', 'branchesText', 'warrantyText', 'kicker', 'title', 'foundersTitle', 'teamTitle', 'branchesTitle', 'warrantyTitle']) {
+    if (LOREM.test(String(st[k] || ''))) story[k] = cierra(sinLorem(st[k])) || reales[k] || '';
+  }
+  if (Array.isArray(st.founders)) story.founders = st.founders.map(p => (p && LOREM.test(String(p.role || '')) ? { ...p, role: sinLorem(p.role).replace(/^·\s*/, '') } : p));
+  if (Array.isArray(st.team)) story.team = st.team.map(p => (p && /^(lorem|ipsum|dolor|sit|amet)$/i.test(String(p.name || '').trim()) ? { ...p, name: '' } : p));
+  // Preguntas y textos de las categorías: se corta lo que era relleno
+  // (un renglón "Pregunta | Respuesta" que se queda sin respuesta se saca entero)
+  const corta = x => { const r = sinLorem(x); return !r || /\|\s*$/.test(r) ? '' : cierra(r); };
+  const limpiar = v => (Array.isArray(v) ? v.map(x => (LOREM.test(String(x)) ? corta(x) : x)).filter(Boolean)
+    : typeof v === 'string' && LOREM.test(v) ? corta(v) : v);
+  // Y los textos de fábrica que hablaban de Mercado Pago, de las 12 cuotas con crédito o de la calculadora
+  const CAMBIOS = {
+    'Ventiladores de pie, de piso y de techo para pasar el verano fresco. Mirá cómo funciona cada uno en su video y pagalo en hasta 12 cuotas con Mercado Pago o en cuotas con tu débito en GO cuotas.':
+      'Ventiladores de pie, de piso y de techo para pasar el verano fresco. Mirá cómo funciona cada uno en su video y pagalo en cuotas sin interés con tu débito en GO cuotas.',
+    'Pagalo en cuotas | Hasta 12 con Mercado Pago o con tu débito en GO cuotas.': 'Pagalo en cuotas | Sin interés, con tu tarjeta de débito en GO cuotas.',
+    '¿Hacen envíos? | Sí, a todo el país con Andreani o Correo Argentino. Calculá el costo más abajo.': '¿Hacen envíos? | Sí, a todo el país. Después de tu compra te escribimos por WhatsApp para coordinar el envío y su costo. Y si estás cerca, retirás gratis en una sucursal.',
+    'Cuotas | Hasta 6 sin interés con Go Cuotas o hasta 12 con tarjeta de crédito.': 'Cuotas | Hasta 6 sin interés con tu tarjeta de débito en Go Cuotas.',
+  };
+  const credito = ' Pagalo en 6 cuotas sin interés con Go Cuotas o hasta en 12 con tarjeta de crédito.';
+  const cambiar = v => (Array.isArray(v) ? v.map(cambiar) : typeof v !== 'string' ? v
+    : CAMBIOS[v] || (v.endsWith(credito) ? `${v.slice(0, -credito.length)} Pagalo en 6 cuotas sin interés con tu débito en Go Cuotas.` : v));
+  const categories = Array.isArray(s.categories) ? s.categories.map(c => (c && typeof c === 'object'
+    ? Object.fromEntries(Object.entries(c).map(([k, v]) => [k, ['benefits', 'guide', 'faq', 'title', 'text', 'guideTitle'].includes(k) ? cambiar(limpiar(v)) : v]))
+    : c)) : s.categories;
+  // Las fotos de los locales (si todavía no tienen)
+  const FOTOS = { munecas: 'munecas', maipu: 'maipu', 'buenos-aires': 'buenos-aires', alberdi: 'alberdi' };
+  const store = { ...obj(s.store) };
+  if (Array.isArray(store.branches)) {
+    store.branches = store.branches.map(b => (b && FOTOS[b.id] && !(Array.isArray(b.photos) && b.photos.some(Boolean)) && !b.photo
+      ? { ...b, photos: [`/media/sucursales/${FOTOS[b.id]}/foto-1.webp`], photo: `/media/sucursales/${FOTOS[b.id]}/foto-1.webp` } : b));
+  }
+  // Pasos de "Cómo comprar" que hablaban de Mercado Pago o de los celulares
+  const paso = (lista, viejo, nuevo) => (Array.isArray(lista) ? lista.map(h => (h && h.title === viejo.title && h.text === viejo.text ? { ...h, ...nuevo } : h)) : lista);
+  store.howtoPay = paso(paso(store.howtoPay,
+    { title: 'Elegí cómo pagar', text: '12 cuotas sin interés con tarjeta de crédito en Mercado Pago, o hasta 9 sin interés con tu tarjeta de débito en GO cuotas.' },
+    { title: 'Elegí las cuotas', text: 'Pagá en cuotas sin interés con tu tarjeta de débito en GO cuotas.' }),
+  { title: 'Pagá online', text: 'Completá tus datos, pagá en el sitio seguro y te escribimos por WhatsApp para la entrega.' },
+  { title: 'Pagá online', text: 'Completá tus datos y pagá en el sitio seguro. Después te escribimos por WhatsApp para coordinar el envío o el retiro.' });
+  store.howtoPay = paso(store.howtoPay, { title: 'Elegí tu celu', text: 'Mirá los videos y tocá "Comprar ahora" en el que más te guste.' }, { title: 'Elegí tu producto', text: 'Mirá los videos y tocá "Comprar" en el que más te guste.' });
+  store.howto = paso(paso(store.howto, { title: 'Elegí tu celu', text: 'Mirá los videos y tocá el que más te guste.' }, { title: 'Elegí tu producto', text: 'Mirá los videos y tocá el que más te guste.' }),
+    { title: 'Elegí las cuotas', text: '12 cuotas sin interés con tarjeta de crédito, o hasta 9 sin interés con tu tarjeta de débito en GO cuotas.' },
+    { title: 'Elegí las cuotas', text: 'Pagá en cuotas sin interés con tu tarjeta de débito en GO cuotas.' });
+  // Textos de la página: sin Mercado Pago ni "12 cuotas con crédito", y el aviso del regalo de bienvenida
+  const t = { ...obj(s.texts) };
+  if (t.seoDescription === 'Ventiladores, micrófonos, luces, parlantes y auriculares en hasta 12 cuotas con Mercado Pago o con tu débito en GO cuotas. Envíos a todo el país y 30 días de garantía.') {
+    t.seoDescription = 'Ventiladores, micrófonos, luces, parlantes y auriculares en cuotas con tu débito en GO cuotas. Envíos a todo el país y 30 días de garantía.';
+  }
+  if (Array.isArray(t.notices)) {
+    const sinCredito = t.notices.filter(n => n !== '12 cuotas sin interés con crédito');
+    t.notices = [...sinCredito.slice(0, 1), 'Creá tu cuenta y obtené $7.000 off en tu primera compra', ...sinCredito.slice(1)].slice(0, 6);
+  }
+  if (t.heroText === '12 cuotas sin interés con tarjeta de crédito o hasta 9 con *tu tarjeta de débito en {financiera}*. Mirá el video de cada celular y comprá online.') {
+    t.heroText = 'Cuotas sin interés con *tu tarjeta de débito en {financiera}*. Mirá el video de cada producto y comprá online.';
+  }
+  return { ...s, story, categories, store, texts: t, migraciones: [...hechas, 'version-final'] };
+}
+
 function migrarSinCelulares(s) {
   const t = s.texts || {};
   const viejo = {
@@ -442,7 +547,7 @@ function normalizar(s) {
   if (!s || typeof s !== 'object' || !s.store || typeof s.store !== 'object' || !Array.isArray(s.products)) {
     fallar('El contenido no tiene el formato esperado');
   }
-  s = migrarSoulFotos(migrarSinSocios(migrarSoul(migrarEnvioParejo(migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s))))))));
+  s = migrarVersionFinal(migrarSoulFotos(migrarSinSocios(migrarSoul(migrarEnvioParejo(migrarSinCelulares(migrarVentiladores2(migrarVentiladores(migrar(s)))))))));
   const st = s.store;
   const logo = obj(st.financingLogo);
   const closing = st.closing && typeof st.closing === 'object' ? st.closing : null;
@@ -462,6 +567,8 @@ function normalizar(s) {
       icon: mediaUrl(logo.icon, 'Ícono de la financiera'),
     },
     sinInteres: Boolean(st.sinInteres),
+    // 27/11/2026: Mercado Pago queda apagado hasta tener su webhook; prendido (y con su clave) vuelve a cobrar
+    mercadoPago: st.mercadoPago === true,
     budgets: items(st.budgets, (b, i) => num(b, `Botón de cuota ${i + 1}`, 1), 6),
     featured: txt(st.featured, 60),
     closing: {
@@ -537,6 +644,8 @@ function normalizar(s) {
     flash: normalizarFlash(s.flash),
     shipping: normalizarEnvios(s.shipping),
     story: normalizarHistoria(s.story),
+    bienvenida: normalizarBienvenida(s.bienvenida),
+    promo: normalizarPromo(s.promo),
   };
 }
 
@@ -627,17 +736,28 @@ function publico() {
   const { closing, financingLogo, ...store } = site.store;
   store.closing = closing.show && closing.title ? { title: closing.title, text: closing.text } : null;
   store.financingLogo = financingLogo.color ? { color: financingLogo.color, icon: financingLogo.icon || financingLogo.color } : null;
-  const nombreSuc = Object.fromEntries(store.branches.map(b => [b.id, b.name]));
   store.branches = store.branches.map(b => ({ id: b.id, name: b.name, province: b.province, address: b.address, photo: b.photo || '', photos: b.photos || [], hours: b.hours || '', phone: b.phone || '' }));
-  const story = { ...site.story, team: (site.story.team || []).filter(p => p.show).map(({ show, branch, ...p }) => ({ ...p, branch: nombreSuc[branch] || '' })) };
+  // 27/11/2026: la parte del equipo se sacó de las páginas (nadie quiso poner la cara): no se publica.
+  // (Los datos del equipo siguen guardados por si algún día vuelve.)
+  const story = { ...site.story, team: [], teamTitle: '', teamText: '', founders: [], foundersText: '', foundersTitle: '' };
   const visibles = list => list.filter(p => !p.hidden).map(({ hidden, ...p }) => p);
   return {
     store, products: site.store.phones ? visibles(site.products) : [], extras: visibles(site.extras),
     site: {
       texts: site.texts, footer: site.footer, categories: site.categories, flash: site.flash,
       shipping: site.shipping, story,
+      bienvenida: site.bienvenida.on ? site.bienvenida : null,
+      promo: promoVigente(site),
     },
   };
 }
 
-module.exports = { CUOTAS_CREDITO, VARIANTS, EN_PRUEBA, CATS, PRINCIPAL, EMPRESAS, SITIO, COPIAS, txt, normalizar, cargar, guardar, copiar, publico, ogImage, absoluta };
+// El cartel flotante, si está prendido y no venció (la fecha es la de Argentina)
+function promoVigente(site = cargar()) {
+  const p = site.promo;
+  if (!p || !p.on || !p.imagen) return null;
+  const hoy = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+  return p.hasta && p.hasta < hoy ? null : p;
+}
+
+module.exports = { CUOTAS_CREDITO, VARIANTS, EN_PRUEBA, CATS, PRINCIPAL, EMPRESAS, SITIO, COPIAS, txt, normalizar, cargar, guardar, copiar, publico, promoVigente, ogImage, absoluta };

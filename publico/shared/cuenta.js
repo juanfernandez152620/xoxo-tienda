@@ -12,6 +12,16 @@
   const ESTADOS = { '': 'Pagado', preparando: 'Preparando', listo: 'Listo para retirar', despachado: 'Despachado', entregado: 'Entregado', cancelado: 'Cancelado' };
   const GOOGLE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.9-3a7.2 7.2 0 0 1-10.8-3.8h-4v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.2 14.3a7.2 7.2 0 0 1 0-4.6V6.6h-4a12 12 0 0 0 0 10.8z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.2 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8z"/></svg>';
 
+  // Regalo de bienvenida (27/11/2026): quien crea la cuenta antes de comprar tiene un descuento en su primera compra
+  const REGALO = (window.SITE && window.SITE.bienvenida) || null;
+  const regaloTxt = b => (!b ? '' : b.tipo === 'porcentaje' ? `${b.valor}% off` : `${money(b.valor)} off`);
+  const tienda = () => document.querySelector('.sp-volver')?.getAttribute('href') || '/';
+  const regaloIngreso = () => (REGALO ? `<div class="sp-box cu-regalo"><p><b>🎁 Creá tu cuenta y obtené ${esc(regaloTxt(REGALO))} en tu primera compra</b></p>
+    <p class="sp-muted">Creala antes de pagar${REGALO.minimo ? ` (en compras desde ${money(REGALO.minimo)})` : ''}. El descuento se aplica solo al pagar con tu sesión iniciada.</p></div>` : '');
+  const regaloCuenta = c => (c && c.bienvenida ? `<div class="sp-box cu-regalo"><p><b>🎁 Tenés ${esc(regaloTxt(c.bienvenida))} en tu primera compra</b></p>
+    <p class="sp-muted">Se aplica solo al pagar con tu sesión iniciada${c.bienvenida.minimo ? `, en compras desde ${money(c.bienvenida.minimo)}` : ''}. Tu carrito te espera en la tienda.</p>
+    <a class="sp-btn" href="${esc(tienda())}">Ir a la tienda</a></div>` : '');
+
   let estado = { cliente: null, google: false };
   let aviso = { texto: '', malo: false };
 
@@ -49,6 +59,7 @@
       <h1>Mi cuenta</h1>
       <p class="cu-intro">Con tu cuenta ves todas tus compras, bajás los comprobantes y pagás más rápido. Para comprar no hace falta.</p>
       ${avisoHTML()}
+      ${modo !== 'olvido' ? regaloIngreso() : ''}
       <div class="sp-box cu-caja">
         ${modo !== 'olvido' ? `<div class="cu-tabs">${tab('ingresar', 'Ingresar')}${tab('registro', 'Crear cuenta')}</div>${google}` : ''}
         ${forms[modo]}
@@ -70,6 +81,7 @@
       <div class="cu-top"><h1>Hola, ${esc(c.nombre.split(' ')[0])}</h1><button class="cu-link" type="button" data-salir>Salir</button></div>
       <p class="cu-intro">${esc(c.email)}${c.google ? ' · con Google' : ''}</p>
       ${avisoHTML()}
+      ${regaloCuenta(c)}
       <div class="cu-tabs">${tab('compras', 'Mis compras')}${tab('datos', 'Mis datos')}</div>
       <div class="cu-seccion"><p class="sp-muted">Cargando…</p></div>`;
     decir('');
@@ -175,6 +187,6 @@
       history.replaceState(null, '', '/cuenta');
     }
     if (q.get('error')) history.replaceState(null, '', '/cuenta');
-    return estado.cliente ? vistaCuenta() : vistaIngreso(q.get('modo') === 'registro' ? 'registro' : 'ingresar');
+    return estado.cliente ? vistaCuenta() : vistaIngreso(q.get('modo') === 'registro' || q.has('registro') ? 'registro' : 'ingresar');
   })();
 })();

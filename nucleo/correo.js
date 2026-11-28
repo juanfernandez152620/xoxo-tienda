@@ -288,15 +288,15 @@ function detalle(o) {
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="linea" style="border-top:1px solid #ebe5f7;border-bottom:1px solid #ebe5f7;margin:18px 0">
     ${(o.items || [{ name: o.product.name, n: 1, price: o.discount ? producto + o.discount.amount : producto }]).map(x => fila(esc(`${x.n > 1 ? `${x.n} × ` : ''}${x.name}`), money(x.price * x.n))).join('')}
-    ${o.discount ? fila(`<span class="suave" style="color:#7a7194">Código ${esc(o.discount.code)} (${o.discount.percent}% off)</span>`, `<span style="color:#16a34a">−${money(o.discount.amount)}</span>`) : ''}
+    ${o.discount ? fila(`<span class="suave" style="color:#7a7194">${o.discount.bienvenida ? 'Regalo de bienvenida (primera compra)' : `Código ${esc(o.discount.code)} (${o.discount.percent}% off)`}</span>`, `<span style="color:#16a34a">−${money(o.discount.amount)}</span>`) : ''}
     ${o.plan > 1 ? fila(`<span class="suave" style="color:#7a7194;font-size:13px">${o.plan} cuotas con ${esc(METODOS[o.method] || o.method)}</span>`, '') : ''}
     ${o.coupon ? fila(`<span class="suave" style="color:#7a7194">Descuento flash (cupón ${esc(o.coupon)})</span>`, '<span style="color:#16a34a">aplicado</span>') : ''}
-    ${fila(esc(envio.nombre), envio.costo ? money(envio.costo) : 'Gratis')}
+    ${fila(esc(envio.nombre), envio.costo ? money(envio.costo) : envio.tipo === 'coordinar' ? 'A coordinar' : 'Gratis')}
     ${fila('Total pagado', money(o.amount), true)}
   </table>`;
 }
 
-function entrega(o, site) {
+function entrega(o, site, paraLaTienda = false) {
   const e = o.envio;
   if (!e || e.tipo === 'retiro') {
     const suc = site.store.branches.find(b => b.id === (e && e.sucursal)) || site.store.branches[0];
@@ -304,6 +304,11 @@ function entrega(o, site) {
       <p style="margin:0">Te avisamos por WhatsApp cuando esté listo para retirar.</p>`;
   }
   const d = o.delivery || {};
+  // 27/11/2026: envío a coordinar por WhatsApp (sin la calculadora)
+  if (e.tipo === 'coordinar') {
+    return `<p style="margin:0 0 8px"><b>Envío a coordinar</b><br><span class="suave" style="color:#7a7194">${esc([d.city, d.province].filter(Boolean).join(', '))}</span></p>
+    <p style="margin:0">${paraLaTienda ? 'Escribile por WhatsApp para coordinar el envío: la empresa, el costo y la dirección.' : 'Te escribimos por WhatsApp para coordinar el envío: la empresa, el costo y la dirección.'}</p>`;
+  }
   const dias = e.dias ? ` · llega en ${e.dias[0]} a ${e.dias[1]} días hábiles` : '';
   return `<p style="margin:0 0 8px"><b>${esc(e.nombre)}</b>${esc(dias)}<br><span class="suave" style="color:#7a7194">${esc([d.address, d.city, e.provincia, d.cp && `CP ${d.cp}`].filter(Boolean).join(', '))}</span></p>
     <p style="margin:0">Cuando lo despachemos te mandamos el número de seguimiento.</p>`;
@@ -334,7 +339,7 @@ function compra(o) {
     `¡Gracias por tu compra, ${nombre}!`, '',
     `Recibimos tu pago. Pedido #${o.ref} (${fecha(o.createdAt)}).`, demo ? 'PRUEBA: pago simulado, no se cobró nada.' : '',
     `${o.product.name}: ${money(o.productAmount ?? o.amount)}`,
-    o.envio ? `${o.envio.nombre}: ${o.envio.costo ? money(o.envio.costo) : 'gratis'}` : '',
+    o.envio ? `${o.envio.nombre}: ${o.envio.costo ? money(o.envio.costo) : o.envio.tipo === 'coordinar' ? 'a coordinar' : 'gratis'}` : '',
     `Total pagado: ${money(o.amount)}`, '',
     dias ? `Tu compra tiene ${dias} días de garantía.` : '',
     `¿Dudas? Escribinos por WhatsApp: ${wa}`, '', site.store.name,
@@ -354,7 +359,7 @@ function venta(o, para) {
       <h2 style="margin:0 0 8px;font:800 17px Arial,Helvetica,sans-serif">Cliente</h2>
       <p style="margin:0">${esc(b.name)}<br>${esc(b.email)}<br>WhatsApp ${esc(b.phone)}${b.dni ? `<br>DNI ${esc(b.dni)}` : ''}</p>
       <h2 style="margin:18px 0 8px;font:800 17px Arial,Helvetica,sans-serif">Entrega</h2>
-      ${entrega(o, site)}
+      ${entrega(o, site, true)}
       ${boton(`${BASE_URL}/admin/#pedidos`, 'Ver el pedido en el panel')}`,
   });
   const texto = `Nueva venta pagada #${o.ref}\n${o.product.name} · ${money(o.amount)}\n${b.name} · ${b.email} · ${b.phone}\n${BASE_URL}/admin/#pedidos`;

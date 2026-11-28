@@ -87,6 +87,11 @@ body { margin: 0; background: var(--crema); color: var(--ink); font: 16px/1.5 "I
 .cu-o { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--muted); font-size: 13px; }
 .cu-o::before, .cu-o::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .cu-aviso { background: #fff3c4; }
+/* Regalo de bienvenida (27/11/2026) */
+.cu-regalo { background: var(--azul); color: #fff; }
+.cu-regalo p { margin: 0 0 6px; }
+.cu-regalo .sp-muted { color: rgba(255, 255, 255, .85); }
+.cu-regalo .sp-btn { margin-top: 8px; background: #fff; color: var(--azul); }
 .cu-aviso p { margin: 0 0 6px; color: #7a5b00; }
 .cu-compra-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 6px; }
 .cu-total { margin-left: auto; color: var(--azul); }

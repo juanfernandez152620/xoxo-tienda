@@ -1219,6 +1219,8 @@ html:root {
 .suc b { font-size: 16px; font-weight: 800; }
 .suc span { color: var(--muted); font-weight: 600; text-wrap: balance; }
 .suc a { margin-top: 6px; color: var(--acento-texto); font-weight: 800; text-underline-offset: 3px; }
+/* 27/11/2026: la foto del local arriba de cada sucursal */
+.suc-foto { width: 100%; aspect-ratio: 4 / 3; margin-bottom: 8px; border-radius: 12px; object-fit: cover; }
 .promo-sucursales { background: var(--menta); color: var(--marino); }
 .promo-sucursales .p-icon { background: var(--marino); }
 .promo-sucursales .p-btn { background: var(--marino); color: #fff; }

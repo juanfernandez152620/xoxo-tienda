@@ -93,9 +93,9 @@ function comprobante(o) {
     };
     const subtotal = items.reduce((s, it) => s + it.price * it.n, 0);
     fila('Subtotal', money(subtotal));
-    if (o.discount) fila(`Código ${o.discount.code} (${o.discount.percent}% de descuento)`, `-${money(o.discount.amount)}`, { color: '#15803d' });
-    if (o.coupon && !o.discount) fila(`Descuento flash (código ${o.coupon})`, 'incluido', { color: '#15803d' });
-    fila(o.envio ? o.envio.nombre : 'Entrega', o.envio && o.envio.costo ? money(o.envio.costo) : 'Gratis');
+    if (o.discount) fila(o.discount.bienvenida ? 'Regalo de bienvenida (primera compra)' : `Código ${o.discount.code} (${o.discount.percent}% de descuento)`, `-${money(o.discount.amount)}`, { color: '#15803d' });
+    if (o.coupon && !(o.discount && !o.discount.bienvenida)) fila(`Descuento flash (código ${o.coupon})`, 'incluido', { color: '#15803d' });
+    fila(o.envio ? o.envio.nombre : 'Entrega', o.envio && o.envio.costo ? money(o.envio.costo) : o.envio && o.envio.tipo === 'coordinar' ? 'A coordinar' : 'Gratis');
     y -= 14;
     d.rect(M, y - 10, R - M, 30, CREMA);
     d.texto(M + 12, y, 'TOTAL PAGADO', { size: 12, bold: true, color: AZUL });
@@ -115,7 +115,8 @@ function comprobante(o) {
       const dir = o.delivery || {};
       d.texto(M, y, o.envio.nombre, { size: 11, bold: true, color: '#242424' });
       y -= 15;
-      d.texto(M, y, [dir.address, dir.city, o.envio.provincia, dir.cp && `CP ${dir.cp}`].filter(Boolean).join(', '), { size: 11, color: '#242424' });
+      d.texto(M, y, [dir.address, dir.city, o.envio.provincia || dir.province, dir.cp && `CP ${dir.cp}`].filter(Boolean).join(', '), { size: 11, color: '#242424' });
+      if (o.envio.tipo === 'coordinar' && !seg.numero) { y -= 15; d.texto(M, y, 'Te escribimos por WhatsApp para coordinar el envío.', { size: 11, color: GRIS }); }
       if (seg.numero) { y -= 15; d.texto(M, y, `Número de seguimiento ${EMPRESAS[seg.empresa] || ''}: ${seg.numero}`.replace('  ', ' '), { size: 11, bold: true, color: '#242424' }); }
     }
     if (seg.estado) { y -= 15; d.texto(M, y, `Estado: ${PASOS[seg.estado] || seg.estado}`, { size: 11, color: GRIS }); }

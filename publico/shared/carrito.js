@@ -27,6 +27,7 @@
     trash: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></svg>',
     tag: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12.5V4h8.5L21 13.5 13.5 21z"/><circle cx="7.5" cy="8.5" r="1.4"/></svg>',
     user: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+    gift: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v8.5h14V12M12 8v12.5M12 8c-1.5-3.5-5.5-4-5.5-1.5S10 8 12 8zm0 0c1.5-3.5 5.5-4 5.5-1.5S14 8 12 8z"/></svg>',
     wa: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2.2a9.7 9.7 0 0 0-8.4 14.6L2.3 21.7l5-1.3A9.7 9.7 0 1 0 12 2.2zm0 17.7a8 8 0 0 1-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 19.9zm4.4-6c-.2-.1-1.4-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.6 6.6 0 0 1-3.3-2.9c-.2-.4.3-.4.8-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11.2 11.2 0 0 0 4.3 3.8c1.6.7 2.2.7 3 .6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .1-1.2c0-.1-.2-.2-.4-.3z"/></svg>',
   };
 
@@ -103,12 +104,35 @@
     } catch { return { error: 'No pudimos revisar el código. Probá de nuevo.' }; }
   }
 
-  // Totales que ve la persona (el servidor los vuelve a calcular)
+  /* ---------- Regalo de bienvenida (27/11/2026): cuenta creada antes de comprar, solo la primera compra ----------
+     SITE.bienvenida: { tipo: 'monto' | 'porcentaje', valor, minimo } · TB_CLIENTE.bienvenida: le toca (lo dice el
+     servidor en /api/cuenta, que también lo vuelve a revisar al pagar) */
+  const REGALO = SITE.bienvenida || null;
+  const regaloTxt = (b = REGALO) => (!b ? '' : b.tipo === 'porcentaje' ? `${b.valor}% off` : `${money(b.valor)} off`);
+  const regaloMio = () => (window.TB_CLIENTE && window.TB_CLIENTE.bienvenida) || null;
+  const montoRegalo = (b, subtotal) => (!b || subtotal < (b.minimo || 0) ? 0
+    : Math.max(0, Math.min(b.tipo === 'porcentaje' ? Math.round(subtotal * b.valor / 100) : b.valor, subtotal - 1)));
+
+  // Totales que ve la persona (el servidor los vuelve a calcular). Con código propio y regalo, va el que más descuenta.
   function totales(ls = lineas()) {
     const subtotal = ls.reduce((s, l) => s + priceOf(l.p) * l.n, 0);
     const c = codigoActual();
-    const descuento = c && c.percent ? Math.round(subtotal * c.percent / 100) : 0;
-    return { subtotal, descuento, total: subtotal - descuento, codigo: c };
+    const deCodigo = c && c.percent ? Math.round(subtotal * c.percent / 100) : 0;
+    const deRegalo = montoRegalo(regaloMio(), subtotal);
+    const regalo = deRegalo > deCodigo;
+    const descuento = regalo ? deRegalo : deCodigo;
+    return { subtotal, descuento, total: subtotal - descuento, codigo: c, regalo };
+  }
+  // Invitación a crear la cuenta (sin sesión), o el aviso de que el regalo ya está aplicado
+  function regaloHTML(t) {
+    if (!REGALO) return '';
+    const yo = window.TB_CLIENTE;
+    if (yo && !yo.bienvenida) return '';
+    if (yo) {
+      return t.regalo ? `<p class="cart-code-ok cart-regalo-ok">${ICON.gift}<span>Tu <b>regalo de bienvenida</b> ya está aplicado: ${esc(regaloTxt(regaloMio()))} en esta compra.</span></p>`
+        : REGALO.minimo && t.subtotal < REGALO.minimo ? `<p class="cart-regalo-nota">${ICON.gift}<span>Tu regalo de bienvenida (${esc(regaloTxt(regaloMio()))}) vale en compras desde ${money(REGALO.minimo)}.</span></p>` : '';
+    }
+    return `<a class="cart-regalo" href="/cuenta?registro=1">${ICON.gift}<span><b>Creá tu cuenta y obtené ${esc(regaloTxt())}</b>en tu primera compra${REGALO.minimo ? ` desde ${money(REGALO.minimo)}` : ''}. Creala antes de pagar: tu carrito queda guardado.</span></a>`;
   }
 
   /* ---------- Botón del encabezado ---------- */
@@ -139,6 +163,7 @@
       cuenta.innerHTML = `<span class="cuenta-ini">${esc(d.cliente.nombre.trim().charAt(0).toUpperCase())}</span>`;
       cuenta.setAttribute('aria-label', `Mi cuenta (${d.cliente.nombre}): mis compras`);
       window.TB_CLIENTE = d.cliente;
+      if (abierto()) pintar(); // el regalo de bienvenida pudo cambiar los totales
     }).catch(() => {});
   }
   function pintarBoton() {
@@ -219,15 +244,16 @@
   function cuotasHTML(total, cu) {
     const filas = [1, 3, 6, 9, 12].filter(n => n <= cu.credito);
     const fila = (n, dest) => `<li${dest ? ' class="fc-dest"' : ''}><span>${n === 1 ? '1 pago' : `${n} cuotas${sinInteres}`}</span><b>${money(n === 1 ? total : Math.ceil(total / n))}</b></li>`;
+    // Sin Mercado Pago (credito 0): solo las cuotas con débito
     return `<div class="ficha-cuotas cart-cuotas">
       <p class="fc-t">El carrito en cuotas</p>
-      <div class="fc-grupo"><p class="fc-medio"><b>Con tarjeta de crédito</b><span>por Mercado Pago</span></p>
-        <ul class="fc-lista">${filas.map(n => fila(n, n === cu.credito)).join('')}</ul></div>
+      ${cu.credito ? `<div class="fc-grupo"><p class="fc-medio"><b>Con tarjeta de crédito</b><span>por Mercado Pago</span></p>
+        <ul class="fc-lista">${filas.map(n => fila(n, n === cu.credito)).join('')}</ul></div>` : ''}
       ${cu.debito ? `<div class="fc-grupo"><p class="fc-medio"><b>Con tarjeta de débito</b><span>con ${esc(STORE.financing || 'GO cuotas')}</span></p>
         <ul class="fc-lista">${fila(cu.debito, true)}</ul></div>` : ''}
-      ${cu.limita ? `<p class="fc-nota">Por ${esc(fullName(cu.limita.p))}, este carrito va hasta ${cu.credito > 1 ? `${cu.credito} cuotas` : '1 pago'} con crédito.</p>` : ''}
-      ${cu.sinDebito && STORE.financing ? `<p class="fc-nota">${esc(fullName(cu.sinDebito.p))} no se paga con débito en cuotas: este carrito se paga con Mercado Pago.</p>` : ''}
-      <p class="fc-nota">Sin contar el envío: lo elegís al pagar.</p>
+      ${cu.limita && cu.credito ? `<p class="fc-nota">Por ${esc(fullName(cu.limita.p))}, este carrito va hasta ${cu.credito > 1 ? `${cu.credito} cuotas` : '1 pago'} con crédito.</p>` : ''}
+      ${cu.sinDebito && STORE.financing ? `<p class="fc-nota">${esc(fullName(cu.sinDebito.p))} no se paga con débito en cuotas: ${cu.credito ? 'este carrito se paga con Mercado Pago' : 'sacalo del carrito o escribinos por WhatsApp'}.</p>` : ''}
+      <p class="fc-nota">${SITE.shipping && SITE.shipping.modo === 'coordinar' ? 'Sin contar el envío: lo coordinamos por WhatsApp después de la compra.' : 'Sin contar el envío: lo elegís al pagar.'}</p>
     </div>`;
   }
 
@@ -267,13 +293,14 @@
           </div>
         </li>`;
       }).join('')}</ul>
+      ${regaloHTML(t)}
       ${codigoHTML(t)}
       ${cuotasHTML(t.total, cu)}`;
     foot.innerHTML = `
       <dl class="cart-sum">
         <div><dt>Productos</dt><dd>${money(t.subtotal)}</dd></div>
-        ${t.descuento ? `<div class="cart-save"><dt>Código ${esc(t.codigo.code)} (−${t.codigo.percent}%)</dt><dd>−${money(t.descuento)}</dd></div>` : ''}
-        <div><dt>Envío</dt><dd>Lo elegís al pagar</dd></div>
+        ${t.descuento ? `<div class="cart-save"><dt>${t.regalo ? 'Regalo de bienvenida' : `Código ${esc(t.codigo.code)} (−${t.codigo.percent}%)`}</dt><dd>−${money(t.descuento)}</dd></div>` : ''}
+        <div><dt>Envío</dt><dd>${SITE.shipping && SITE.shipping.modo === 'coordinar' ? 'Retiro gratis o a coordinar' : 'Lo elegís al pagar'}</dd></div>
         <div class="cart-total"><dt>Total</dt><dd>${money(t.total)}</dd></div>
       </dl>
       <button class="cart-pay" type="button" data-act="pagar"${ls.some(l => l.n > tope(l.p.id)) ? ' disabled title="Hay productos sin stock en el carrito"' : ''}>Pagar</button>
@@ -333,7 +360,7 @@
     return abrir();
   }
 
-  window.Carrito = { agregar, cambiar, quitar, vaciar, items, lineas, contar, cuotas, totales, codigo, codigoActual, consultar, abrir, cerrar, comprar };
+  window.Carrito = { agregar, cambiar, quitar, vaciar, items, lineas, contar, cuotas, totales, codigo, codigoActual, consultar, abrir, cerrar, comprar, regalo: { txt: regaloTxt, mio: regaloMio, monto: montoRegalo, html: regaloHTML } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montarBoton);
   else montarBoton();
   // Si cambia en otra pestaña

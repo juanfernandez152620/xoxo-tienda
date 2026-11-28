@@ -55,6 +55,10 @@
           : lines.length > 1 ? 'Algún producto del carrito no se puede pagar con débito en cuotas.' : 'Este producto no se puede pagar con débito en cuotas.'),
     },
   };
+  // 27/11/2026: solo los medios prendidos (Mercado Pago está apagado en /admin hasta tener su webhook)
+  const ACTIVOS = Object.keys(METHODS).filter(k => !(window.TB_PAGOS && window.TB_PAGOS[k] === false));
+  // Sin la calculadora: el envío se coordina por WhatsApp después de la compra (se pide solo provincia y localidad)
+  const COORD = Boolean(SHIP && SHIP.modo === 'coordinar');
   const branches = (STORE.branches || []).map((b, i) => ({ ...b, i }));
 
   let root = null;
@@ -100,7 +104,7 @@
 
             <fieldset class="co-methods">
               <legend>¿Cómo querés pagar?</legend>
-              ${Object.entries(METHODS).map(([key, m]) => `
+              ${Object.entries(METHODS).filter(([key]) => ACTIVOS.includes(key)).map(([key, m]) => `
                 <label class="co-method" data-method="${key}">
                   <input type="radio" name="method" value="${key}">
                   <span class="co-logo">${m.logo ? `<img src="${esc(m.logo)}" alt="">` : ''}</span>
@@ -123,6 +127,26 @@
               </div>
             </fieldset>
 
+            ${COORD ? `
+            <fieldset class="co-fields co-ship">
+              <legend>Entrega</legend>
+              <div class="co-options" role="radiogroup" aria-label="Forma de entrega"></div>
+              <label class="co-field co-branch" hidden><span>Sucursal</span>
+                <select name="branch">${branches.map(b => `<option value="${esc(b.id)}">${esc(b.name)}${b.province ? ` (${esc(b.province)})` : ''}</option>`).join('')}</select></label>
+              <div class="co-address" hidden>
+                <div class="co-row">
+                  <label class="co-field"><span>Provincia</span>
+                    <select name="province" autocomplete="address-level1">
+                      <option value="">Elegí…</option>
+                      ${Envios ? Envios.PROVINCIAS.map(p => `<option>${esc(p.nombre)}</option>`).join('') : ''}
+                    </select></label>
+                  <label class="co-field"><span>Localidad</span>
+                    <input name="city" autocomplete="address-level2" maxlength="80"></label>
+                </div>
+                <input type="hidden" name="cp"><input type="hidden" name="address">
+                <p class="co-note">Después de la compra te escribimos por WhatsApp para coordinar el envío: la empresa, el costo y la dirección. El envío se paga aparte.</p>
+              </div>
+            </fieldset>` : `
             <fieldset class="co-fields co-ship">
               <legend>Entrega</legend>
               <div class="co-row">
@@ -144,7 +168,9 @@
                   <input name="city" autocomplete="address-level2" maxlength="80"></label>
                 <p class="co-note"></p>
               </div>
-            </fieldset>
+            </fieldset>`}
+
+            <div class="co-regalo" hidden></div>
 
             <fieldset class="co-fields co-coupon">
               <legend>Código de descuento</legend>
@@ -210,7 +236,9 @@
     const form = $('.co-form');
     const prov = Envios && Envios.provincia(form.elements.province.value);
     const before = ($('input[name="delivery"]:checked') || {}).value || 'retiro';
-    shipOptions = prov && SHIP ? Envios.opciones(SHIP, prov.zona, peso(), subtotal()) : [];
+    // Sin la calculadora (COORD): una sola opción de envío, que se coordina por WhatsApp y se paga aparte
+    shipOptions = COORD ? [{ id: 'coordinar', nombre: 'Envío a todo el país', costo: 0, coordinar: true }]
+      : prov && SHIP ? Envios.opciones(SHIP, prov.zona, peso(), subtotal()) : [];
     const pickup = !SHIP || SHIP.pickup;
     const opt = (value, title, price, note) => `
       <label class="co-opt">
@@ -220,8 +248,9 @@
       </label>`;
     $('.co-options').innerHTML = [
       pickup ? opt('retiro', 'Retiro en sucursal', 'Gratis', branches.length > 1 ? `${branches.length} sucursales` : (branches[0] && branches[0].name) || '') : '',
-      ...shipOptions.map(o => opt(o.id, o.nombre, o.costo ? money(o.costo) : 'Gratis', `Llega en ${Envios.diasTexto(o.dias)}`)),
-      !prov ? '<p class="co-ship-hint">Elegí tu provincia o escribí tu código postal para ver el envío con Andreani y Correo Argentino.</p>' : '',
+      ...shipOptions.map(o => (o.coordinar ? opt(o.id, o.nombre, 'A coordinar', 'Lo coordinamos por WhatsApp después de la compra')
+        : opt(o.id, o.nombre, o.costo ? money(o.costo) : 'Gratis', `Llega en ${Envios.diasTexto(o.dias)}`))),
+      !prov && !COORD ? '<p class="co-ship-hint">Elegí tu provincia o escribí tu código postal para ver el envío con Andreani y Correo Argentino.</p>' : '',
     ].join('');
     const keep = $(`input[name="delivery"][value="${CSS.escape(before)}"]`) || $('input[name="delivery"]');
     if (keep) keep.checked = true;
@@ -234,14 +263,16 @@
     const domicilio = envio && ship.id.endsWith('domicilio');
     $('.co-branch').hidden = Boolean(envio) || branches.length < 2;
     $('.co-address').hidden = !envio;
-    $('.co-street').hidden = !domicilio;
     const form = $('.co-form');
-    form.elements.address.required = domicilio;
     form.elements.city.required = envio;
-    form.elements.cp.required = envio;
-    $('.co-note').textContent = envio
-      ? (domicilio ? 'Te mandamos el número de seguimiento por email y WhatsApp.' : `Retirás en la sucursal de ${ship.nombre.split(' a ')[0]} más cercana a esa dirección.`)
-      : '';
+    if (!COORD) {
+      $('.co-street').hidden = !domicilio;
+      form.elements.address.required = domicilio;
+      form.elements.cp.required = envio;
+      $('.co-note').textContent = envio
+        ? (domicilio ? 'Te mandamos el número de seguimiento por email y WhatsApp.' : `Retirás en la sucursal de ${ship.nombre.split(' a ')[0]} más cercana a esa dirección.`)
+        : '';
+    }
     paintTotals();
   }
 
@@ -276,17 +307,27 @@
     const shipCost = ship ? ship.costo : 0;
     const flashOn = Flash && Flash.activo() && Flash.cfg.percent > 0;
     const list = flashOn ? lines.reduce((s, l) => s + Flash.lista(priceOf(l.p), Flash.cfg.percent) * l.n, 0) : 0;
-    const desc = own ? Math.round(price * own.percent / 100) : 0;
+    // Código propio o regalo de bienvenida (cuenta nueva, primera compra): el que más descuenta, igual que el servidor
+    const R = window.Carrito && window.Carrito.regalo;
+    const deCodigo = own ? Math.round(price * own.percent / 100) : 0;
+    const deRegalo = R ? R.monto(R.mio(), price) : 0;
+    const regalo = deRegalo > deCodigo;
+    const desc = regalo ? deRegalo : deCodigo;
     const n = lines.reduce((s, l) => s + l.n, 0);
     const row = (a, b, cls = '') => `<div class="${cls}"><dt>${a}</dt><dd>${b}</dd></div>`;
     $('.co-sum').innerHTML = [
       flashOn && couponOk && !own ? row('Precio de lista', `<s>${money(list)}</s>`) : '',
       flashOn && couponOk && !own ? row(`Descuento flash (${esc(Flash.cupon())})`, `−${money(list - price)}`, 'co-save') : '',
       row(n > 1 ? `Productos (${n})` : 'Producto', money(price)),
-      own ? row(`Código ${esc(own.code)} (−${own.percent}%)`, `−${money(desc)}`, 'co-save') : '',
-      row(ship ? esc(ship.nombre) : 'Envío', ship ? (shipCost ? money(shipCost) : 'Gratis') : 'Elegí la entrega'),
+      regalo ? row('Regalo de bienvenida', `−${money(desc)}`, 'co-save') : own ? row(`Código ${esc(own.code)} (−${own.percent}%)`, `−${money(desc)}`, 'co-save') : '',
+      row(ship ? esc(ship.coordinar ? 'Envío' : ship.nombre) : 'Envío', ship ? (shipCost ? money(shipCost) : ship.coordinar ? 'A coordinar' : 'Gratis') : 'Elegí la entrega'),
     ].join('');
     $('.co-total strong').textContent = money(price - desc + shipCost);
+    // La invitación a crear la cuenta (sin sesión) o el aviso de que el regalo ya está aplicado
+    const box = $('.co-regalo');
+    const html = R ? R.html({ regalo, subtotal: price }) : '';
+    box.innerHTML = html;
+    box.hidden = !html;
   }
 
   function paintMethod() {
@@ -335,8 +376,9 @@
         <div><b>${esc(fullName(l.p))}</b><small>${l.n > 1 ? `${l.n} × ${money(priceOf(l.p))}` : money(priceOf(l.p))}</small></div></div>`;
     }).join('');
     $$('.co-method').forEach(el => { el.querySelector('.co-mdesc').textContent = METHODS[el.dataset.method].text(product); });
-    const pick = $(`.co-method[data-method="${wanted}"] input`);
-    pick.checked = true;
+    // El medio pedido, o el primero que esté prendido (sin Mercado Pago: GO cuotas)
+    const pick = $(`.co-method[data-method="${wanted}"] input`) || $('.co-method input');
+    if (pick) pick.checked = true;
     paintMethod();
     showError('');
     fillBuyer();

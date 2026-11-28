@@ -49,13 +49,14 @@
       <p>${esc(p.direccion)}</p>
       ${seg.numero ? `<p class="sp-ok">Número de seguimiento${empresa ? ` de ${esc(empresa)}` : ''}: <b>${esc(seg.numero)}</b></p>
         ${web ? `<a class="sp-link" href="${esc(web)}" target="_blank" rel="noopener">Buscalo en ${esc(web.replace(/^https:\/\/(www\.)?|\/$/g, ''))}</a>` : ''}`
+        : p.envio && p.envio.tipo === 'coordinar' ? '<p class="sp-muted">Te escribimos por WhatsApp para coordinar el envío. Cuando lo despachemos vas a ver acá el número de seguimiento.</p>'
         : '<p class="sp-muted">Cuando lo despachemos vas a ver acá el número de seguimiento (y te lo mandamos por mail).</p>'}</div>`;
   }
 
   // Sin pagar todavía: si se puede, el botón para pagarlo ahora (el servidor arma un link nuevo de la pasarela)
   function sinPagar(p) {
     const tienda = esc(document.querySelector('.sp-volver')?.getAttribute('href') || '/');
-    if (p.pagar === 'en-curso') return '<div class="sp-box"><h2>Estamos esperando tu pago</h2><p>Ya empezaste a pagar con Mercado Pago (por ejemplo, en efectivo). Apenas se acredite, tu pedido pasa a Pagado y te avisamos por mail.</p></div>';
+    if (p.pagar === 'en-curso') return `<div class="sp-box"><h2>Estamos esperando tu pago</h2><p>Ya empezaste a pagar con ${esc(p.medio)} (por ejemplo, en efectivo). Apenas se acredite, tu pedido pasa a Pagado y te avisamos por mail.</p></div>`;
     if (p.pagar === 'vencido') return `<div class="sp-box"><h2>Este pedido no se pagó</h2><p>Pasaron más de 3 días y los precios pueden haber cambiado. Si todavía lo querés, armalo de nuevo desde la tienda.</p><a class="sp-btn" href="${tienda}">Ir a la tienda</a></div>`;
     if (p.pagar !== 'si') return '<div class="sp-box"><h2>Todavía no recibimos el pago</h2><p>Apenas se acredite, tu pedido pasa a Pagado y te avisamos por mail.</p></div>';
     const fallo = p.pago === 'rejected' || p.pago === 'error';
@@ -103,8 +104,8 @@
       ${!cancelado ? entrega(p) : ''}
       <div class="sp-box"><h2>Tu compra</h2>
         <ul class="sp-items">${p.items.map(x => `<li><span>${x.n > 1 ? `${x.n} × ` : ''}${esc(x.name)}</span><b>${money(x.price * x.n)}</b></li>`).join('')}
-          ${p.descuento ? `<li class="sp-save"><span>Código ${esc(p.descuento.code)} (−${p.descuento.percent}%)</span><b>−${money(p.descuento.amount)}</b></li>` : ''}
-          <li><span>${esc(p.envio ? p.envio.nombre : 'Entrega')}</span><b>${p.envio && p.envio.costo ? money(p.envio.costo) : 'Gratis'}</b></li>
+          ${p.descuento ? `<li class="sp-save"><span>${p.descuento.texto ? esc(p.descuento.texto) : `Código ${esc(p.descuento.code)} (−${p.descuento.percent}%)`}</span><b>−${money(p.descuento.amount)}</b></li>` : ''}
+          <li><span>${esc(p.envio ? p.envio.nombre : 'Entrega')}</span><b>${p.envio && p.envio.costo ? money(p.envio.costo) : p.envio && p.envio.tipo === 'coordinar' ? 'A coordinar' : 'Gratis'}</b></li>
           <li class="sp-total"><span>Total</span><b>${money(p.total)}</b></li></ul>
         <p class="sp-muted">${esc(p.medio)}${p.cuotas ? ` · ${p.cuotas} ${p.cuotas === 1 ? 'pago' : 'cuotas'}` : ''}${p.items.length > 1 || p.descuento ? ` · productos ${money(subtotal)}` : ''}</p>
       </div>

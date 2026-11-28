@@ -192,6 +192,11 @@ html.co-lock, html.co-lock body { overflow: hidden; }
 .co-opt-price { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .co-ship-hint { margin: 2px 0 0; color: var(--co-muted); font-size: 13px; }
 .co-branch[hidden], .co-street[hidden], .co-coupon[hidden] { display: none; }
+/* 27/11/2026: envío a coordinar por WhatsApp (sin la calculadora) */
+.co-coord[hidden], .co-regalo[hidden], .co-ship-row[hidden], .co-address[hidden] { display: none; }
+.co-coord { display: grid; gap: 10px; }
+.co-coord .co-note { margin: 0; color: var(--co-muted); font-size: 13px; }
+.co-regalo { margin: 0; }
 
 /* ---------- Cupón y resumen ---------- */
 .co-coupon-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
@@ -296,6 +301,16 @@ html.co-lock, html.co-lock body { overflow: hidden; }
 .cart-redes-links .cart-wa { background: #25d366; color: #fff; box-shadow: none; }
 .cart-redes-links svg { width: 16px; height: 16px; }
 .cart-cuotas { margin: 0; }
+/* Regalo de bienvenida (27/11/2026): la invitación a crear la cuenta (azul de XOXO) y el aviso de que ya está aplicado */
+.cart-regalo {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 14px;
+  background: #2b4966; color: #fff; font-size: 14px; line-height: 1.4; text-decoration: none;
+}
+.cart-regalo svg, .cart-regalo-nota svg { flex: none; width: 22px; height: 22px; margin-top: 1px; }
+.cart-regalo b { display: block; font-size: 15.5px; }
+.cart-regalo:hover { background: #1d3550; }
+.cart-regalo-ok svg { width: 20px; height: 20px; }
+.cart-regalo-nota { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--co-soft); font-size: 13.5px; line-height: 1.4; }
 
 .cart-foot { padding: 14px 20px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid var(--co-line); background: var(--co-bg); }
 .cart-sum { display: grid; gap: 6px; margin: 0 0 12px; }

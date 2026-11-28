@@ -37,12 +37,14 @@ function asset(p) {
 const heroLogo = site => (site.texts.heroLogo ? `<img class="cyber-logo" src="${esc(site.texts.heroLogo)}" alt="" width="150" height="121">` : '');
 
 // Sucursales con su dirección y el link para llegar
+// 27/11/2026: con la foto del local arriba (en el pie de Minimalista no se ve: lo esconde su CSS)
 function sucursales(site) {
   return site.store.branches.map(b => {
     const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}`;
     // "Dirección a confirmar" (sucursal de ejemplo) no lleva el link al mapa
     const real = b.address && !/a confirmar/i.test(b.address);
-    return `<li class="suc"><b>Sucursal ${esc(b.name)}</b>${b.address
+    const foto = (b.photos && b.photos[0]) || b.photo;
+    return `<li class="suc">${foto ? `<img class="suc-foto" src="${esc(foto)}" alt="El local de ${esc(b.name)}" loading="lazy" decoding="async">` : ''}<b>Sucursal ${esc(b.name)}</b>${b.address
       ? `<span>${esc(b.address)}</span>${real ? `<a href="${esc(maps)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}`
       : `<span>${esc(site.store.city)}</span>`}</li>`;
   }).join('');
@@ -51,14 +53,20 @@ function sucursales(site) {
 // Los datos de la tienda para las páginas. cat: la categoría de la página (/historia/audio/), o vacío en el inicio.
 function datos(pago, cat, diseno) {
   const d = sitio.publico();
+  // Qué medios de pago se ven (27/11/2026: Mercado Pago apagado hasta tener su webhook): sin Mercado Pago, las
+  // páginas no muestran las cuotas con crédito ni lo nombran
+  const medios = { mercadopago: pagos.estadoMedio('mercadopago').enabled, gocuotas: pagos.estadoMedio('gocuotas').enabled };
+  // Cartel flotante de la promo (Black Week): solo en los diseños de la tienda, mientras esté vigente
+  const promo = sitio.VARIANTS.includes(diseno) && d.site.promo;
   return `<script>window.TB_BASE = "";
     window.TB_DISENO = ${js(diseno || '')};
+    window.TB_PAGOS = ${js(medios)};
     window.STORE = ${js(d.store)};
     window.PRODUCTS = ${js(d.products)};
     window.EXTRAS = ${js(d.extras)};
     window.SITE = ${js(d.site)};
     window.STOCK = ${js(stock.publico(pagos.leerPedidos()))};
-    window.CATEGORIA = ${js(cat || '')};${pago ? "\n    window.TB_MODE = 'pago';" : ''}</script>\n`;
+    window.CATEGORIA = ${js(cat || '')};${pago ? "\n    window.TB_MODE = 'pago';" : ''}</script>\n${promo ? `  <script src="${asset('/shared/promo.js')}" defer></script>\n` : ''}`;
 }
 
 // Título de la pestaña: en las páginas de categoría va la categoría adelante

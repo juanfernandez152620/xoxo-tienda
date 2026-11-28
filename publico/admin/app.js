@@ -788,9 +788,57 @@
     </section>`;
   }
 
+  // 27/11/2026: Mercado Pago apagado hasta tener su webhook (solo GO cuotas), el regalo de bienvenida de las
+  // cuentas nuevas y el cartel flotante de la promo pasajera (Black Week)
+  function pagosCard() {
+    return `<section class="card"><div class="card-head"><h2>Medios de pago</h2></div>
+      <div class="row">${check('Cobrar con Mercado Pago', 'store.mercadoPago')}</div>
+      <p class="muted">Apagado: la tienda cobra solo con GO cuotas, y ninguna página nombra a Mercado Pago ni las cuotas con crédito.
+        Prendelo cuando esté configurado su webhook (además, la clave se carga en el servidor).</p>
+    </section>`;
+  }
+  function bienvenidaCard() {
+    const b = S.draft.bienvenida || (S.draft.bienvenida = { on: true, tipo: 'monto', valor: 7000, minimo: 0 });
+    return `<section class="card"><div class="card-head"><h2>Regalo de bienvenida</h2></div>
+      <p>Quien se crea la cuenta <b>antes de comprar</b> tiene un descuento en su <b>primera compra</b> (se aplica solo al pagar con la sesión iniciada).
+        No vale para quien ya compró con ese email, celular o DNI. Si además usa un código, se aplica el que más descuenta.</p>
+      <div class="grid-3">
+        <label class="field">Tipo de descuento
+          <select ${attrs('bienvenida.tipo', { rerender: true })}><option value="monto"${b.tipo !== 'porcentaje' ? ' selected' : ''}>Pesos</option><option value="porcentaje"${b.tipo === 'porcentaje' ? ' selected' : ''}>Porcentaje</option></select></label>
+        ${field(b.tipo === 'porcentaje' ? 'Porcentaje' : 'Pesos de descuento', 'bienvenida.valor', { type: 'number' })}
+        ${field('Compra mínima (0 = sin mínimo)', 'bienvenida.minimo', { type: 'number' })}
+      </div>
+      <div class="row">${check('Prendido', 'bienvenida.on')}</div>
+      <p class="muted">Se anuncia en el carrito, al pagar, en Mi cuenta y en el cartel de la promo. Para que salga en la barra de avisos, escribilo en "Portada y avisos".</p>
+    </section>`;
+  }
+  function promoCard() {
+    if (!S.draft.promo) S.draft.promo = { on: true, hasta: '', titulo: 'Black Week', texto: 'Promociones exclusivas por tiempo limitado', imagen: '/media/marca/mascota-black-week.webp' };
+    return `<section class="card"><div class="card-head"><h2>Cartel de promo (flotante)</h2></div>
+      <p class="muted">La mascota que flota en una esquina de los 3 diseños, sin tocar el resto de la página. Al tocarla muestra la promo.
+        Se apaga sola después del día "Hasta".</p>
+      <div class="grid-3">
+        ${field('Título', 'promo.titulo')}
+        ${field('Texto', 'promo.texto')}
+        ${field('Hasta (inclusive)', 'promo.hasta', { type: 'date' })}
+      </div>
+      ${mediaField('Imagen de la burbuja (cuadrada)', 'promo.imagen')}
+      <div class="row">${check('Prendido', 'promo.on')}</div>
+    </section>`;
+  }
+
   function enviosCard() {
     const e = S.draft.shipping;
     if (!e) return '';
+    // 27/11/2026: sin la API de envíos, el envío se coordina por WhatsApp después de la compra
+    if (e.modo !== 'calculadora') {
+      return `<section class="card"><div class="card-head"><h2>Envíos</h2></div>
+        <p>La calculadora está <b>apagada</b>: al pagar, el cliente elige <b>retiro gratis en sucursal</b> o <b>envío a coordinar</b>
+          (deja su provincia y localidad). Después de la compra le escriben por WhatsApp para arreglar la empresa, el costo y la dirección.</p>
+        <div class="row">${check('Retiro gratis en sucursal', 'shipping.pickup')}
+          <button class="btn small" type="button" data-act="envios-calculadora">Volver a la calculadora</button></div>
+      </section>`;
+    }
     const zonas = ['1 · Tucumán', '2 · NOA', '3 · Centro y resto', '4 · Patagonia'];
     const fila = (emp, srv, label) => `<tr><td>${label}</td>${zonas.map((z, i) =>
       `<td><input class="num-in" type="number" min="0" inputmode="numeric" ${attrs(`shipping.rates.${emp}.${srv}.${i}`, { kind: 'num' })} value="${esc(e.rates[emp][srv][i])}" aria-label="${esc(label)}, zona ${esc(z)}"></td>`).join('')}</tr>`;
@@ -809,7 +857,8 @@
         ${field('Correo Argentino: cada kg de más (0 = mismo envío para todo)', 'shipping.rates.correo.extraKg', { type: 'number' })}
         ${field('Envío gratis desde (0 = nunca)', 'shipping.freeFrom', { type: 'number' })}
       </div>
-      <div class="row">${check('Andreani', 'shipping.rates.andreani.on')}${check('Correo Argentino', 'shipping.rates.correo.on')}${check('Retiro gratis en sucursal', 'shipping.pickup')}</div>
+      <div class="row">${check('Andreani', 'shipping.rates.andreani.on')}${check('Correo Argentino', 'shipping.rates.correo.on')}${check('Retiro gratis en sucursal', 'shipping.pickup')}
+        <button class="btn small" type="button" data-act="envios-coordinar">Apagar la calculadora (coordinar por WhatsApp)</button></div>
     </section>`;
   }
 
@@ -910,6 +959,9 @@
         <p class="muted">Apagado (así está desde el 17/11/2026): Red social y Minimalista muestran solo ventilación, creación de contenido y audio,
           y los celulares no se pueden comprar. Prendido, vuelve el catálogo de celulares de la pestaña Celulares.</p>
       </section>
+      ${pagosCard()}
+      ${promoCard()}
+      ${bienvenidaCard()}
       ${flashCard()}
       ${codigosCard()}
       ${enviosCard()}
@@ -1505,14 +1557,14 @@
     const team = (S.draft.story && S.draft.story.team) || [];
     const visibles = team.filter(p => p.show !== false).length;
     const branches = S.draft.store.branches;
+    // 27/11/2026: la parte del equipo se sacó de las páginas (nadie quiso poner la cara). Lo cargado sigue guardado.
+    void visibles;
     return `
-      <div class="page-head"><h1>Equipo y locales</h1><button class="btn small primary" type="button" data-act="team-add">Agregar persona</button></div>
-      <p class="muted">Las personas que atienden y las fotos de cada local. Se ven en la página principal de la tienda (Historia). Después de cambiar algo, tocá <b>Guardar cambios</b>.</p>
+      <div class="page-head"><h1>Equipo y locales</h1></div>
+      <p class="muted">Las fotos de cada local: se ven en las sucursales de los 3 diseños. Después de cambiar algo, tocá <b>Guardar cambios</b>.</p>
       <section class="card">
-        <div class="card-head"><h2>El equipo</h2><p>${n(team.length)} persona${team.length === 1 ? '' : 's'}${team.length !== visibles ? `, ${n(visibles)} se ven en la página` : ''}. En la portada se ven las primeras 8: cambiá el orden con las flechas. Una foto de frente, de los hombros para arriba, queda mejor.</p></div>
-        <div class="grid-2">${field('Título', 'story.teamTitle', { ph: 'Un equipo que te atiende de verdad' })}${area('Texto', 'story.teamText', { rows: 2 })}</div>
-        <div class="personas">${team.map((p, i) => personaEditor(p, i, team.length)).join('') || '<p class="muted">Todavía no hay nadie cargado.</p>'}</div>
-        <div class="row"><button class="btn small" type="button" data-act="team-add">Agregar persona</button></div>
+        <div class="card-head"><h2>El equipo</h2><p>La parte del equipo <b>no se muestra</b> en ninguna página desde el 27/11/2026.
+          ${team.length ? `Las ${n(team.length)} personas que estaban cargadas siguen guardadas, por si algún día vuelve.` : ''}</p></div>
       </section>
       <section class="card">
         <div class="card-head"><h2>Fotos de los locales</h2><p>Hasta 12 por local: el frente, el interior, la vidriera. La primera es la principal. Se ven en la página principal, en la parte de las sucursales. La dirección, el WhatsApp y los horarios de cada local se cambian en <button class="link" type="button" data-tab="sucursales">Sucursales</button>.</p></div>
@@ -2141,6 +2193,9 @@
       (S.draft.codes || (S.draft.codes = [])).push({ code: '', percent: 10, until: '', max: 0, on: true, note: '' });
       render();
     },
+    // Envíos: con la calculadora (tabla de precios) o a coordinar por WhatsApp después de la compra
+    'envios-calculadora'() { S.draft.shipping.modo = 'calculadora'; render(); },
+    'envios-coordinar'() { S.draft.shipping.modo = 'coordinar'; render(); },
     'del-code'(el) {
       const c = S.draft.codes[+el.dataset.i];
       if (!confirm(`¿Quitar el código ${c.code || 'nuevo'}?`)) return;

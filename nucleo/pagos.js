@@ -19,12 +19,16 @@ const { diaLocal } = require('./archivos');
 
 const PEDIDOS = ruta('pedidos.json');
 
-// Mercado Pago es el medio principal (va primero y elegido); GO cuotas queda como segunda opción
+// Mercado Pago es el medio principal (va primero y elegido); GO cuotas queda como segunda opción.
+// 27/11/2026: Mercado Pago está apagado en /admin → Tienda y textos hasta tener su webhook: no aparece en ninguna
+// página ni acepta pagos, aunque tenga la clave cargada. Prenderlo lo vuelve a mostrar tal cual estaba.
+const mpPrendido = () => sitio.cargar().store.mercadoPago === true;
 const METHODS = {
-  mercadopago: { name: 'Mercado Pago', live: () => Boolean(MP_TOKEN) },
-  gocuotas: { name: 'GO cuotas', live: () => Boolean(GC.email && GC.password) },
+  mercadopago: { name: 'Mercado Pago', live: () => Boolean(MP_TOKEN), prendido: mpPrendido },
+  gocuotas: { name: 'GO cuotas', live: () => Boolean(GC.email && GC.password), prendido: () => true },
 };
 function estadoMedio(key) {
+  if (!METHODS[key].prendido()) return { enabled: false, demo: false, apagado: true };
   const live = METHODS[key].live();
   return { enabled: live || PAGOS_DEMO, demo: !live && PAGOS_DEMO };
 }
@@ -37,6 +41,8 @@ const priceOf = p => p.price || p.cuotas[12] * 12;
 const fullName = p => (p.storage ? `${/^(moto|nubia)/i.test(p.name) ? '' : `${p.brand} `}${p.name} ${p.storage} GB` : p.name);
 const money = n => `$${new Intl.NumberFormat('es-AR').format(n)}`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// El renglón del descuento de un pedido: un código propio o el regalo de bienvenida de la cuenta nueva
+const descuentoTexto = d => (d.bienvenida ? 'Regalo de bienvenida (primera compra)' : `Código ${d.code} (${d.percent}% off)`);
 
 class ErrorPasarela extends Error {
   constructor(gateway, status, detail) {
@@ -87,8 +93,9 @@ function validar(body) {
     phone: String(b.phone || '').replace(/[^\d]/g, '').slice(0, 15),
     dni: String(b.dni || '').replace(/[^\d]/g, '').slice(0, 9),
   };
-  // type: 'retiro' o la forma de envío elegida en la calculadora (andreani-domicilio, correo-sucursal…)
-  const type = /^(retiro|(andreani|correo)-(domicilio|sucursal))$/.test(d.type) ? d.type : d.type === 'envio' ? 'andreani-domicilio' : 'retiro';
+  // type: 'retiro', 'coordinar' (el envío se arregla por WhatsApp después de la compra) o la forma de envío
+  // elegida en la calculadora (andreani-domicilio, correo-sucursal…)
+  const type = /^(retiro|coordinar|(andreani|correo)-(domicilio|sucursal))$/.test(d.type) ? d.type : d.type === 'envio' ? 'andreani-domicilio' : 'retiro';
   const delivery = {
     type,
     address: clean(d.address).slice(0, 160),
@@ -101,7 +108,9 @@ function validar(body) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(buyer.email)) return { error: 'Revisá tu email.' };
   if (buyer.phone.length < 8) return { error: 'Escribí tu celular con característica (ej: 381 5123456).' };
   if (buyer.dni && (buyer.dni.length < 7 || buyer.dni.length > 9)) return { error: 'Revisá tu DNI.' };
-  if (type !== 'retiro') {
+  if (type === 'coordinar') {
+    if (delivery.city.length < 2) return { error: 'Escribí tu localidad, así ya sabemos adónde va el envío.' };
+  } else if (type !== 'retiro') {
     if (delivery.cp.length < 4) return { error: 'Escribí el código postal para el envío.' };
     if (delivery.city.length < 2) return { error: 'Escribí la localidad para el envío.' };
     if (type.endsWith('domicilio') && delivery.address.length < 5) return { error: 'Escribí la dirección para el envío.' };
@@ -118,7 +127,7 @@ async function mpCrear(order, lines, clave = order.id) {
   const renglones = order.discount
     ? [{
       id: `pedido-${order.ref}`, title: `Pedido ${order.ref}: ${order.product.name}`,
-      description: `Con el código ${order.discount.code} (${order.discount.percent}% off) · ${tienda()}`,
+      description: `${descuentoTexto(order.discount)} · ${tienda()}`,
       category_id: 'electronics', quantity: 1, currency_id: 'ARS', unit_price: order.productAmount, ...foto(lines[0].p),
     }]
     : lines.map(l => ({
@@ -350,13 +359,14 @@ function seguimientoPublico(o) {
     pagadoEl: o.status === 'approved' ? o.paidAt || o.createdAt : null,
     pago: o.status,
     items: (o.items || [{ name: o.product.name, n: 1, price: o.productAmount ?? o.amount }]).map(x => ({ name: x.name, n: x.n, price: x.price })),
-    descuento: o.discount ? { code: o.discount.code, percent: o.discount.percent, amount: o.discount.amount } : null,
+    descuento: o.discount ? { code: o.discount.code, percent: o.discount.percent, amount: o.discount.amount, texto: descuentoTexto(o.discount) } : null,
     envio: o.envio ? { nombre: o.envio.nombre, costo: o.envio.costo, tipo: o.envio.tipo, dias: o.envio.dias || null } : null,
     total: o.amount,
-    medio: METHODS[o.method] ? METHODS[o.method].name : o.method,
+    // (sin pagar todavía: el medio con el que se pagaría ahora, ver medioParaPagar)
+    medio: (m => (METHODS[m] ? METHODS[m].name : m))(comoPagar(o) === 'si' ? medioParaPagar(o) : o.method),
     cuotas: o.method === 'gocuotas' ? o.plan : (o.gateway && o.gateway.installments) || null,
     sucursal: suc ? { name: suc.name, address: suc.address, hours: suc.hours || '' } : null,
-    direccion: retiro ? '' : [d.address, d.city, o.envio.provincia, d.cp && `CP ${d.cp}`].filter(Boolean).join(', '),
+    direccion: retiro ? '' : [d.address, d.city, o.envio.provincia || d.province, d.cp && `CP ${d.cp}`].filter(Boolean).join(', '),
     seguimiento: { estado: seg.estado || '', historial: (seg.historial || []).map(h => ({ paso: h.paso, at: h.at, empresa: h.empresa, numero: h.numero, motivo: h.motivo })), empresa: seg.empresa || '', numero: seg.numero || '' },
     demo: Boolean(o.gateway && o.gateway.demo),
     // Si se puede pagar desde el seguimiento: 'si', 'en-curso' (un pago esperando acreditarse), 'vencido' o ''
@@ -381,13 +391,23 @@ function comoPagar(o) {
   if (Date.now() - Date.parse(o.createdAt) > VENCE_DIAS * 864e5) return 'vencido';
   return 'si';
 }
+// Con qué se paga ahora un pedido que quedó sin pagar: su medio; o, si ese medio está apagado (Mercado Pago desde el
+// 27/11/2026), GO cuotas, siempre que todos sus productos acepten débito
+function medioParaPagar(o) {
+  if (estadoMedio(o.method).enabled || !estadoMedio('gocuotas').enabled) return o.method;
+  const extras = sitio.cargar().extras;
+  const items = Array.isArray(o.items) && o.items.length ? o.items : [{ id: o.product && o.product.id }];
+  return items.every(it => { const p = extras.find(x => x.id === it.id); return !p || p.debito !== false; }) ? 'gocuotas' : o.method;
+}
 async function pagarDeNuevo(o) {
   const como = comoPagar(o);
   if (!como) return [409, { error: 'Este pedido ya está pago o se canceló.' }];
   if (como === 'en-curso') return [409, { error: 'Ya hay un pago de este pedido esperando acreditarse. Si pagaste en efectivo, puede tardar hasta 2 días hábiles.' }];
   if (como === 'vencido') return [409, { error: `Este pedido tiene más de ${VENCE_DIAS} días y los precios pueden haber cambiado. Armalo de nuevo desde la tienda.` }];
-  const medio = METHODS[o.method] ? METHODS[o.method].name : o.method;
-  const state = estadoMedio(o.method);
+  // 27/11/2026: un pedido de Mercado Pago, con Mercado Pago apagado, se paga con GO cuotas (si sus productos aceptan débito)
+  const metodo = medioParaPagar(o);
+  const medio = METHODS[metodo] ? METHODS[metodo].name : metodo;
+  const state = estadoMedio(metodo);
   if (!state.enabled) return [503, { error: `El pago con ${medio} no está disponible en este momento. Escribinos por WhatsApp y te ayudamos.` }];
   // Los productos con el precio del pedido (no el de hoy): el total tiene que dar lo mismo que cuando lo armó
   const items = Array.isArray(o.items) && o.items.length ? o.items : [{ id: o.product.id, name: o.product.name, n: 1, price: o.productAmount ?? o.amount }];
@@ -396,10 +416,12 @@ async function pagarDeNuevo(o) {
   const site = sitio.cargar();
   const catalogo = [...site.products, ...site.extras];
   const lines = items.map(it => ({ p: { ...(catalogo.find(p => p.id === it.id) || { id: it.id, name: it.name }), price: it.price }, n: it.n }));
+  const cambio = metodo !== o.method ? { method: metodo, plan: metodo === 'gocuotas' ? (lines[0].p.cuotas ? 9 : Number(site.store.extras.cuotas) || 6) : 1 } : {};
+  const ped = { ...o, ...cambio };
   try {
-    const result = state.demo ? demoCrear(o) : o.method === 'mercadopago' ? await mpCrear(o, lines, `${o.id}-${Date.now()}`) : await gcCrear(o);
+    const result = state.demo ? demoCrear(ped) : metodo === 'mercadopago' ? await mpCrear(ped, lines, `${o.id}-${Date.now()}`) : await gcCrear(ped);
     // intentoAt: desde cuándo vuelve a reservar el stock mientras paga (nucleo/stock.js)
-    actualizar(o.id, { status: 'pending', intentoAt: new Date().toISOString(), gateway: { ...(o.gateway || {}), ...result.gateway } });
+    actualizar(o.id, { ...cambio, status: 'pending', intentoAt: new Date().toISOString(), gateway: { ...(o.gateway || {}), ...result.gateway } });
     console.log(`[pedido ${o.ref}] vuelve a pagar con ${medio}`);
     return [200, { url: result.url }];
   } catch (err) {
@@ -424,11 +446,31 @@ function codigoValido(texto, site = sitio.cargar()) {
   if (!c) return null;
   if (!c.on) return { error: 'Ese código ya no está activo.' };
   if (c.until && c.until < diaLocal()) return { error: 'Ese código ya venció.' };
-  if (c.max && leerPedidos().filter(o => o.status === 'approved' && o.discount && o.discount.code === code).length >= c.max) {
+  if (c.max && leerPedidos().filter(o => o.status === 'approved' && o.discount && !o.discount.bienvenida && o.discount.code === code).length >= c.max) {
     return { error: 'Ese código ya se usó todas las veces que se podía.' };
   }
   return { code, percent: c.percent };
 }
+/* ---------- Regalo de bienvenida (27/11/2026) ----------
+   Quien tiene cuenta (creada antes de pagar: hay que estar con la sesión iniciada) y todavía no compró tiene un
+   descuento en su primera compra. "Todavía no compró": ningún pedido pagado con esa cuenta, ese email, ese
+   celular ni ese DNI. Lo usa el carrito (/api/cuenta dice si le toca) y lo vuelve a revisar crear(). */
+const ultimos10 = s => String(s || '').replace(/\D/g, '').slice(-10);
+function bienvenidaPara(c, buyer = null, site = sitio.cargar()) {
+  const b = site.bienvenida;
+  if (!b || !b.on || !c) return null;
+  const mails = new Set([c.email, buyer && buyer.email].filter(Boolean).map(e => String(e).toLowerCase()));
+  const tels = new Set([c.telefono, buyer && buyer.phone].map(ultimos10).filter(t => t.length >= 8));
+  const dnis = new Set([c.dni, buyer && buyer.dni].map(d => String(d || '').replace(/\D/g, '')).filter(d => d.length >= 7));
+  const yaCompro = leerPedidos().some(o => ['approved', 'review'].includes(o.status) && (o.clienteId === c.id
+    || mails.has(String(o.buyer.email || '').toLowerCase()) || tels.has(ultimos10(o.buyer.phone))
+    || (o.buyer.dni && dnis.has(String(o.buyer.dni)))));
+  return yaCompro ? null : b;
+}
+// Cuánto descuenta el regalo sobre un subtotal (0 si no llega a la compra mínima). Nunca deja el total en 0.
+const montoBienvenida = (b, subtotal) => (!b || subtotal < (b.minimo || 0) ? 0
+  : Math.max(0, Math.min(b.tipo === 'porcentaje' ? Math.round(subtotal * b.valor / 100) : b.valor, subtotal - 1)));
+
 // Para el carrito: /api/codigo { code } → { code, percent } (el pedido lo vuelve a revisar al crearse)
 function consultarCodigo(body) {
   const r = codigoValido(body && body.code);
@@ -464,7 +506,7 @@ async function crear(body, extra = {}) {
   // Cuotas: Mercado Pago, hasta las que permitan todos; GO cuotas, solo si todos aceptan débito
   if (method === 'gocuotas' && lines.some(l => l.p.debito === false)) {
     const no = lines.find(l => l.p.debito === false).p;
-    return [400, { error: `${fullName(no)} no se puede pagar con débito en GO cuotas. Elegí Mercado Pago o sacalo del carrito.` }];
+    return [400, { error: `${fullName(no)} no se puede pagar con débito en GO cuotas. ${estadoMedio('mercadopago').enabled ? 'Elegí Mercado Pago o sacalo del carrito.' : 'Sacalo del carrito o escribinos por WhatsApp.'}` }];
   }
   const credito = Math.min(...lines.map(l => (l.p.cuotas ? 12 : Number(l.p.credito) || 12)));
   const check = validar(body);
@@ -479,8 +521,13 @@ async function crear(body, extra = {}) {
   // de la página ya es el del flash)
   const propio = body.coupon ? codigoValido(body.coupon, site) : null;
   if (propio && propio.error) return [400, { error: propio.error }];
-  const discount = propio ? { code: propio.code, percent: propio.percent, amount: Math.round(subtotal * propio.percent / 100) } : null;
-  const coupon = !discount && flash.cuponValido(body.coupon, site.flash) ? flash.cupon() : '';
+  // Regalo de bienvenida (cuenta nueva, primera compra): si además hay un código propio, va el que más descuenta
+  const regalo = extra.cliente ? bienvenidaPara(extra.cliente, check.buyer, site) : null;
+  const deCodigo = propio ? Math.round(subtotal * propio.percent / 100) : 0;
+  const deRegalo = montoBienvenida(regalo, subtotal);
+  const discount = deRegalo > deCodigo ? { code: 'bienvenida', percent: 0, amount: deRegalo, bienvenida: true }
+    : propio ? { code: propio.code, percent: propio.percent, amount: deCodigo } : null;
+  const coupon = !propio && flash.cuponValido(body.coupon, site.flash) ? flash.cupon() : '';
 
   const id = crypto.randomBytes(5).toString('hex');
   const productAmount = subtotal - (discount ? discount.amount : 0);
@@ -589,7 +636,7 @@ function lineaArranque(key) {
   const s = estadoMedio(key);
   const extra = key === 'gocuotas' && GC.base.includes('sandbox') && METHODS.gocuotas.live() ? ' · sandbox'
     : key === 'mercadopago' && MP_TOKEN.startsWith('TEST-') ? ' · credenciales de prueba' : '';
-  return `${METHODS[key].name.padEnd(13)} ${s.demo ? 'pago simulado (falta la clave)' : s.enabled ? 'activo' : 'apagado (falta la clave)'}${extra}`;
+  return `${METHODS[key].name.padEnd(13)} ${s.apagado ? 'apagado en el panel (Tienda y textos)' : s.demo ? 'pago simulado (falta la clave)' : s.enabled ? 'activo' : 'apagado (falta la clave)'}${extra}`;
 }
 
 /* ---------- Estado para el panel ---------- */
@@ -665,5 +712,5 @@ module.exports = {
   estadoAdmin, probar, linkPrueba,
   METHODS, activo, configPublica, leerPedidos, crear, estado, avisoMercadoPago, avisoGoCuotas, demo, lineaArranque, consultarCodigo,
   PASOS, EMPRESAS, seguir, anotar, porRefYEmail, seguimientoPublico, consultarSeguimiento, buscarPedido: buscar,
-  pagarDeNuevo, pagarPorSeguimiento,
+  pagarDeNuevo, pagarPorSeguimiento, bienvenidaPara, montoBienvenida, estadoMedio,
 };

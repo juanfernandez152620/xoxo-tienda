@@ -27,6 +27,11 @@
   const money = n => '$' + fmt.format(n);
   const catUrl = c => `/${c.id}/`;
   const emailTienda = (SITE.footer && SITE.footer.email) || 'ventas@xoxotecno.com.ar';
+  // 27/11/2026: Mercado Pago apagado en /admin (window.TB_PAGOS) y envíos sin calculadora (se coordinan por
+  // WhatsApp después de la compra). Al prender cada cosa de nuevo, los textos vuelven solos.
+  const MP = !(window.TB_PAGOS && window.TB_PAGOS.mercadopago === false);
+  const COORD = Boolean(SHIP && SHIP.modo === 'coordinar');
+  const FIN = STORE.financing || 'GO cuotas';
 
   const line = d => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const I = {
@@ -75,10 +80,10 @@
           <p class="kicker hero-kicker">${esc(STORY.kicker || STORE.name)}</p>
           <div class="hero-logo" aria-hidden="true">${$('.logo-svg').outerHTML}</div>
           <h1 class="hero-title">${esc(STORY.title || STORE.name)}</h1>
-          <p class="hero-text">${esc(textoReal(STORY.text, 'Ventilación, creación de contenido y audio, con garantía y en cuotas: con crédito por Mercado Pago o con tu débito en GO cuotas.'))}</p>
+          <p class="hero-text">${esc(textoReal(STORY.text, MP ? 'Ventilación, creación de contenido y audio, con garantía y en cuotas: con crédito por Mercado Pago o con tu débito en GO cuotas.' : `Ventilación, creación de contenido y audio, con garantía y en cuotas con tu débito en ${FIN}.`))}</p>
           <div class="hero-ctas">
             <a class="btn" href="#categorias">Ver productos ${I.arrow}</a>
-            <a class="btn ghost" href="#envios">Calculá tu envío</a>
+            ${COORD ? '<a class="btn ghost" href="#sucursales">Ver sucursales</a>' : '<a class="btn ghost" href="#envios">Calculá tu envío</a>'}
           </div>
         </div>
         <a class="scroll-cue" href="#${(STORY.team || []).length ? 'equipo' : 'sucursales'}" aria-label="Seguir bajando">${I.down}</a>
@@ -143,7 +148,7 @@
         <div class="warranty-copy" data-reveal>
           <span class="badge-ico">${I.shield}</span>
           <h2 class="sec-title">${esc(STORY.warrantyTitle)}</h2>
-          <p class="sec-text"><b>${esc(d)} días de garantía</b> en todos los productos. ${esc(STORY.warrantyText)}</p>
+          <p class="sec-text"><b>${esc(d)} días de garantía</b> en todos los productos. ${esc(sinRelleno(STORY.warrantyText))}</p>
         </div>
       </section>`;
   }
@@ -151,8 +156,10 @@
   // Cómo comprar: tres pasos sobre una línea que se llena con el scroll
   function comoComprar() {
     const pasos = [
-      [I.card, 'Comprás online', 'Elegí tu producto y pagá con Mercado Pago: tarjeta en cuotas, débito, dinero en cuenta o efectivo.'],
-      [I.truck, 'Elegís el envío', 'Andreani o Correo Argentino a tu casa o a la sucursal, o retirás gratis en una de nuestras sucursales.'],
+      [I.card, 'Comprás online', MP ? 'Elegí tu producto y pagá con Mercado Pago: tarjeta en cuotas, débito, dinero en cuenta o efectivo.'
+        : `Elegí tu producto y pagalo en cuotas con tu tarjeta de débito en ${FIN}, en su sitio seguro.`],
+      COORD ? [I.truck, 'Retiro o envío', 'Retirás gratis en una de nuestras sucursales, o te lo mandamos a todo el país: el envío lo coordinamos por WhatsApp después de la compra.']
+        : [I.truck, 'Elegís el envío', 'Andreani o Correo Argentino a tu casa o a la sucursal, o retirás gratis en una de nuestras sucursales.'],
       [I.mail, 'Te llega el mail', `Apenas se acredita el pago te escribimos desde ${emailTienda} con el detalle y el seguimiento.`],
     ];
     return `
@@ -173,8 +180,10 @@
           <div class="mail-body">
             <i style="width:82%"></i><i style="width:64%"></i>
             <div class="mail-row"><span>Producto</span><span>${money(39999)}</span></div>
-            <div class="mail-row"><span>Envío Andreani</span><span>${money(9500)}</span></div>
-            <div class="mail-row total"><span>Total pagado</span><span>${money(49499)}</span></div>
+            ${COORD ? `<div class="mail-row"><span>Retiro en sucursal</span><span>Gratis</span></div>
+            <div class="mail-row total"><span>Total pagado</span><span>${money(39999)}</span></div>`
+              : `<div class="mail-row"><span>Envío Andreani</span><span>${money(9500)}</span></div>
+            <div class="mail-row total"><span>Total pagado</span><span>${money(49499)}</span></div>`}
           </div>
         </div>
       </section>`;
@@ -183,7 +192,7 @@
   // Calculadora de envíos: la misma cuenta que el checkout y el servidor (shared/envios.js).
   // El envío cuesta lo mismo para cualquier producto (17/11/2026): alcanza con la provincia o el código postal.
   function calculadora() {
-    if (!SHIP || !EN) return '';
+    if (!SHIP || !EN || COORD) return '';
     return `
       <section class="calc wrap" id="envios">
         <div class="calc-copy" data-reveal>
@@ -253,7 +262,7 @@
           <h1 class="hero-title">${esc(c.name)}</h1>
           <p class="hero-sub">${esc(c.title)}</p>
           <p class="hero-text">${esc(c.text)}</p>
-          <div class="hero-ctas"><a class="btn" href="#productos">Ver los productos ${I.arrow}</a><a class="btn ghost" href="#envios">Calculá tu envío</a></div>
+          <div class="hero-ctas"><a class="btn" href="#productos">Ver los productos ${I.arrow}</a>${COORD ? '<a class="btn ghost" href="#como-comprar">Cómo comprar</a>' : '<a class="btn ghost" href="#envios">Calculá tu envío</a>'}</div>
         </div>
       </section>`;
   }
@@ -262,8 +271,8 @@
     const d = STORY.warrantyDays;
     const items = [
       [I.shield, d ? `${d} días de garantía` : 'Garantía en todo'],
-      [I.truck, 'Envíos con Andreani y Correo Argentino'],
-      [I.card, 'Pagá con Mercado Pago'],
+      [I.truck, COORD ? 'Envíos a todo el país' : 'Envíos con Andreani y Correo Argentino'],
+      [I.card, MP ? 'Pagá con Mercado Pago' : `Cuotas con débito en ${FIN}`],
       [I.store, 'Retiro gratis en sucursal'],
     ];
     const fila = items.map(([i, t]) => `<span>${i}${esc(t)}</span>`).join('');
@@ -489,7 +498,8 @@
       ],
       promesa: {
         ico: I.truck, titulo: 'Por eso enviamos a todo el país, y retirar es gratis',
-        texto: 'Con <b>Andreani</b> o <b>Correo Argentino</b>, a tu casa o a la sucursal del correo, con seguimiento. Y si estás cerca, lo retirás <b>sin cargo en cualquiera de nuestras sucursales</b>.',
+        texto: COORD ? 'Después de tu compra te escribimos por WhatsApp y <b>coordinamos el envío</b> a tu casa, estés donde estés. Y si estás cerca, lo retirás <b>sin cargo en cualquiera de nuestras sucursales</b>.'
+          : 'Con <b>Andreani</b> o <b>Correo Argentino</b>, a tu casa o a la sucursal del correo, con seguimiento. Y si estás cerca, lo retirás <b>sin cargo en cualquiera de nuestras sucursales</b>.',
       },
       visual: fotos.length ? carrusel(fotos, 'las sucursales', true) : '',
     });
@@ -617,7 +627,7 @@
               ${V.priceHTML(p)}
               ${V.stockNoteHTML(p)}
               ${n ? `<p class="hv-cuotas"><b>${n} cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, n)}</b> con débito ${goImg()}</p>` : ''}
-              <p class="hv-cuotas">${cu.credito > 1 ? `<b>${cu.credito} cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, cu.credito)}</b> con crédito` : '<b>En 1 pago</b> con crédito o débito'}</p>
+              ${!cu.credito ? '' : `<p class="hv-cuotas">${cu.credito > 1 ? `<b>${cu.credito} cuotas${sinInteres}</b> de <b>${cuotaDe(p.price, cu.credito)}</b> con crédito` : '<b>En 1 pago</b> con crédito o débito'}</p>`}
               <div class="hv-btns">${PAY ? V.buyButton(p, 'Comprar') : V.waLink(p, 'Pedilo por WhatsApp')}</div>
             </div>
           </div>
@@ -696,7 +706,8 @@
   /* ---------- Encabezado, pie y armado ---------- */
   // Menú de las 4 vistas: Inicio y la home de cada categoría (shared/secciones.js), más el atajo a Envíos
   function nav() {
-    $('#nav').innerHTML = window.Secciones.nav('', CAT ? CAT.id : '') + '<a href="#envios" class="nav-ship" data-sx-go="envios">Envíos</a>';
+    // (Sin la calculadora no hay sección de envíos: el atajo no va)
+    $('#nav').innerHTML = window.Secciones.nav('', CAT ? CAT.id : '') + (COORD ? '' : '<a href="#envios" class="nav-ship" data-sx-go="envios">Envíos</a>');
   }
 
 
@@ -726,12 +737,13 @@
     const sx = html => `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${html}</div>`;
     if (CAT && capitulosDe(CAT).length) document.body.classList.add('hv-page');
     main.innerHTML = CAT && capitulosDe(CAT).length
-      ? [hvPortada(CAT), hvEquipo(), hvSucursales(), franja(), hvCapitulos(CAT), calculadora(), sx(window.Secciones.faq(CAT)), hvCierre(), categorias(CAT)].join('')
+      // 27/11/2026: sin la parte del equipo (hvEquipo): nadie quiso poner la cara
+      ? [hvPortada(CAT), hvSucursales(), franja(), hvCapitulos(CAT), calculadora(), sx(window.Secciones.faq(CAT)), hvCierre(), categorias(CAT)].join('')
       : CAT
       ? [CAT.banner ? `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.hero(CAT)}${window.Secciones.videos(CAT)}</div>` : heroCategoria(CAT), franja(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.beneficios(CAT)}</div>`,
         productosCategoria(CAT), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.guia(CAT)}</div>`,
         comoComprar(), calculadora(), garantia(), `<div class="sx-page h-sx" style="--sx-accent:${esc(CAT.color)}">${window.Secciones.faq(CAT)}</div>`, categorias(CAT)].join('')
-      : [heroHome(), equipo(), sucursales(), garantia(), franja(), categorias(), productosHome(), comoComprar(), calculadora()].join('');
+      : [heroHome(), sucursales(), garantia(), franja(), categorias(), productosHome(), comoComprar(), calculadora()].join('');
     nav();
     pie();
   }

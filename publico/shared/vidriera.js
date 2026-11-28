@@ -86,21 +86,28 @@
 
   // Las cuotas de un producto (/admin → Otros productos → Cuotas): con crédito, hasta cuántas (1 = un solo pago);
   // con débito en GO cuotas, cuántas (0 = no se acepta). Los celulares de antes: 12 y 9
+  // 27/11/2026: Mercado Pago apagado en /admin (window.TB_PAGOS, lo pone el servidor): no hay cuotas con crédito
+  // (credito 0) y ningún texto lo nombra. Al prenderlo vuelve todo como estaba.
+  const MP = !(window.TB_PAGOS && window.TB_PAGOS.mercadopago === false);
   const cuotasDe = p => ({
-    credito: [1, 3, 6, 9, 12].includes(Number(p && p.credito)) ? Number(p.credito) : 12,
+    credito: !MP ? 0 : [1, 3, 6, 9, 12].includes(Number(p && p.credito)) ? Number(p.credito) : 12,
     debito: STORE.financing && !(p && p.debito === false) ? (p && p.cuotas ? 9 : Number(STORE.extras.cuotas) || 0) : 0,
   });
   const credTxt = n => (n > 1 ? `${n} cuotas` : '1 pago');
   // Mercado Pago es el medio principal; abajo, si el producto lo acepta, el débito en GO cuotas
-  const cuotasText = p => { const c = cuotasDe(p); return `${c.credito > 1 ? `Hasta ${c.credito} cuotas` : 'En 1 pago'} con Mercado Pago${c.debito ? ` o ${c.debito} con tu débito en ${STORE.financing}` : ''}`; };
+  const cuotasText = p => {
+    const c = cuotasDe(p);
+    if (!c.credito) return c.debito ? `${c.debito} cuotas con tu débito en ${STORE.financing}` : 'Consultá por WhatsApp cómo pagarlo';
+    return `${c.credito > 1 ? `Hasta ${c.credito} cuotas` : 'En 1 pago'} con Mercado Pago${c.debito ? ` o ${c.debito} con tu débito en ${STORE.financing}` : ''}`;
+  };
   const goLogo = () => (STORE.financingLogo && STORE.financingLogo.color
     ? `<img class="x-go" src="${esc(STORE.financingLogo.color)}" alt="${esc(STORE.financing)}">` : esc(STORE.financing));
   // corto: en la tarjeta (angosta en el celular) dos renglones cortos; el texto completo va en la ficha
   const cuotasHTML = (p, corto = false) => { const c = cuotasDe(p); return corto
-    ? `<p class="x-cuotas"><b>${credTxt(c.credito)}</b> con crédito</p>${c.debito
+    ? `${c.credito ? `<p class="x-cuotas"><b>${credTxt(c.credito)}</b> con crédito</p>` : ''}${c.debito
       ? `<p class="x-cuotas x-debito"><b>${esc(c.debito)} cuotas</b> con débito ${goLogo()}</p>` : ''}`
-    : `<p class="x-cuotas">${c.credito > 1 ? `Hasta ${c.credito} cuotas` : 'En 1 pago'} con Mercado Pago</p>${c.debito
-      ? `<p class="x-cuotas x-debito">o <b>${esc(c.debito)} cuotas</b> con tu <b>débito</b> en ${goLogo()}</p>` : ''}`; };
+    : `${c.credito ? `<p class="x-cuotas">${c.credito > 1 ? `Hasta ${c.credito} cuotas` : 'En 1 pago'} con Mercado Pago</p>` : ''}${c.debito
+      ? `<p class="x-cuotas x-debito">${c.credito ? 'o ' : ''}<b>${esc(c.debito)} cuotas</b> con tu <b>débito</b> en ${goLogo()}</p>` : ''}`; };
 
   // Ficha: el precio desglosado en cuotas. Crédito por Mercado Pago en 1, 3, 6, 9 y 12 (los planes que acepta el
   // checkout) y débito en GO cuotas. Cada cuota se redondea para arriba, igual que en las tarjetas de cada diseño
@@ -116,10 +123,11 @@
     return `
       <div class="ficha-cuotas">
         <p class="fc-t">Pagalo en cuotas</p>
+        ${c.credito ? `
         <div class="fc-grupo">
           <p class="fc-medio"><b>Con tarjeta de crédito</b><span>por Mercado Pago</span></p>
           <ul class="fc-lista">${planes.map(n => fila(n, n === c.credito)).join('')}</ul>
-        </div>
+        </div>` : ''}
         ${STORE.financing && deb > 1 ? `
         <div class="fc-grupo">
           <p class="fc-medio"><b>Con tarjeta de débito</b><span>con ${goLogo()}</span></p>
